@@ -437,6 +437,46 @@ function calculateIPv6(ip, prefix) {
   };
 }
 
+// ─── IPv6 Hex Viz ─────────────────────────────────────────────
+function renderIPv6Hex(r) {
+  const container = document.getElementById('v6-hex-viz');
+  const { fullIp, rangeFirst, prefix } = r;
+
+  const makeRow = (label, fullAddr) => {
+    const groups = fullAddr.split(':');
+    let nibblePos = 0;
+    const groupsHtml = groups.map(group => {
+      let html = '';
+      for (const ch of group) {
+        const start = nibblePos * 4;
+        const end   = start + 4;
+        let cls;
+        if (end <= prefix)   cls = 'bit-net';
+        else if (start >= prefix) cls = 'bit-host';
+        else                 cls = 'bit-partial';
+        html += `<span class="${cls}">${ch}</span>`;
+        nibblePos++;
+      }
+      return `<span class="hex-group">${html}</span>`;
+    }).join('<span class="hex-colon">:</span>');
+
+    return `<div class="binary-row">
+      <span class="binary-row-label">${label}</span>
+      <span class="hex-groups">${groupsHtml}</span>
+    </div>`;
+  };
+
+  const hasPartial = prefix % 4 !== 0;
+  container.innerHTML =
+    makeRow('Address:', fullIp) +
+    makeRow('Network:', rangeFirst) +
+    `<div class="binary-legend">
+      <span class="legend-item"><span class="legend-dot net"></span> Network bits</span>
+      <span class="legend-item"><span class="legend-dot host"></span> Host bits</span>
+      ${hasPartial ? `<span class="legend-item"><span class="legend-dot partial"></span> Boundary nibble</span>` : ''}
+    </div>`;
+}
+
 // ─── IPv6 Render ──────────────────────────────────────────────
 function renderIPv6(r) {
   document.getElementById('ipv6-results').classList.remove('hidden');
@@ -460,6 +500,8 @@ function renderIPv6(r) {
   rangeEl.innerHTML =
     `<span>${escHtml(r.rangeFirst)}</span>` +
     `<span>— ${escHtml(r.rangeLast)}</span>`;
+
+  renderIPv6Hex(r);
 }
 
 // ─── Input Parser ─────────────────────────────────────────────

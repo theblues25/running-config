@@ -584,6 +584,23 @@ main {
   box-shadow: var(--shadow);
 }
 
+/* ─── IPv6 Hex Viz ─────────────────────────────────────────── */
+.hex-groups {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+.hex-group { display: inline-flex; }
+.hex-colon { color: var(--text-sec); opacity: 0.4; padding: 0 1px; }
+.bit-partial { color: #d97706; font-weight: 700; }
+[data-theme="dark"] .bit-partial { color: #fbbf24; }
+.legend-dot.partial { background: #d97706; }
+[data-theme="dark"] .legend-dot.partial { background: #fbbf24; }
+
 /* ─── WHOIS Link ───────────────────────────────────────────── */
 .whois-link {
   display: inline-flex;
