@@ -933,53 +933,83 @@ function handleSplit() {
   if (!raw) return;
 
   const parsed = parseInput(raw);
-  if (parsed.error || parsed.type !== 'ipv4') {
-    resultEl.innerHTML = `<div class="cmp-error">Enter a valid IPv4 network (e.g. 192.168.1.0/24)</div>`;
-    resultEl.classList.remove('hidden'); return;
-  }
-  if (isNaN(newPrefix) || newPrefix <= parsed.prefix || newPrefix > 32) {
-    resultEl.innerHTML = `<div class="cmp-error">New prefix must be larger than /${parsed.prefix} and ≤ /32</div>`;
+  if (parsed.error) {
+    resultEl.innerHTML = `<div class="cmp-error">Enter a valid network (e.g. 192.168.1.0/24 or 2001:db8::/32)</div>`;
     resultEl.classList.remove('hidden'); return;
   }
 
-  const count = 1 << (newPrefix - parsed.prefix);
-  if (count > 1024) {
-    resultEl.innerHTML = `<div class="cmp-error">Too many subnets (${count.toLocaleString()}). Maximum is 1,024.</div>`;
+  const maxPrefix = parsed.type === 'ipv4' ? 32 : 128;
+  if (isNaN(newPrefix) || newPrefix <= parsed.prefix || newPrefix > maxPrefix) {
+    resultEl.innerHTML = `<div class="cmp-error">New prefix must be larger than /${parsed.prefix} and ≤ /${maxPrefix}</div>`;
     resultEl.classList.remove('hidden'); return;
   }
 
-  const r = calculateIPv4(parsed.ip, parsed.prefix);
-  const netInt = ipToInt(r.network);
-  const subSize = 1 << (32 - newPrefix);
-  const usablePerSubnet = newPrefix >= 31 ? subSize : subSize - 2;
-
-  const rows = [];
-  for (let i = 0; i < count; i++) {
-    const ni = (netInt + i * subSize) >>> 0;
-    const bi = (ni + subSize - 1) >>> 0;
-    const fi = newPrefix >= 31 ? ni : ni + 1;
-    const li = newPrefix >= 31 ? bi : bi - 1;
-    rows.push(`<tr>
-      <td>${i + 1}</td>
-      <td>${intToIp(ni)}/${newPrefix}</td>
-      <td>${intToIp(fi)} – ${intToIp(li)}</td>
-      <td>${intToIp(bi)}</td>
-      <td>${usablePerSubnet.toLocaleString()}</td>
-    </tr>`);
+  const diff = newPrefix - parsed.prefix;
+  const countBig = 1n << BigInt(diff);
+  if (countBig > 1024n) {
+    resultEl.innerHTML = `<div class="cmp-error">Would produce ${countBig.toLocaleString()} subnets (2<sup>${diff}</sup>). Maximum displayed is 1,024 — use a prefix closer to /${parsed.prefix}.</div>`;
+    resultEl.classList.remove('hidden'); return;
   }
+  const count = Number(countBig);
 
-  resultEl.innerHTML = `
-    <div class="split-summary">
-      Splitting <strong>${r.network}/${r.prefix}</strong> into
-      <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
-      ${usablePerSubnet.toLocaleString()} usable hosts each
-    </div>
-    <div class="table-wrapper" style="max-height:400px">
-      <table class="networks-table">
-        <thead><tr><th>#</th><th>Network</th><th>Usable Range</th><th>Broadcast</th><th>Hosts</th></tr></thead>
-        <tbody>${rows.join('')}</tbody>
-      </table>
-    </div>`;
+  if (parsed.type === 'ipv4') {
+    const r = calculateIPv4(parsed.ip, parsed.prefix);
+    const netInt = ipToInt(r.network);
+    const subSize = 1 << (32 - newPrefix);
+    const usable = newPrefix >= 31 ? subSize : subSize - 2;
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      const ni = (netInt + i * subSize) >>> 0;
+      const bi = (ni + subSize - 1) >>> 0;
+      const fi = newPrefix >= 31 ? ni : ni + 1;
+      const li = newPrefix >= 31 ? bi : bi - 1;
+      rows.push(`<tr>
+        <td>${i + 1}</td><td>${intToIp(ni)}/${newPrefix}</td>
+        <td>${intToIp(fi)} – ${intToIp(li)}</td>
+        <td>${intToIp(bi)}</td><td>${usable.toLocaleString()}</td>
+      </tr>`);
+    }
+    resultEl.innerHTML = `
+      <div class="split-summary">
+        Splitting <strong>${r.network}/${r.prefix}</strong> into
+        <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
+        ${usable.toLocaleString()} usable hosts each
+      </div>
+      <div class="table-wrapper" style="max-height:400px">
+        <table class="networks-table">
+          <thead><tr><th>#</th><th>Network</th><th>Usable Range</th><th>Broadcast</th><th>Hosts</th></tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>`;
+  } else {
+    const r = calculateIPv6(parsed.ip, parsed.prefix);
+    const netInt = ipv6ToBigInt(r.rangeFirst);
+    const subSize = 1n << BigInt(128 - newPrefix);
+    const addressesPerSubnet = subSize;
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      const ni = netInt + BigInt(i) * subSize;
+      const li = ni + subSize - 1n;
+      rows.push(`<tr>
+        <td>${i + 1}</td>
+        <td>${compressIPv6(bigIntToIPv6Full(ni))}/${newPrefix}</td>
+        <td>${compressIPv6(bigIntToIPv6Full(ni))} – ${compressIPv6(bigIntToIPv6Full(li))}</td>
+        <td>${fmtBigInt(addressesPerSubnet)}</td>
+      </tr>`);
+    }
+    resultEl.innerHTML = `
+      <div class="split-summary">
+        Splitting <strong>${compressIPv6(r.rangeFirst)}/${r.prefix}</strong> into
+        <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
+        2<sup>${128 - newPrefix}</sup> addresses each
+      </div>
+      <div class="table-wrapper" style="max-height:400px">
+        <table class="networks-table">
+          <thead><tr><th>#</th><th>Network</th><th>Range (First – Last)</th><th>Addresses</th></tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      </div>`;
+  }
   resultEl.classList.remove('hidden');
 }
 
@@ -992,54 +1022,97 @@ function handleSummary() {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
   const parsed = lines.map(l => parseInput(l));
 
-  if (parsed.some(p => p.error || p.type !== 'ipv4')) {
-    resultEl.innerHTML = `<div class="cmp-error">All entries must be valid IPv4 networks (e.g. 192.168.1.0/24)</div>`;
+  if (parsed.some(p => p.error)) {
+    resultEl.innerHTML = `<div class="cmp-error">Invalid format. Use CIDR notation (e.g. 192.168.1.0/24 or 2001:db8::/48)</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+  const types = [...new Set(parsed.map(p => p.type))];
+  if (types.length > 1) {
+    resultEl.innerHTML = `<div class="cmp-error">Mix of IPv4 and IPv6 detected — enter one type at a time</div>`;
     resultEl.classList.remove('hidden'); return;
   }
 
-  const networks = parsed.map(p => {
-    const r = calculateIPv4(p.ip, p.prefix);
-    const ni = ipToInt(r.network);
-    const bi = r.broadcast ? ipToInt(r.broadcast) : ni;
-    return { ni, bi, prefix: p.prefix, network: r.network, broadcast: r.broadcast, usableRange: r.usableRange };
-  });
-
-  const minNet   = networks.reduce((a, n) => Math.min(a, n.ni),  Infinity);
-  const maxBcast = networks.reduce((a, n) => Math.max(a, n.bi), -Infinity);
-
-  let aggPrefix = 32;
-  while (aggPrefix > 0) {
-    const mask = (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
-    const aggNet   = (minNet & mask) >>> 0;
+  if (types[0] === 'ipv4') {
+    const networks = parsed.map(p => {
+      const r = calculateIPv4(p.ip, p.prefix);
+      const ni = ipToInt(r.network);
+      const bi = r.broadcast ? ipToInt(r.broadcast) : ni;
+      return { ni, bi, prefix: p.prefix, network: r.network, broadcast: r.broadcast, usableRange: r.usableRange };
+    });
+    const minNet   = networks.reduce((a, n) => Math.min(a, n.ni),  Infinity);
+    const maxBcast = networks.reduce((a, n) => Math.max(a, n.bi), -Infinity);
+    let aggPrefix = 32;
+    while (aggPrefix > 0) {
+      const mask = (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
+      const aggNet   = (minNet & mask) >>> 0;
+      const aggBcast = (aggNet | ((~mask) >>> 0)) >>> 0;
+      if (aggNet <= minNet && aggBcast >= maxBcast) break;
+      aggPrefix--;
+    }
+    const mask    = aggPrefix === 0 ? 0 : (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
+    const aggNet  = (minNet & mask) >>> 0;
     const aggBcast = (aggNet | ((~mask) >>> 0)) >>> 0;
-    if (aggNet <= minNet && aggBcast >= maxBcast) break;
-    aggPrefix--;
+    const sorted = [...networks].sort((a, b) => a.ni - b.ni);
+    const rows = sorted.map(n => `<tr>
+      <td>${n.network}/${n.prefix}</td>
+      <td>${n.usableRange}</td>
+      <td>${n.broadcast || '—'}</td>
+    </tr>`).join('');
+    resultEl.innerHTML = `
+      <div class="summary-box">
+        <div class="summary-agg"><span class="summary-label">Aggregate Route</span><span class="summary-value mono">${intToIp(aggNet)}/${aggPrefix}</span></div>
+        <div class="summary-agg"><span class="summary-label">Subnet Mask</span><span class="summary-value mono">${cidrToMask(aggPrefix)}</span></div>
+        <div class="summary-agg"><span class="summary-label">Coverage</span><span class="summary-value">${intToIp(aggNet)} – ${intToIp(aggBcast)} &nbsp;(${fmtNum(aggBcast - aggNet + 1)} addresses)</span></div>
+        <div class="summary-agg"><span class="summary-label">Inputs</span><span class="summary-value">${sorted.length} networks summarized</span></div>
+      </div>
+      <div class="table-wrapper" style="max-height:300px">
+        <table class="networks-table">
+          <thead><tr><th>Input Network</th><th>Usable Range</th><th>Broadcast</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } else {
+    const networks = parsed.map(p => {
+      const r = calculateIPv6(p.ip, p.prefix);
+      const ni = ipv6ToBigInt(r.rangeFirst);
+      const li = ipv6ToBigInt(r.rangeLast);
+      return { ni, li, prefix: p.prefix, network: compressIPv6(r.rangeFirst), last: compressIPv6(r.rangeLast) };
+    });
+    const minNet  = networks.reduce((a, n) => a < n.ni ? a : n.ni, networks[0].ni);
+    const maxLast = networks.reduce((a, n) => a > n.li ? a : n.li, networks[0].li);
+    let aggPrefix = 128;
+    while (aggPrefix > 0) {
+      const b = BigInt(128 - aggPrefix);
+      const mask = aggPrefix === 0 ? 0n : (((1n << BigInt(aggPrefix)) - 1n) << b);
+      const aggNet  = minNet & mask;
+      const aggLast = aggNet | ((1n << b) - 1n);
+      if (aggNet <= minNet && aggLast >= maxLast) break;
+      aggPrefix--;
+    }
+    const b2 = BigInt(128 - aggPrefix);
+    const mask2 = aggPrefix === 0 ? 0n : (((1n << BigInt(aggPrefix)) - 1n) << b2);
+    const aggNetInt  = minNet & mask2;
+    const aggLastInt = aggNetInt | ((1n << b2) - 1n);
+    const aggNetStr  = compressIPv6(bigIntToIPv6Full(aggNetInt));
+    const aggLastStr = compressIPv6(bigIntToIPv6Full(aggLastInt));
+    const sorted = [...networks].sort((a, b) => a.ni < b.ni ? -1 : 1);
+    const rows = sorted.map(n => `<tr>
+      <td>${n.network}/${n.prefix}</td>
+      <td>${n.network} – ${n.last}</td>
+    </tr>`).join('');
+    resultEl.innerHTML = `
+      <div class="summary-box">
+        <div class="summary-agg"><span class="summary-label">Aggregate Route</span><span class="summary-value mono">${aggNetStr}/${aggPrefix}</span></div>
+        <div class="summary-agg"><span class="summary-label">Coverage</span><span class="summary-value">${aggNetStr} – ${aggLastStr}</span></div>
+        <div class="summary-agg"><span class="summary-label">Inputs</span><span class="summary-value">${sorted.length} networks summarized</span></div>
+      </div>
+      <div class="table-wrapper" style="max-height:300px">
+        <table class="networks-table">
+          <thead><tr><th>Input Network</th><th>Range (First – Last)</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   }
-
-  const mask    = aggPrefix === 0 ? 0 : (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
-  const aggNet  = (minNet & mask) >>> 0;
-  const aggBcast = (aggNet | ((~mask) >>> 0)) >>> 0;
-
-  const sorted = [...networks].sort((a, b) => a.ni - b.ni);
-  const rows = sorted.map(n => `<tr>
-    <td>${n.network}/${n.prefix}</td>
-    <td>${n.usableRange}</td>
-    <td>${n.broadcast || '—'}</td>
-  </tr>`).join('');
-
-  resultEl.innerHTML = `
-    <div class="summary-box">
-      <div class="summary-agg"><span class="summary-label">Aggregate Route</span><span class="summary-value mono">${intToIp(aggNet)}/${aggPrefix}</span></div>
-      <div class="summary-agg"><span class="summary-label">Subnet Mask</span><span class="summary-value mono">${cidrToMask(aggPrefix)}</span></div>
-      <div class="summary-agg"><span class="summary-label">Coverage</span><span class="summary-value">${intToIp(aggNet)} – ${intToIp(aggBcast)} &nbsp;(${fmtNum(aggBcast - aggNet + 1)} addresses)</span></div>
-      <div class="summary-agg"><span class="summary-label">Inputs</span><span class="summary-value">${sorted.length} networks summarized</span></div>
-    </div>
-    <div class="table-wrapper" style="max-height:300px">
-      <table class="networks-table">
-        <thead><tr><th>Input Network</th><th>Usable Range</th><th>Broadcast</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
   resultEl.classList.remove('hidden');
 }
 

@@ -71,6 +71,7 @@
   </header>
 
   <main>
+    <h2 class="tools-heading" style="margin-bottom:0.75rem">Subnet Calculator</h2>
     <section class="input-section">
       <div class="input-card">
         <label class="input-label" for="ip-input" data-i18n="label.input">Enter IP Address</label>
@@ -269,7 +270,7 @@
     </section>
 
     <section class="tools-section">
-      <h2 class="tools-heading">Tools</h2>
+      <h2 class="tools-heading">Other Tools</h2>
 
       <div class="result-card">
         <div class="card-header collapsible" data-tool="cmp">
@@ -295,17 +296,18 @@
         <div class="card-header collapsible" data-tool="split">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
           <h2>Subnet Splitter</h2>
-          <span class="tool-badge ipv4-only">IPv4</span>
+          <span class="tool-badge">IPv4 / IPv6</span>
           <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="tool-body" id="tool-body-split">
           <div class="tool-body-inner">
             <div class="tool-inputs">
-              <input type="text" id="split-network" class="ip-input" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false">
+              <input type="text" id="split-network" class="ip-input" placeholder="192.168.1.0/24 or 2001:db8::/32" autocomplete="off" spellcheck="false">
               <span class="split-label">into /</span>
-              <input type="number" id="split-prefix" class="prefix-input" min="1" max="32" value="26">
+              <input type="number" id="split-prefix" class="prefix-input" min="1" max="128" value="26">
               <button id="split-btn" class="btn-primary">Split</button>
             </div>
+            <p class="hint-text" style="margin-top:0.5rem">Max 1,024 subnets displayed &nbsp;·&nbsp; IPv4 up to /32 &nbsp;·&nbsp; IPv6 up to /128</p>
           </div>
           <div id="split-result" class="tool-result hidden"></div>
         </div>
@@ -315,15 +317,16 @@
         <div class="card-header collapsible" data-tool="summary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="m3 17 4-8 4 4 4-6 4 10"/></svg>
           <h2>Route Summary</h2>
-          <span class="tool-badge ipv4-only">IPv4</span>
+          <span class="tool-badge">IPv4 / IPv6</span>
           <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="tool-body" id="tool-body-summary">
           <div class="tool-body-inner">
-            <textarea id="summary-input" class="summary-textarea" rows="4" placeholder="One network per line:&#10;192.168.1.0/24&#10;192.168.2.0/24&#10;192.168.3.0/24" spellcheck="false"></textarea>
+            <textarea id="summary-input" class="summary-textarea" rows="4" placeholder="One network per line (IPv4 or IPv6, not mixed):&#10;192.168.1.0/24&#10;192.168.2.0/24&#10;2001:db8:1::/48&#10;2001:db8:2::/48" spellcheck="false"></textarea>
             <div class="tool-btn-row">
               <button id="summary-btn" class="btn-primary">Summarize</button>
             </div>
+            <p class="hint-text" style="margin-top:0.5rem">IPv4 or IPv6 — do not mix &nbsp;·&nbsp; Finds the smallest aggregate that covers all inputs</p>
           </div>
           <div id="summary-result" class="tool-result hidden"></div>
         </div>
