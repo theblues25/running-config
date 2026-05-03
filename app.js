@@ -257,28 +257,22 @@ function renderIPv4(r) {
   document.getElementById('ipv6-results').classList.add('hidden');
 
   setV('v4-ip-address', `${r.ip}/${r.prefix}`, false);
+  document.getElementById('v4-ip-type').innerHTML =
+    `<span class="type-badge type-${r.ipType}">${t('type.' + r.ipType)}</span>`;
+  document.getElementById('v4-ip-class').innerHTML =
+    `<span class="class-badge">${r.ipClass}</span>`;
+  document.getElementById('v4-cidr').textContent = r.cidr;
   setV('v4-network',      r.network);
-  setV('v4-usable-range', r.usableRange);
   setV('v4-broadcast',    r.broadcast ? r.broadcast : '—');
+  setV('v4-usable-range', r.usableRange);
 
   document.getElementById('v4-total-hosts').textContent  = fmtNum(r.total);
   document.getElementById('v4-usable-hosts').textContent = fmtNum(r.usable);
 
-  setV('v4-subnet-mask',  r.subnetMask);
+  setV('v4-subnet-mask',   r.subnetMask);
   setV('v4-wildcard-mask', r.wildcardMask);
-  document.getElementById('v4-binary-mask').textContent = r.binaryMask;
-
-  document.getElementById('v4-ip-class').innerHTML =
-    `<span class="class-badge">${r.ipClass}</span>`;
-  document.getElementById('v4-cidr').textContent = r.cidr;
-  document.getElementById('v4-ip-type').innerHTML =
-    `<span class="type-badge type-${r.ipType}">${t('type.' + r.ipType)}</span>`;
-
   document.getElementById('v4-short').textContent = r.short;
-  setV('v4-binary-id',   r.binaryId);
-  document.getElementById('v4-integer-id').textContent = fmtNum(parseInt(r.intId));
-  document.getElementById('v4-hex-id').textContent     = r.hexId;
-  setV('v4-arpa',        r.arpa);
+  setV('v4-arpa',          r.arpa);
   document.getElementById('v4-ipv4mapped').textContent = r.ipv4mapped;
   document.getElementById('v4-6to4').textContent       = r.sixToFour;
 
@@ -600,22 +594,17 @@ function exportToExcel() {
       [],
       ['Field', 'Value'],
       ['IP Address',            `${r.ip}/${r.prefix}`],
+      ['IP Type',               t('type.' + r.ipType)],
+      ['IP Class',              r.ipClass],
+      ['CIDR Notation',         r.cidr],
       ['Network Address',       r.network],
-      ['Usable Host IP Range',  r.usableRange],
       ['Broadcast Address',     r.broadcast || '—'],
+      ['Usable Host IP Range',  r.usableRange],
       ['Total Number of Hosts', r.total],
       ['Number of Usable Hosts',r.usable],
       ['Subnet Mask',           r.subnetMask],
       ['Wildcard Mask',         r.wildcardMask],
-      ['Binary Subnet Mask',    r.binaryMask],
-      ['IP Class',              r.ipClass],
-      ['CIDR Notation',         r.cidr],
-      ['IP Type',               t('type.' + r.ipType)],
-      [],
       ['Short',                 r.short],
-      ['Binary ID',             r.binaryId],
-      ['Integer ID',            parseInt(r.intId)],
-      ['Hex ID',                r.hexId],
       ['in-addr.arpa',          r.arpa],
       ['IPv4 Mapped Address',   r.ipv4mapped],
       ['6to4 Prefix',           r.sixToFour],
