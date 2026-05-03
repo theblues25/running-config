@@ -891,7 +891,7 @@ function handleCompare() {
       </div>
       <div class="cmp-verdicts">
         ${vbadge(sameNet,        'Same Network',                                      'Different Networks')}
-        ${vbadge(overlap,        'Overlapping Ranges',                                'No Overlap')}
+        ${vbadge(!overlap,       'No Overlap',                                        'Overlapping Ranges')}
         ${vbadge(i1 >= n2 && i1 <= b2, `${r1.ip} is inside ${r2.network}/${r2.prefix}`, `${r1.ip} is outside ${r2.network}/${r2.prefix}`)}
         ${vbadge(i2 >= n1 && i2 <= b1, `${r2.ip} is inside ${r1.network}/${r1.prefix}`, `${r2.ip} is outside ${r1.network}/${r1.prefix}`)}
       </div>`;
