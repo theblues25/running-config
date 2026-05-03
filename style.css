@@ -584,6 +584,42 @@ main {
   box-shadow: var(--shadow);
 }
 
+/* ─── Accordion / Collapsible ──────────────────────────────── */
+.card-header.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+.card-header.collapsible:hover { background: var(--border); }
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-sec);
+  transition: transform 0.25s ease;
+  margin-left: 0.375rem;
+}
+.card-header.expanded .chevron { transform: rotate(180deg); }
+
+.tool-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+.tool-body.open { max-height: 1800px; }
+
+.tool-body-inner { padding: 1rem 1.5rem 1.25rem; }
+
+/* Tables inside tools go edge-to-edge like the main result tables */
+.tool-result { margin-top: 0; }
+.tool-result > .cmp-error   { padding: 0.75rem 1.5rem 0.875rem; }
+.tool-result > .cmp-grid    { padding: 0.875rem 1.5rem 0; }
+.tool-result > .cmp-verdicts{ padding: 0.5rem 1.5rem 0.875rem; }
+.tool-result > .split-summary{ padding: 0.75rem 1.5rem 0; }
+.tool-result > .summary-box {
+  margin: 0; border-radius: 0;
+  border: none; border-top: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+}
+.tool-result > .table-wrapper { margin: 0; border-top: 1px solid var(--border); }
+
 /* ─── Tools Section ────────────────────────────────────────── */
 .tools-section {
   max-width: 960px;
@@ -609,11 +645,9 @@ main {
   background: var(--accent-light);
   color: var(--accent);
   letter-spacing: 0.03em;
-  margin-left: auto;
   flex-shrink: 0;
 }
 .tool-badge.ipv4-only { background: var(--badge-v4-bg); color: var(--badge-v4-fg); }
-.tool-body { padding: 1rem 1.5rem 1.25rem; }
 .tool-inputs {
   display: flex;
   gap: 0.625rem;

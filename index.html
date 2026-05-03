@@ -272,49 +272,58 @@
       <h2 class="tools-heading">Tools</h2>
 
       <div class="result-card">
-        <div class="card-header">
+        <div class="card-header collapsible" data-tool="cmp">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>
           <h2>Compare Two IPs</h2>
           <span class="tool-badge">IPv4 / IPv6</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div class="tool-body">
-          <div class="tool-inputs">
-            <input type="text" id="cmp-ip1" class="ip-input" placeholder="192.168.1.1/24" autocomplete="off" spellcheck="false">
-            <span class="cmp-vs">vs</span>
-            <input type="text" id="cmp-ip2" class="ip-input" placeholder="192.168.2.1/24" autocomplete="off" spellcheck="false">
-            <button id="cmp-btn" class="btn-primary">Compare</button>
+        <div class="tool-body" id="tool-body-cmp">
+          <div class="tool-body-inner">
+            <div class="tool-inputs">
+              <input type="text" id="cmp-ip1" class="ip-input" placeholder="192.168.1.1/24" autocomplete="off" spellcheck="false">
+              <span class="cmp-vs">vs</span>
+              <input type="text" id="cmp-ip2" class="ip-input" placeholder="192.168.2.1/24" autocomplete="off" spellcheck="false">
+              <button id="cmp-btn" class="btn-primary">Compare</button>
+            </div>
           </div>
           <div id="cmp-result" class="tool-result hidden"></div>
         </div>
       </div>
 
       <div class="result-card">
-        <div class="card-header">
+        <div class="card-header collapsible" data-tool="split">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
           <h2>Subnet Splitter</h2>
           <span class="tool-badge ipv4-only">IPv4</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div class="tool-body">
-          <div class="tool-inputs">
-            <input type="text" id="split-network" class="ip-input" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false">
-            <span class="split-label">into /</span>
-            <input type="number" id="split-prefix" class="prefix-input" min="1" max="32" value="26">
-            <button id="split-btn" class="btn-primary">Split</button>
+        <div class="tool-body" id="tool-body-split">
+          <div class="tool-body-inner">
+            <div class="tool-inputs">
+              <input type="text" id="split-network" class="ip-input" placeholder="192.168.1.0/24" autocomplete="off" spellcheck="false">
+              <span class="split-label">into /</span>
+              <input type="number" id="split-prefix" class="prefix-input" min="1" max="32" value="26">
+              <button id="split-btn" class="btn-primary">Split</button>
+            </div>
           </div>
           <div id="split-result" class="tool-result hidden"></div>
         </div>
       </div>
 
       <div class="result-card">
-        <div class="card-header">
+        <div class="card-header collapsible" data-tool="summary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="m3 17 4-8 4 4 4-6 4 10"/></svg>
           <h2>Route Summary</h2>
           <span class="tool-badge ipv4-only">IPv4</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div class="tool-body">
-          <textarea id="summary-input" class="summary-textarea" rows="4" placeholder="One network per line:&#10;192.168.1.0/24&#10;192.168.2.0/24&#10;192.168.3.0/24" spellcheck="false"></textarea>
-          <div class="tool-btn-row">
-            <button id="summary-btn" class="btn-primary">Summarize</button>
+        <div class="tool-body" id="tool-body-summary">
+          <div class="tool-body-inner">
+            <textarea id="summary-input" class="summary-textarea" rows="4" placeholder="One network per line:&#10;192.168.1.0/24&#10;192.168.2.0/24&#10;192.168.3.0/24" spellcheck="false"></textarea>
+            <div class="tool-btn-row">
+              <button id="summary-btn" class="btn-primary">Summarize</button>
+            </div>
           </div>
           <div id="summary-result" class="tool-result hidden"></div>
         </div>

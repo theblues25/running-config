@@ -633,6 +633,16 @@ function init() {
     if (e.key === 'Enter') handleCalculate();
   });
 
+  document.querySelectorAll('.card-header.collapsible').forEach(header => {
+    const toolId = header.dataset.tool;
+    const body = document.getElementById(`tool-body-${toolId}`);
+    header.addEventListener('click', () => {
+      const isOpen = body.classList.contains('open');
+      body.classList.toggle('open', !isOpen);
+      header.classList.toggle('expanded', !isOpen);
+    });
+  });
+
   document.getElementById('eui64-btn').addEventListener('click', handleEUI64);
   document.getElementById('mac-input').addEventListener('keydown', e => { if (e.key === 'Enter') handleEUI64(); });
 
