@@ -502,6 +502,15 @@ function renderIPv6(r) {
     `<span>— ${escHtml(r.rangeLast)}</span>`;
 
   renderIPv6Hex(r);
+  renderIPv6Breakdown(r);
+
+  const eui64Wrap = document.getElementById('v6-eui64-wrap');
+  if (r.prefix <= 64) {
+    eui64Wrap.classList.remove('hidden');
+  } else {
+    eui64Wrap.classList.add('hidden');
+    document.getElementById('eui64-result').classList.add('hidden');
+  }
 }
 
 // ─── Input Parser ─────────────────────────────────────────────
@@ -624,6 +633,18 @@ function init() {
     if (e.key === 'Enter') handleCalculate();
   });
 
+  document.getElementById('eui64-btn').addEventListener('click', handleEUI64);
+  document.getElementById('mac-input').addEventListener('keydown', e => { if (e.key === 'Enter') handleEUI64(); });
+
+  document.getElementById('cmp-btn').addEventListener('click', handleCompare);
+  document.getElementById('cmp-ip1').addEventListener('keydown', e => { if (e.key === 'Enter') handleCompare(); });
+  document.getElementById('cmp-ip2').addEventListener('keydown', e => { if (e.key === 'Enter') handleCompare(); });
+
+  document.getElementById('split-btn').addEventListener('click', handleSplit);
+  document.getElementById('split-network').addEventListener('keydown', e => { if (e.key === 'Enter') handleSplit(); });
+
+  document.getElementById('summary-btn').addEventListener('click', handleSummary);
+
   const params = new URLSearchParams(location.search);
   if (params.get('ip')) {
     document.getElementById('ip-input').value = params.get('ip');
@@ -716,6 +737,300 @@ function styleSummarySheet(ws, totalRows) {
   ['A1', 'A4', 'B4'].forEach(ref => {
     if (ws[ref]) ws[ref].s = { font: { bold: true } };
   });
+}
+
+// ─── IPv6 Address Breakdown ───────────────────────────────────
+function renderIPv6Breakdown(r) {
+  const container = document.getElementById('v6-breakdown-viz');
+  const { fullIp, prefix } = r;
+  const groups = fullIp.split(':');
+
+  let sections;
+  if (prefix === 64) {
+    sections = [
+      { grps: groups.slice(0, 4), cls: 'bdk-net',    name: 'Network Prefix',           bits: '64 bits' },
+      { grps: groups.slice(4),    cls: 'bdk-host',   name: 'Interface ID',             bits: '64 bits' },
+    ];
+  } else if (prefix === 48) {
+    sections = [
+      { grps: groups.slice(0, 3), cls: 'bdk-net',    name: 'Global Routing Prefix',    bits: '48 bits' },
+      { grps: groups.slice(3, 4), cls: 'bdk-subnet', name: 'Subnet ID',                bits: '16 bits' },
+      { grps: groups.slice(4),    cls: 'bdk-host',   name: 'Interface ID',             bits: '64 bits' },
+    ];
+  } else if (prefix < 64 && prefix % 16 === 0) {
+    const n = prefix / 16;
+    sections = [
+      { grps: groups.slice(0, n), cls: 'bdk-net',    name: 'Global Routing Prefix',    bits: `${prefix} bits` },
+      { grps: groups.slice(n, 4), cls: 'bdk-subnet', name: 'Subnet Range',             bits: `${64 - prefix} bits` },
+      { grps: groups.slice(4),    cls: 'bdk-host',   name: 'Interface ID',             bits: '64 bits' },
+    ];
+  } else if (prefix > 64 && prefix % 16 === 0) {
+    const n = prefix / 16;
+    sections = [
+      { grps: groups.slice(0, n), cls: 'bdk-net',    name: 'Network',                  bits: `${prefix} bits` },
+      { grps: groups.slice(n),    cls: 'bdk-host',   name: 'Host',                     bits: `${128 - prefix} bits` },
+    ];
+  } else {
+    const n = Math.floor(prefix / 16);
+    const hostLabel = prefix <= 64 ? 'Interface ID' : 'Host';
+    sections = [];
+    if (n > 0) sections.push({ grps: groups.slice(0, n), cls: 'bdk-net', name: 'Network', bits: `${prefix} bits` });
+    sections.push({ grps: [groups[n]], cls: 'bdk-boundary', name: '(boundary)', bits: `${prefix % 16}+${16 - prefix % 16} bits` });
+    if (n + 1 < 8) sections.push({ grps: groups.slice(n + 1), cls: 'bdk-host', name: hostLabel, bits: `${128 - prefix} bits` });
+  }
+
+  const html = sections.filter(s => s.grps.length).map(sec => {
+    const val = sec.grps.join('<span class="bdk-colon">:</span>');
+    return `<div class="v6-bdk-sec ${sec.cls}">
+      <div class="v6-bdk-val">${val}</div>
+      <div class="v6-bdk-name">${sec.name}</div>
+      <div class="v6-bdk-bits">${sec.bits}</div>
+    </div>`;
+  }).join('<span class="v6-bdk-sep">:</span>');
+
+  container.innerHTML = `<div class="v6-bdk">${html}</div>`;
+}
+
+// ─── EUI-64 Generator ─────────────────────────────────────────
+function handleEUI64() {
+  const mac = document.getElementById('mac-input').value.trim();
+  const resultEl = document.getElementById('eui64-result');
+  if (!mac) return;
+
+  const cleaned = mac.replace(/[:\-.\s]/g, '');
+  if (!/^[0-9a-fA-F]{12}$/.test(cleaned)) {
+    resultEl.className = '';
+    resultEl.innerHTML = `<span class="eui64-error">Invalid MAC. Use format: AA:BB:CC:DD:EE:FF</span>`;
+    resultEl.classList.remove('hidden');
+    return;
+  }
+
+  const b = [];
+  for (let i = 0; i < 12; i += 2) b.push(parseInt(cleaned.slice(i, i + 2), 16));
+  b[0] ^= 0x02;
+  const eui = [b[0], b[1], b[2], 0xFF, 0xFE, b[3], b[4], b[5]];
+  const ifIdGroups = [
+    ((eui[0] << 8) | eui[1]).toString(16).padStart(4, '0'),
+    ((eui[2] << 8) | eui[3]).toString(16).padStart(4, '0'),
+    ((eui[4] << 8) | eui[5]).toString(16).padStart(4, '0'),
+    ((eui[6] << 8) | eui[7]).toString(16).padStart(4, '0'),
+  ];
+
+  const r = state.lastResult;
+  const netGroups = r.rangeFirst.split(':').slice(0, 4);
+  const fullGroups = [...netGroups, ...ifIdGroups];
+  const fullAddr = fullGroups.map(g => g.padStart(4, '0')).join(':');
+  const compressed = compressIPv6(fullAddr);
+  const ifId = ifIdGroups.join(':');
+
+  const copyBtn = (text, label) =>
+    `<span class="eui64-value mono copyable" data-copy="${text}">${escHtml(text)}<svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>`;
+
+  resultEl.className = 'eui64-result';
+  resultEl.innerHTML = `
+    <div class="eui64-row-result"><span class="eui64-label">Interface ID</span>${copyBtn(ifId)}</div>
+    <div class="eui64-row-result"><span class="eui64-label">Full IPv6 Address</span>${copyBtn(compressed)}</div>`;
+  resultEl.classList.remove('hidden');
+}
+
+// ─── Compare Two IPs ──────────────────────────────────────────
+function handleCompare() {
+  const raw1 = document.getElementById('cmp-ip1').value.trim();
+  const raw2 = document.getElementById('cmp-ip2').value.trim();
+  const resultEl = document.getElementById('cmp-result');
+  if (!raw1 || !raw2) return;
+
+  const p1 = parseInput(raw1);
+  const p2 = parseInput(raw2);
+
+  if (p1.error || p2.error) {
+    resultEl.innerHTML = `<div class="cmp-error">Invalid IP address format</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+  if (p1.type !== p2.type) {
+    resultEl.innerHTML = `<div class="cmp-error">Cannot compare IPv4 with IPv6</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+
+  const vbadge = (ok, yes, no) => {
+    const cls = ok ? 'verdict-yes' : 'verdict-no';
+    return `<span class="verdict-badge ${cls}"><span class="verdict-icon">${ok ? '✓' : '✗'}</span>${ok ? yes : no}</span>`;
+  };
+
+  let html = '';
+  if (p1.type === 'ipv4') {
+    const r1 = calculateIPv4(p1.ip, p1.prefix);
+    const r2 = calculateIPv4(p2.ip, p2.prefix);
+    const n1 = ipToInt(r1.network), b1 = r1.broadcast ? ipToInt(r1.broadcast) : ipToInt(r1.network);
+    const n2 = ipToInt(r2.network), b2 = r2.broadcast ? ipToInt(r2.broadcast) : ipToInt(r2.network);
+    const i1 = ipToInt(r1.ip),      i2 = ipToInt(r2.ip);
+    const sameNet = r1.network === r2.network && r1.prefix === r2.prefix;
+    const overlap = n1 <= b2 && n2 <= b1 && !sameNet;
+    html = `
+      <div class="cmp-grid">
+        <div class="cmp-col">
+          <div class="cmp-addr">${r1.ip}/${r1.prefix}</div>
+          <div class="cmp-net">Network: ${r1.network}/${r1.prefix}</div>
+          <div class="cmp-range">${intToIp(n1)} – ${r1.broadcast || r1.ip}</div>
+        </div>
+        <div class="cmp-col">
+          <div class="cmp-addr">${r2.ip}/${r2.prefix}</div>
+          <div class="cmp-net">Network: ${r2.network}/${r2.prefix}</div>
+          <div class="cmp-range">${intToIp(n2)} – ${r2.broadcast || r2.ip}</div>
+        </div>
+      </div>
+      <div class="cmp-verdicts">
+        ${vbadge(sameNet,        'Same Network',                                      'Different Networks')}
+        ${vbadge(overlap,        'Overlapping Ranges',                                'No Overlap')}
+        ${vbadge(i1 >= n2 && i1 <= b2, `${r1.ip} is inside ${r2.network}/${r2.prefix}`, `${r1.ip} is outside ${r2.network}/${r2.prefix}`)}
+        ${vbadge(i2 >= n1 && i2 <= b1, `${r2.ip} is inside ${r1.network}/${r1.prefix}`, `${r2.ip} is outside ${r1.network}/${r1.prefix}`)}
+      </div>`;
+  } else {
+    const r1 = calculateIPv6(p1.ip, p1.prefix);
+    const r2 = calculateIPv6(p2.ip, p2.prefix);
+    const i1 = ipv6ToBigInt(r1.fullIp),  i2 = ipv6ToBigInt(r2.fullIp);
+    const n1 = ipv6ToBigInt(r1.rangeFirst), l1 = ipv6ToBigInt(r1.rangeLast);
+    const n2 = ipv6ToBigInt(r2.rangeFirst), l2 = ipv6ToBigInt(r2.rangeLast);
+    const sameNet = r1.network === r2.network && r1.prefix === r2.prefix;
+    const overlap = n1 <= l2 && n2 <= l1 && !sameNet;
+    html = `
+      <div class="cmp-grid">
+        <div class="cmp-col">
+          <div class="cmp-addr">${r1.ip}/${r1.prefix}</div>
+          <div class="cmp-net">Network: ${r1.network}/${r1.prefix}</div>
+        </div>
+        <div class="cmp-col">
+          <div class="cmp-addr">${r2.ip}/${r2.prefix}</div>
+          <div class="cmp-net">Network: ${r2.network}/${r2.prefix}</div>
+        </div>
+      </div>
+      <div class="cmp-verdicts">
+        ${vbadge(sameNet,      'Same Network',                                      'Different Networks')}
+        ${vbadge(overlap,      'Overlapping Ranges',                                'No Overlap')}
+        ${vbadge(i1 >= n2 && i1 <= l2, `${r1.ip} is inside ${r2.network}/${r2.prefix}`, `${r1.ip} is outside ${r2.network}/${r2.prefix}`)}
+        ${vbadge(i2 >= n1 && i2 <= l1, `${r2.ip} is inside ${r1.network}/${r1.prefix}`, `${r2.ip} is outside ${r1.network}/${r1.prefix}`)}
+      </div>`;
+  }
+  resultEl.innerHTML = html;
+  resultEl.classList.remove('hidden');
+}
+
+// ─── Subnet Splitter ──────────────────────────────────────────
+function handleSplit() {
+  const raw = document.getElementById('split-network').value.trim();
+  const newPrefix = parseInt(document.getElementById('split-prefix').value, 10);
+  const resultEl = document.getElementById('split-result');
+  if (!raw) return;
+
+  const parsed = parseInput(raw);
+  if (parsed.error || parsed.type !== 'ipv4') {
+    resultEl.innerHTML = `<div class="cmp-error">Enter a valid IPv4 network (e.g. 192.168.1.0/24)</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+  if (isNaN(newPrefix) || newPrefix <= parsed.prefix || newPrefix > 32) {
+    resultEl.innerHTML = `<div class="cmp-error">New prefix must be larger than /${parsed.prefix} and ≤ /32</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+
+  const count = 1 << (newPrefix - parsed.prefix);
+  if (count > 1024) {
+    resultEl.innerHTML = `<div class="cmp-error">Too many subnets (${count.toLocaleString()}). Maximum is 1,024.</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+
+  const r = calculateIPv4(parsed.ip, parsed.prefix);
+  const netInt = ipToInt(r.network);
+  const subSize = 1 << (32 - newPrefix);
+  const usablePerSubnet = newPrefix >= 31 ? subSize : subSize - 2;
+
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const ni = (netInt + i * subSize) >>> 0;
+    const bi = (ni + subSize - 1) >>> 0;
+    const fi = newPrefix >= 31 ? ni : ni + 1;
+    const li = newPrefix >= 31 ? bi : bi - 1;
+    rows.push(`<tr>
+      <td>${i + 1}</td>
+      <td>${intToIp(ni)}/${newPrefix}</td>
+      <td>${intToIp(fi)} – ${intToIp(li)}</td>
+      <td>${intToIp(bi)}</td>
+      <td>${usablePerSubnet.toLocaleString()}</td>
+    </tr>`);
+  }
+
+  resultEl.innerHTML = `
+    <div class="split-summary">
+      Splitting <strong>${r.network}/${r.prefix}</strong> into
+      <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
+      ${usablePerSubnet.toLocaleString()} usable hosts each
+    </div>
+    <div class="table-wrapper" style="max-height:400px">
+      <table class="networks-table">
+        <thead><tr><th>#</th><th>Network</th><th>Usable Range</th><th>Broadcast</th><th>Hosts</th></tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>`;
+  resultEl.classList.remove('hidden');
+}
+
+// ─── Route Summary ────────────────────────────────────────────
+function handleSummary() {
+  const raw = document.getElementById('summary-input').value.trim();
+  const resultEl = document.getElementById('summary-result');
+  if (!raw) return;
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const parsed = lines.map(l => parseInput(l));
+
+  if (parsed.some(p => p.error || p.type !== 'ipv4')) {
+    resultEl.innerHTML = `<div class="cmp-error">All entries must be valid IPv4 networks (e.g. 192.168.1.0/24)</div>`;
+    resultEl.classList.remove('hidden'); return;
+  }
+
+  const networks = parsed.map(p => {
+    const r = calculateIPv4(p.ip, p.prefix);
+    const ni = ipToInt(r.network);
+    const bi = r.broadcast ? ipToInt(r.broadcast) : ni;
+    return { ni, bi, prefix: p.prefix, network: r.network, broadcast: r.broadcast, usableRange: r.usableRange };
+  });
+
+  const minNet   = networks.reduce((a, n) => Math.min(a, n.ni),  Infinity);
+  const maxBcast = networks.reduce((a, n) => Math.max(a, n.bi), -Infinity);
+
+  let aggPrefix = 32;
+  while (aggPrefix > 0) {
+    const mask = (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
+    const aggNet   = (minNet & mask) >>> 0;
+    const aggBcast = (aggNet | ((~mask) >>> 0)) >>> 0;
+    if (aggNet <= minNet && aggBcast >= maxBcast) break;
+    aggPrefix--;
+  }
+
+  const mask    = aggPrefix === 0 ? 0 : (0xFFFFFFFF << (32 - aggPrefix)) >>> 0;
+  const aggNet  = (minNet & mask) >>> 0;
+  const aggBcast = (aggNet | ((~mask) >>> 0)) >>> 0;
+
+  const sorted = [...networks].sort((a, b) => a.ni - b.ni);
+  const rows = sorted.map(n => `<tr>
+    <td>${n.network}/${n.prefix}</td>
+    <td>${n.usableRange}</td>
+    <td>${n.broadcast || '—'}</td>
+  </tr>`).join('');
+
+  resultEl.innerHTML = `
+    <div class="summary-box">
+      <div class="summary-agg"><span class="summary-label">Aggregate Route</span><span class="summary-value mono">${intToIp(aggNet)}/${aggPrefix}</span></div>
+      <div class="summary-agg"><span class="summary-label">Subnet Mask</span><span class="summary-value mono">${cidrToMask(aggPrefix)}</span></div>
+      <div class="summary-agg"><span class="summary-label">Coverage</span><span class="summary-value">${intToIp(aggNet)} – ${intToIp(aggBcast)} &nbsp;(${fmtNum(aggBcast - aggNet + 1)} addresses)</span></div>
+      <div class="summary-agg"><span class="summary-label">Inputs</span><span class="summary-value">${sorted.length} networks summarized</span></div>
+    </div>
+    <div class="table-wrapper" style="max-height:300px">
+      <table class="networks-table">
+        <thead><tr><th>Input Network</th><th>Usable Range</th><th>Broadcast</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  resultEl.classList.remove('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', init);
