@@ -2,6 +2,8 @@
 
 **🌐 Live Demo:** [ip-subnet-calculator-dc0q.onrender.com](https://ip-subnet-calculator-dc0q.onrender.com/)
 
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
 เครื่องคำนวณ Subnet สำหรับ IPv4 และ IPv6 แบบ client-side ทำงานได้ทันทีโดยไม่ต้องส่งข้อมูลไปยัง server
 A fully client-side IPv4 and IPv6 subnet calculator — instant results, no data sent to any server.
 
@@ -138,4 +140,10 @@ This is a pure static site — no build step or dependencies required.
 
 ---
 
-Created by Thananchai
+---
+
+## License
+
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — Free to use and fork with credit. Commercial use prohibited.
+
+Created by Thananchai Panyaravahirun
