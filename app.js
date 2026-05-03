@@ -256,7 +256,12 @@ function renderIPv4(r) {
   document.getElementById('ipv4-results').classList.remove('hidden');
   document.getElementById('ipv6-results').classList.add('hidden');
 
-  setV('v4-ip-address', `${r.ip}/${r.prefix}`, false);
+  const v4ipEl = document.getElementById('v4-ip-address');
+  if (r.ipType === 'public') {
+    v4ipEl.innerHTML = `${escHtml(`${r.ip}/${r.prefix}`)} <a href="https://www.whois.com/whois/${encodeURIComponent(r.ip)}" target="_blank" rel="noopener noreferrer" class="whois-link">WHOIS ↗</a>`;
+  } else {
+    v4ipEl.textContent = `${r.ip}/${r.prefix}`;
+  }
   document.getElementById('v4-ip-type').innerHTML =
     `<span class="type-badge type-${r.ipType}">${t('type.' + r.ipType)}</span>`;
   document.getElementById('v4-ip-class').innerHTML =
@@ -438,7 +443,12 @@ function renderIPv6(r) {
   document.getElementById('ipv4-results').classList.add('hidden');
   document.getElementById('v4-all-networks-card').classList.add('hidden');
 
-  document.getElementById('v6-ip-address').textContent = `${r.ip}/${r.prefix}`;
+  const v6ipEl = document.getElementById('v6-ip-address');
+  if (r.ipType === 'globalunicast') {
+    v6ipEl.innerHTML = `${escHtml(`${r.ip}/${r.prefix}`)} <a href="https://www.whois.com/whois/${encodeURIComponent(r.ip)}" target="_blank" rel="noopener noreferrer" class="whois-link">WHOIS ↗</a>`;
+  } else {
+    v6ipEl.textContent = `${r.ip}/${r.prefix}`;
+  }
   setV('v6-full-ip',  r.fullIp);
   document.getElementById('v6-total').textContent = fmtBigInt(r.total);
   setV('v6-network', r.network);
