@@ -948,17 +948,15 @@ function handleSplit() {
   const countBig = 1n << BigInt(diff);
 
   if (parsed.type === 'ipv4') {
-    if (countBig > 1000n) {
-      resultEl.innerHTML = `<div class="cmp-error">Would produce ${countBig.toLocaleString()} subnets (2<sup>${diff}</sup>). Maximum is 1,000 — use a prefix closer to /${parsed.prefix}.</div>`;
-      resultEl.classList.remove('hidden'); return;
-    }
-    const count = Number(countBig);
+    const LIMIT = 1000;
+    const truncated = countBig > BigInt(LIMIT);
+    const displayCount = truncated ? LIMIT : Number(countBig);
     const r = calculateIPv4(parsed.ip, parsed.prefix);
     const netInt = ipToInt(r.network);
     const subSize = 1 << (32 - newPrefix);
     const usable = newPrefix >= 31 ? subSize : subSize - 2;
     const rows = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < displayCount; i++) {
       const ni = (netInt + i * subSize) >>> 0;
       const bi = (ni + subSize - 1) >>> 0;
       const fi = newPrefix >= 31 ? ni : ni + 1;
@@ -969,10 +967,13 @@ function handleSplit() {
         <td>${intToIp(bi)}</td><td>${usable.toLocaleString()}</td>
       </tr>`);
     }
+    const truncNote = truncated
+      ? ` <span style="color:var(--text-sec);font-weight:400">— showing first ${LIMIT.toLocaleString()} of ${countBig.toLocaleString()} total</span>`
+      : '';
     resultEl.innerHTML = `
       <div class="split-summary">
         Splitting <strong>${r.network}/${r.prefix}</strong> into
-        <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
+        <strong>${countBig.toLocaleString()} × /${newPrefix}</strong> subnets${truncNote} —
         ${usable.toLocaleString()} usable hosts each
       </div>
       <div class="table-wrapper" style="max-height:400px">
