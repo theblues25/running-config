@@ -946,13 +946,13 @@ function handleSplit() {
 
   const diff = newPrefix - parsed.prefix;
   const countBig = 1n << BigInt(diff);
-  if (countBig > 1024n) {
-    resultEl.innerHTML = `<div class="cmp-error">Would produce ${countBig.toLocaleString()} subnets (2<sup>${diff}</sup>). Maximum displayed is 1,024 — use a prefix closer to /${parsed.prefix}.</div>`;
-    resultEl.classList.remove('hidden'); return;
-  }
-  const count = Number(countBig);
 
   if (parsed.type === 'ipv4') {
+    if (countBig > 1000n) {
+      resultEl.innerHTML = `<div class="cmp-error">Would produce ${countBig.toLocaleString()} subnets (2<sup>${diff}</sup>). Maximum is 1,000 — use a prefix closer to /${parsed.prefix}.</div>`;
+      resultEl.classList.remove('hidden'); return;
+    }
+    const count = Number(countBig);
     const r = calculateIPv4(parsed.ip, parsed.prefix);
     const netInt = ipToInt(r.network);
     const subSize = 1 << (32 - newPrefix);
@@ -982,25 +982,30 @@ function handleSplit() {
         </table>
       </div>`;
   } else {
+    const LIMIT = 1000;
+    const truncated = countBig > BigInt(LIMIT);
+    const displayCount = truncated ? LIMIT : Number(countBig);
     const r = calculateIPv6(parsed.ip, parsed.prefix);
     const netInt = ipv6ToBigInt(r.rangeFirst);
     const subSize = 1n << BigInt(128 - newPrefix);
-    const addressesPerSubnet = subSize;
     const rows = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < displayCount; i++) {
       const ni = netInt + BigInt(i) * subSize;
       const li = ni + subSize - 1n;
       rows.push(`<tr>
         <td>${i + 1}</td>
         <td>${compressIPv6(bigIntToIPv6Full(ni))}/${newPrefix}</td>
         <td>${compressIPv6(bigIntToIPv6Full(ni))} – ${compressIPv6(bigIntToIPv6Full(li))}</td>
-        <td>${fmtBigInt(addressesPerSubnet)}</td>
+        <td>${fmtBigInt(subSize)}</td>
       </tr>`);
     }
+    const truncNote = truncated
+      ? ` <span style="color:var(--text-sec);font-weight:400">— showing first ${LIMIT.toLocaleString()} of ${countBig.toLocaleString()} total</span>`
+      : '';
     resultEl.innerHTML = `
       <div class="split-summary">
         Splitting <strong>${compressIPv6(r.rangeFirst)}/${r.prefix}</strong> into
-        <strong>${count.toLocaleString()} × /${newPrefix}</strong> subnets —
+        <strong>${countBig.toLocaleString()} × /${newPrefix}</strong> subnets${truncNote} —
         2<sup>${128 - newPrefix}</sup> addresses each
       </div>
       <div class="table-wrapper" style="max-height:400px">
