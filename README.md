@@ -21,8 +21,12 @@ A personal blog explaining networking and telecom concepts with interactive anim
 running-config/
   index.html          — หน้าแรก: รายการโพสต์ทั้งหมด
   style.css            — ดีไซน์ระบบกลางของทั้งเว็บ (ใช้ร่วมกันทุกหน้า)
+  assets/
+    theme.js            — light/dark toggle ที่ใช้ร่วมกันทุกหน้า
   posts/
     syncE-and-ptp.html — โพสต์แรก: SyncE และ PTP profile
+  tools/
+    ip-calculator/      — IP Subnet Calculator (IPv4/IPv6), มี style.css ของตัวเอง
 ```
 
 ### เขียนโพสต์ใหม่
@@ -35,7 +39,7 @@ running-config/
 
 - HTML5 / CSS3 / Vanilla JavaScript (ES2020+) — ไม่มี build step, ไม่มี framework
 - Canvas 2D + inline SVG สำหรับแอนิเมชัน
-- Google Fonts (Chakra Petch, Sarabun, JetBrains Mono)
+- Google Fonts (Inter, Sarabun, JetBrains Mono)
 - Deploy บน [GitHub Pages](https://pages.github.com/) (ฟรี)
 
 ### การ Deploy
@@ -60,8 +64,12 @@ A personal blog explaining networking and telecom concepts — SyncE, PTP, MPLS,
 running-config/
   index.html          — home page: post listing
   style.css            — shared design system used across every page
+  assets/
+    theme.js            — shared light/dark toggle
   posts/
     syncE-and-ptp.html — first post: SyncE and PTP profiles
+  tools/
+    ip-calculator/      — IP Subnet Calculator (IPv4/IPv6), has its own style.css
 ```
 
 ### Writing a New Post
@@ -74,7 +82,7 @@ running-config/
 
 - HTML5 / CSS3 / Vanilla JavaScript (ES2020+) — no build step, no framework
 - Canvas 2D + inline SVG for animations
-- Google Fonts (Chakra Petch, Sarabun, JetBrains Mono)
+- Google Fonts (Inter, Sarabun, JetBrains Mono)
 - Deployed on [GitHub Pages](https://pages.github.com/) (free)
 
 ### Deployment

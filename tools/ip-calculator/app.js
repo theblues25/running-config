@@ -1,7 +1,7 @@
 'use strict';
 
 // ─── State ────────────────────────────────────────────────────
-const state = { theme: 'light', lastResult: null };
+const state = { lastResult: null };
 
 // ─── Strings ──────────────────────────────────────────────────
 const STRINGS = {
@@ -65,16 +65,7 @@ const STRINGS = {
 
 function t(key) { return STRINGS[key] || key; }
 
-// ─── Theme ────────────────────────────────────────────────────
-function applyTheme() {
-  document.documentElement.setAttribute('data-theme', state.theme);
-  document.getElementById('theme-icon').textContent = state.theme === 'dark' ? '☀️' : '🌙';
-}
-function toggleTheme() {
-  state.theme = state.theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('theme', state.theme);
-  applyTheme();
-}
+// Theme toggle is handled by ../../assets/theme.js (shared across the whole site)
 
 // ─── IPv4 Helpers ─────────────────────────────────────────────
 function ipToInt(ip) {
@@ -623,12 +614,8 @@ document.addEventListener('click', async e => {
 
 // ─── Init ─────────────────────────────────────────────────────
 function init() {
-  state.theme = localStorage.getItem('theme') || 'dark';
-  applyTheme();
-
   document.getElementById('calc-btn').addEventListener('click', handleCalculate);
   document.getElementById('clear-btn').addEventListener('click', handleClear);
-  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('ip-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleCalculate();
   });
