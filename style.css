@@ -3,35 +3,26 @@
    so every future post and the index share one identity. */
 
 :root{
-  /* dark-first: bare :root carries the DARK palette */
-  --bg:#12141c; --bg-raised:#181c28; --bg-sunk:#0d0f16;
-  --ink:#eef0f6; --ink-soft:#b9bfd0; --muted:#7c8299;
-  --line:#262c3d; --line-strong:#343c53;
-  --amber:#e8a33d; --amber-soft:rgba(232,163,61,.14); --amber-ink:#f4c579;
-  --cyan:#57c3d6; --cyan-soft:rgba(87,195,214,.14); --cyan-ink:#8fdcea;
-  --good:#6fcf97; --good-soft:rgba(111,207,151,.14);
-  --shadow:0 1px 2px rgba(0,0,0,.35), 0 20px 40px -20px rgba(0,0,0,.55);
-  --radius:14px;
+  /* NOTE: token names are historical (amber/cyan/good from the original
+     dark-first design). Values now follow ip-calculator's palette:
+     amber=primary accent (blue), cyan=second series (violet), good=success (green). */
+  --bg:#f1f5f9; --bg-raised:#ffffff; --bg-sunk:#e2e8f0;
+  --ink:#0f172a; --ink-soft:#334155; --muted:#64748b;
+  --line:#e2e8f0; --line-strong:#cbd5e1;
+  --amber:#2563eb; --amber-soft:rgba(37,99,235,.14); --amber-ink:#1d4ed8;
+  --cyan:#7c3aed; --cyan-soft:rgba(124,58,237,.14); --cyan-ink:#6d28d9;
+  --good:#16a34a; --good-soft:rgba(22,163,74,.14);
+  --shadow:0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --radius:16px;
 }
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --bg:#f6f4ee; --bg-raised:#ffffff; --bg-sunk:#efece2;
-    --ink:#1b1e28; --ink-soft:#3c4152; --muted:#6a7082;
-    --line:#ddd8ca; --line-strong:#c7c1af;
-    --amber:#b06f18; --amber-soft:rgba(176,111,24,.10); --amber-ink:#8a5510;
-    --cyan:#0f7f93; --cyan-soft:rgba(15,127,147,.10); --cyan-ink:#0b616f;
-    --good:#2f8a58; --good-soft:rgba(47,138,88,.10);
-    --shadow:0 1px 2px rgba(20,20,10,.06), 0 16px 34px -18px rgba(20,20,10,.16);
-  }
-}
-:root[data-theme="light"]{
-  --bg:#f6f4ee; --bg-raised:#ffffff; --bg-sunk:#efece2;
-  --ink:#1b1e28; --ink-soft:#3c4152; --muted:#6a7082;
-  --line:#ddd8ca; --line-strong:#c7c1af;
-  --amber:#b06f18; --amber-soft:rgba(176,111,24,.10); --amber-ink:#8a5510;
-  --cyan:#0f7f93; --cyan-soft:rgba(15,127,147,.10); --cyan-ink:#0b616f;
-  --good:#2f8a58; --good-soft:rgba(47,138,88,.10);
-  --shadow:0 1px 2px rgba(20,20,10,.06), 0 16px 34px -18px rgba(20,20,10,.16);
+[data-theme="dark"]{
+  --bg:#0f172a; --bg-raised:#1e293b; --bg-sunk:#020617;
+  --ink:#f1f5f9; --ink-soft:#cbd5e1; --muted:#94a3b8;
+  --line:#334155; --line-strong:#475569;
+  --amber:#3b82f6; --amber-soft:rgba(59,130,246,.16); --amber-ink:#60a5fa;
+  --cyan:#a78bfa; --cyan-soft:rgba(167,139,250,.16); --cyan-ink:#c4b5fd;
+  --good:#4ade80; --good-soft:rgba(74,222,128,.16);
+  --shadow:0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
 }
 
 *{box-sizing:border-box}
@@ -40,10 +31,10 @@ html{scroll-behavior:smooth}
 
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-family:"Sarabun","Inter",system-ui,sans-serif;
   font-size:17px; line-height:1.75; -webkit-font-smoothing:antialiased;
 }
-h1,h2,h3,.display,.chip,.tag,button{ font-family:"Chakra Petch","Sarabun",sans-serif; }
+h1,h2,h3,.display,.chip,.tag,button{ font-family:"Inter","Sarabun",sans-serif; }
 .mono{ font-family:"JetBrains Mono","Sarabun",monospace; font-variant-numeric:tabular-nums; }
 
 a{color:var(--cyan-ink)}
@@ -77,7 +68,7 @@ strong{ color:var(--ink); font-weight:600; }
   padding-top:1.1rem; padding-bottom:1.1rem;
 }
 .site-nav .brand{
-  font-family:"Chakra Petch",sans-serif; font-weight:700; font-size:1.05rem;
+  font-family:"Inter",sans-serif; font-weight:700; font-size:1.05rem;
   color:var(--ink); text-decoration:none; letter-spacing:.01em;
   display:inline-flex; align-items:baseline; gap:.5rem;
 }
@@ -86,9 +77,21 @@ strong{ color:var(--ink); font-weight:600; }
 .site-nav .tagline{ font-size:.8rem; color:var(--muted); font-family:"JetBrains Mono",monospace; }
 .site-nav a.back{
   font-size:.85rem; color:var(--ink-soft); text-decoration:none;
-  display:inline-flex; align-items:center; gap:.4rem; font-family:"Chakra Petch",sans-serif;
+  display:inline-flex; align-items:center; gap:.4rem; font-family:"Inter",sans-serif;
 }
 .site-nav a.back:hover{ color:var(--cyan-ink); }
+.site-nav .links{ display:flex; align-items:center; gap:1rem; }
+.site-nav .tool-link{
+  font-size:.85rem; font-weight:600; color:var(--ink-soft); text-decoration:none;
+  font-family:"Inter",sans-serif;
+}
+.site-nav .tool-link:hover{ color:var(--amber-ink); }
+#theme-toggle{
+  background:transparent; border:1.5px solid var(--line-strong); border-radius:8px;
+  width:2.125rem; height:2.125rem; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:1rem; line-height:1; padding:0; color:var(--ink);
+}
+#theme-toggle:hover{ background:var(--bg-sunk); border-color:var(--muted); }
 
 /* ---------------- Hero ---------------- */
 .hero{
@@ -103,7 +106,7 @@ h1{
 .hero p.lede{ font-size:1.15rem; max-width:56ch; }
 .scroll-cue{
   margin-top:2.4rem; display:inline-flex; align-items:center; gap:.6rem;
-  font-size:.85rem; color:var(--muted); font-family:"Chakra Petch",sans-serif;
+  font-size:.85rem; color:var(--muted); font-family:"Inter",sans-serif;
   letter-spacing:.04em;
 }
 .scroll-cue svg{ animation:bob 1.6s ease-in-out infinite; }
@@ -147,7 +150,7 @@ h1{
 }
 .points li::before{
   content:"›"; position:absolute; left:0; top:0;
-  color:var(--amber); font-weight:700; font-family:"Chakra Petch",sans-serif;
+  color:var(--amber); font-weight:700; font-family:"Inter",sans-serif;
 }
 
 .callout{
@@ -193,7 +196,7 @@ h1{
 .table-wrap{ overflow-x:auto; margin:1.4rem 0; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
 table{ border-collapse:collapse; width:100%; min-width:560px; background:var(--bg-raised); font-size:.88rem; }
 th,td{ padding:.65rem .9rem; text-align:left; border-bottom:1px solid var(--line); }
-thead th{ font-family:"Chakra Petch",sans-serif; font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg-sunk); }
+thead th{ font-family:"Inter",sans-serif; font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg-sunk); }
 tbody tr:last-child td{ border-bottom:none; }
 
 /* On narrow screens, stop forcing sideways scroll — stack each row into its own labeled card instead */
@@ -213,7 +216,7 @@ tbody tr:last-child td{ border-bottom:none; }
   tbody tr td:last-child{ border-bottom:none; }
   tbody tr td::before{
     content:attr(data-label);
-    font-family:"Chakra Petch",sans-serif; font-size:.72rem; font-weight:600;
+    font-family:"Inter",sans-serif; font-size:.72rem; font-weight:600;
     text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
   }
 }
@@ -224,7 +227,7 @@ tbody tr:last-child td{ border-bottom:none; }
 .tree-node rect{ fill:var(--bg-raised); stroke:var(--line-strong); stroke-width:1.4; }
 .tree-node.gm rect{ stroke:var(--amber); }
 .tree-node.tc rect{ stroke-dasharray:4 3; }
-.tree-node text{ fill:var(--ink); font-family:"Chakra Petch",sans-serif; }
+.tree-node text{ fill:var(--ink); font-family:"Inter",sans-serif; }
 .tree-node text.sub{ fill:var(--muted); font-family:"JetBrains Mono",monospace; }
 .tree-edge{ stroke:var(--line-strong); stroke-width:1.6; fill:none; }
 .flow-dot{
@@ -257,7 +260,7 @@ figcaption{ font-size:.85rem; color:var(--muted); margin-top:.7rem; }
 .post-card p{ font-size:.95rem; margin:0; max-width:none; color:var(--ink-soft); }
 .post-card .read-more{
   display:inline-flex; align-items:center; gap:.35rem; margin-top:.8rem;
-  font-family:"Chakra Petch",sans-serif; font-size:.85rem; font-weight:600; color:var(--amber-ink);
+  font-family:"Inter",sans-serif; font-size:.85rem; font-weight:600; color:var(--amber-ink);
 }
 .post-card:hover .read-more{ color:var(--cyan-ink); }
 
@@ -270,7 +273,7 @@ footer{
   padding:3.5rem 0 4.5rem; text-align:center; color:var(--muted); font-size:.85rem;
   border-top:1px solid var(--line); margin-top:1rem;
 }
-footer .mark{ font-family:"Chakra Petch",sans-serif; color:var(--ink-soft); margin-bottom:.4rem; }
+footer .mark{ font-family:"Inter",sans-serif; color:var(--ink-soft); margin-bottom:.4rem; }
 footer a{ color:var(--ink-soft); }
 
 ::selection{ background:var(--amber-soft); color:var(--ink); }

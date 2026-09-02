@@ -7,7 +7,7 @@
 <meta name="description" content="เว็บอธิบาย SyncE และ PTP profile ต่าง ๆ แบบเห็นภาพด้วยแอนิเมชัน ตั้งแต่พื้นฐาน frequency, phase, time จนถึงลำดับชั้นนาฬิกาในเครือข่าย">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 </head>
 <body>
@@ -15,7 +15,11 @@
 <nav class="site-nav">
   <div class="wrap">
     <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
-    <a class="back" href="../index.html">← กลับหน้าแรก</a>
+    <div class="links">
+      <a class="back" href="../index.html">← กลับหน้าแรก</a>
+      <a class="tool-link" href="../tools/ip-calculator/index.html">Tools</a>
+      <button id="theme-toggle" aria-label="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
   </div>
 </nav>
 
@@ -694,5 +698,6 @@
 
 })();
 </script>
+<script src="../assets/theme.js"></script>
 </body>
 </html>

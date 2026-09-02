@@ -7,7 +7,7 @@
 <meta name="description" content="บล็อกเก็บเรื่อง network และ telecom ที่อธิบายง่าย ๆ ด้วย animation — เขียนไว้อ่านเอง แชร์ต่อได้">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
   /* Index-only bits: intro block + post list spacing */
@@ -22,7 +22,11 @@
 <nav class="site-nav">
   <div class="wrap">
     <a class="brand" href="index.html">running<span class="prompt">&nbsp;config</span></a>
-    <span class="tagline">network &amp; telecom, อธิบายง่าย ๆ</span>
+    <div class="links">
+      <span class="tagline">network &amp; telecom, อธิบายง่าย ๆ</span>
+      <a class="tool-link" href="tools/ip-calculator/index.html">Tools</a>
+      <button id="theme-toggle" aria-label="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
   </div>
 </nav>
 
@@ -59,5 +63,6 @@
   </div>
 </footer>
 
+<script src="assets/theme.js"></script>
 </body>
 </html>
