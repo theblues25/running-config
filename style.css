@@ -143,9 +143,12 @@ h1{
 /* ---------------- Two-col text/points ---------------- */
 .points{ list-style:none; margin:1.1rem 0 1.4rem; padding:0; display:grid; gap:.65rem; }
 .points li{
-  display:grid; grid-template-columns:1.5rem 1fr; gap:.7rem; font-size:.96rem; color:var(--ink-soft);
+  position:relative; padding-left:1.7rem; font-size:.96rem; color:var(--ink-soft);
 }
-.points li::before{ content:"›"; color:var(--amber); font-weight:700; font-family:"Chakra Petch",sans-serif; }
+.points li::before{
+  content:"›"; position:absolute; left:0; top:0;
+  color:var(--amber); font-weight:700; font-family:"Chakra Petch",sans-serif;
+}
 
 .callout{
   border:1px solid var(--line); border-radius:var(--radius); padding:1rem 1.2rem;
