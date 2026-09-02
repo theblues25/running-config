@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>running config</title>
+<meta name="description" content="บล็อกเก็บเรื่อง network และ telecom ที่อธิบายง่าย ๆ ด้วย animation — เขียนไว้อ่านเอง แชร์ต่อได้">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Index-only bits: intro block + post list spacing */
+  .intro{ padding:4.2rem 0 2.5rem; }
+  .intro h1{ max-width:none; font-size:clamp(1.9rem,4.6vw,2.7rem); }
+  .intro p.lede{ max-width:58ch; }
+  main .wrap{ padding-bottom:1rem; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="index.html">running<span class="prompt">&nbsp;config</span></a>
+    <span class="tagline">network &amp; telecom, อธิบายง่าย ๆ</span>
+  </div>
+</nav>
+
+<header class="intro">
+  <div class="wrap">
+    <span class="kicker"><span class="dot"></span>บันทึกส่วนตัว · เปิดให้ทุกคนอ่าน</span>
+    <h1>เก็บเรื่อง network ที่เข้าใจยาก<br>ให้เห็นภาพง่าย ๆ ด้วย animation</h1>
+    <p class="lede">บล็อกนี้เขียนไว้อ่านเองเป็นหลัก อธิบายแนวคิดเครือข่ายและโทรคมนาคมตั้งแต่พื้นฐาน — SyncE, PTP, MPLS, BGP, QoS, 5G ฯลฯ — ด้วยแอนิเมชันที่ทำให้กลไกที่มองไม่เห็นกลายเป็นภาพจริง</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <ul class="post-list">
+    <li>
+      <a class="post-card" href="posts/syncE-and-ptp.html">
+        <div class="post-meta">
+          <span>2026-09-02</span>
+          <span class="tagset"><span>SyncE</span><span>PTP</span><span>Timing</span></span>
+        </div>
+        <h2>ทำไมนาฬิกาทุกตัวในเครือข่ายต้องเดินตรงกัน</h2>
+        <p>พื้นฐาน frequency, phase และ time of day คืออะไร ต่างกันยังไง แล้ว SyncE กับ PTP ส่งข้อมูลเหล่านี้ผ่านเครือข่ายได้ยังไง พร้อมเปรียบเทียบ PTP profile แบบ G.8275.1, G.8275.2 และ G.8265.1</p>
+        <span class="read-more">อ่านต่อ →</span>
+      </a>
+    </li>
+  </ul>
+
+  <p class="empty-note">กำลังทยอยเขียนเรื่องถัดไป — MPLS, BGP, QoS และหัวข้ออื่น ๆ จะตามมาเรื่อย ๆ</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="mark">running config</div>
+    <div>บันทึกเรื่อง network &amp; telecom · เขียนโดย <a href="https://github.com/theblues25" target="_blank" rel="noopener">theblues25</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

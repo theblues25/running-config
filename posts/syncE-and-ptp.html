@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทำไมนาฬิกาทุกตัวในเครือข่ายต้องเดินตรงกัน · running config</title>
+<meta name="description" content="เว็บอธิบาย SyncE และ PTP profile ต่าง ๆ แบบเห็นภาพด้วยแอนิเมชัน ตั้งแต่พื้นฐาน frequency, phase, time จนถึงลำดับชั้นนาฬิกาในเครือข่าย">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
+    <a class="back" href="../index.html">← กลับหน้าแรก</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="c-hero" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <span class="kicker"><span class="dot"></span>SyncE &amp; PTP ฉบับเข้าใจง่าย · 2026-09-02</span>
+    <h1>ทำไมนาฬิกาทุกตัว<br>ในเครือข่ายต้อง<span class="amber-text">&nbsp;เดินตรงกัน</span></h1>
+    <p class="lede">อุปกรณ์เครือข่ายหลายพันตัวทั่วประเทศ ต้อง "จับจังหวะ" และ "รู้เวลา" ตรงกันในระดับนาโนวินาที ถึงจะส่งสัญญาณโทรศัพท์ วิดีโอ หรือข้อมูลได้ไม่สะดุด หน้านี้จะพาไปดูว่า SyncE และ PTP ทำงานยังไง ด้วยแอนิเมชันที่มองเห็นภาพได้จริง — เริ่มจากศูนย์ ไม่ต้องมีพื้นฐานมาก่อน</p>
+    <span class="scroll-cue">เลื่อนลงเพื่อเริ่มเรียนรู้
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6l5 5 5-5"/></svg>
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 1. ทำไมต้อง sync ============ -->
+  <section id="why">
+    <span class="kicker"><span class="dot"></span>01 · จุดเริ่มต้น</span>
+    <h2>ทำไมอุปกรณ์เครือข่ายต้อง "ซิงค์" กัน</h2>
+    <p class="lede">ลองนึกถึงวงออร์เคสตรา — ถ้านักดนตรีแต่ละคนตีจังหวะเร็วช้าไม่เท่ากัน หรือเริ่มเล่นคนละจุดในโน้ต เสียงเพลงจะเพี้ยนทันที เครือข่ายโทรคมนาคมก็เหมือนกัน อุปกรณ์นับพันตัวต้อง "เดินตามจังหวะเดียวกัน" อย่างแม่นยำสุด ๆ โดยเฉพาะสถานีฐานมือถือ (4G/5G) ที่ต้องรู้เวลาแม่นระดับ <strong>ไม่กี่ร้อยนาโนวินาที</strong> ไม่งั้นสัญญาณจากเสาข้างเคียงจะชนกันเอง</p>
+    <p>คำว่า "ซิงค์" ในโลกโทรคมนาคมแยกออกเป็น 3 เรื่องที่ไม่เหมือนกัน แม้จะฟังดูคล้ายกัน — และนี่คือสิ่งที่หน้านี้จะอธิบายทีละเรื่องแบบช้า ๆ:</p>
+    <div class="trio">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>ความถี่ <span class="mono" style="font-size:.8em;color:var(--muted)">Frequency</span></h3>
+        <p>จังหวะเร็ว-ช้าของนาฬิกา ต้อง "เท่ากัน" ทุกตัว ไม่งั้นจะค่อย ๆ เพี้ยนห่างกันไปเรื่อย ๆ</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>เฟส <span class="mono" style="font-size:.8em;color:var(--muted)">Phase</span></h3>
+        <p>จังหวะเท่ากันไม่พอ ต้อง "ตรงจุดเดียวกัน" ด้วย เหมือนตบมือพร้อมกันเป๊ะ</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>เวลา <span class="mono" style="font-size:.8em;color:var(--muted)">Time of Day</span></h3>
+        <p>รู้ว่า "ตอนนี้กี่โมงกี่วินาทีจริง ๆ" เทียบกับเวลามาตรฐานโลกได้</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. Frequency ============ -->
+  <section id="freq">
+    <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
+    <h2>ความถี่ (Frequency) คืออะไร</h2>
+    <p class="lede">ความถี่ คือ "จำนวนจังหวะต่อวินาที" ของนาฬิกา — ถ้าอุปกรณ์สองตัวเดินจังหวะเร็วไม่เท่ากัน แม้ตอนแรกจะตั้งเวลาตรงกัน เวลาของทั้งคู่ก็จะค่อย ๆ ห่างกันไปเรื่อย ๆ เหมือนนาฬิกาข้อมือสองเรือนที่เรือนหนึ่งเดินเร็วกว่านิดเดียว ผ่านไปหนึ่งเดือนก็จะคลาดกันไปหลายนาที</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● อ้างอิง (Reference)</span>
+        <span class="chip cyan">● อุปกรณ์ (Local)</span>
+      </div>
+      <canvas id="c-freq" role="img" aria-label="แอนิเมชันแสดงจังหวะสองแถว แถวหนึ่งเริ่มเร็วกว่าอีกแถว แล้วค่อย ๆ ปรับจนจังหวะตรงกัน"></canvas>
+    </div>
+    <p class="caption">แถวบน (สีเหลือง) คือจังหวะอ้างอิงที่คงที่ แถวล่าง (สีฟ้า) เริ่มถี่กว่า (เร็วกว่า) แล้วค่อย ๆ ถูกปรับจนช่องห่างเท่ากับแถวบน — เมื่อ "จังหวะเท่ากัน" ระบบจะขึ้นสถานะ ✓ ให้เห็น</p>
+    <p>ในเครือข่ายจริง อุปกรณ์แต่ละตัวมี <strong>oscillator</strong> (แหล่งกำเนิดจังหวะ เช่น คริสตัลหรือรูบิเดียม) ของตัวเอง ซึ่งไม่มีทางเที่ยงตรงเป๊ะเหมือนกันทุกตัว จึงต้อง "ส่งต่อจังหวะ" จากแหล่งที่แม่นที่สุดไปให้อุปกรณ์อื่นเดินตาม — วิธีหนึ่งที่ใช้ส่งต่อความถี่นี้คือ <strong>SyncE</strong> ซึ่งจะอธิบายในหัวข้อถัดไป</p>
+  </section>
+
+  <!-- ============ 3. Phase ============ -->
+  <section id="phase">
+    <span class="kicker"><span class="dot"></span>03 · พื้นฐานที่ 2</span>
+    <h2>เฟส (Phase) คืออะไร</h2>
+    <p class="lede">ความถี่เท่ากันแค่บอกว่า "เร็วเท่ากัน" แต่ไม่ได้บอกว่า "จุดเริ่มตรงกัน" — เหมือนคนสองคนตบมือจังหวะละ 1 วินาทีเท่ากันเป๊ะ แต่ถ้าอีกคนตบช้ากว่าเสมอ 0.3 วินาที ก็ยังไม่เรียกว่า "phase ตรงกัน" ต้องปรับให้จุดตบมือ ตรงกันพอดีด้วย</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● คลื่นอ้างอิง</span>
+        <span class="chip cyan">● คลื่นอุปกรณ์</span>
+      </div>
+      <canvas id="c-phase" role="img" aria-label="แอนิเมชันคลื่นสองเส้นความถี่เท่ากันแต่ยอดคลื่นเหลื่อมกัน แล้วค่อย ๆ เลื่อนจนยอดคลื่นตรงกัน"></canvas>
+    </div>
+    <p class="caption">คลื่นทั้งสองเส้นมีความถี่เท่ากันตลอด (ระยะห่างยอดคลื่นเท่ากัน) แต่ยอดคลื่นเส้นฟ้าเหลื่อมจากเส้นเหลืองอยู่ — เมื่อ "เฟสตรงกัน" ยอดคลื่นทั้งคู่จะขึ้นพร้อมกันเป๊ะ</p>
+    <div class="callout">
+      <span class="tag">ทำไมต้องแคร์เรื่องนี้</span>
+      <p>ระบบมือถือแบบ TDD (Time Division Duplex เช่น 4G/5G ส่วนใหญ่) ใช้ "ช่วงเวลาเดียวกัน" สลับกันส่ง-รับสัญญาณ ถ้าเสาสัญญาณสองต้นที่อยู่ใกล้กัน phase ไม่ตรงกัน ต้นหนึ่งอาจกำลัง "ส่ง" ในขณะที่อีกต้น "รับ" อยู่ สัญญาณจะรบกวนกันทันที</p>
+    </div>
+  </section>
+
+  <!-- ============ 4. Time ============ -->
+  <section id="time">
+    <span class="kicker"><span class="dot"></span>04 · พื้นฐานที่ 3</span>
+    <h2>เวลา (Time of Day) คืออะไร</h2>
+    <p class="lede">ขั้นถัดมาคือการรู้ "เวลาจริง" ไม่ใช่แค่จังหวะ — คือบอกได้ว่าตอนนี้ ปี เดือน วัน ชั่วโมง นาที วินาที เท่าไหร่ เทียบกับเวลามาตรฐานโลก (UTC) เพื่อให้เอาเหตุการณ์ที่เกิดขึ้นคนละที่ในเครือข่ายมาเทียบกันได้ตรง ๆ เช่น log, การคิดค่าบริการ, หรือความปลอดภัยของระบบ</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● นาฬิกาอ้างอิง</span>
+        <span class="chip cyan">● นาฬิกาอุปกรณ์</span>
+      </div>
+      <canvas id="c-clock" role="img" aria-label="แอนิเมชันนาฬิกาสองเรือน เรือนหนึ่งเข็มชี้เวลาไม่ตรง แล้วขยับจนตรงกับอีกเรือน"></canvas>
+    </div>
+    <p class="caption">นาฬิกาฝั่งขวาเริ่มต้นชี้เวลาไม่ตรงกับฝั่งซ้าย (ตัวเลข Δt ด้านล่างแสดงส่วนต่าง) จากนั้นเข็มจะขยับปรับจนตรงกันพอดี และ Δt กลายเป็น 0</p>
+    <p>สังเกตว่านี่คือ "ขั้นที่ละเอียดกว่า" เฟส — อุปกรณ์อาจจังหวะตรงกัน (frequency ตรง) และตบมือพร้อมกัน (phase ตรง) แต่ยังไม่รู้ว่า "ตอนนี้กี่โมง" ก็ได้ ถ้าไม่มีใครบอกเวลาตั้งต้นให้ การส่งทั้ง phase และ time นี้ ทำผ่านโพรโทคอลที่ชื่อว่า <strong>PTP</strong></p>
+  </section>
+
+  <!-- ============ 5. SyncE ============ -->
+  <section id="synce">
+    <span class="kicker"><span class="dot"></span>05 · กลไกที่ 1</span>
+    <h2>SyncE ส่งความถี่ผ่านสายสัญญาณโดยตรง</h2>
+    <p class="lede"><strong>SyncE (Synchronous Ethernet)</strong> คือการส่ง "จังหวะ" (ความถี่) ไปพร้อมกับสัญญาณไฟฟ้า/แสงบนสาย Ethernet เอง — ไม่ใช่การส่งข้อความไปบอกจังหวะ แต่เป็นการทำให้สัญญาณที่วิ่งบนสายมี "จังหวะ" ฝังอยู่ในตัวมันเลย เหมือนส่งจังหวะเพลงผ่านการสั่นของสายไฟ ไม่ใช่พูดบอกกันเป็นคำพูด</p>
+    <div class="stage">
+      <div class="stage-label"><span class="chip amber">● สัญญาณจังหวะ (Physical layer)</span></div>
+      <canvas id="c-synce" role="img" aria-label="แอนิเมชันจุดสัญญาณเดินทางผ่านอุปกรณ์ 5 ตัวที่ต่อกันเป็นสาย แต่ละตัวรับจังหวะแล้วส่งต่อ"></canvas>
+    </div>
+    <p class="caption">แต่ละอุปกรณ์ (สี่เหลี่ยม) รับจังหวะจากอุปกรณ์ก่อนหน้า แล้ว "สร้างจังหวะใหม่" ที่แม่นเท่าเดิมส่งต่อไปอุปกรณ์ถัดไป ทำแบบนี้ทีละช่วง (hop-by-hop) ไปเรื่อย ๆ</p>
+    <ul class="points">
+      <li>ทุก "hop" (จุดต่อระหว่างอุปกรณ์สองตัว) ต้องรองรับ SyncE ถึงจะส่งต่อจังหวะได้ต่อเนื่องตลอดเส้นทาง</li>
+      <li>มีข้อความพิเศษชื่อ <strong>ESMC</strong> (Ethernet Synchronization Messaging Channel) คอยบอก "คุณภาพ" ของจังหวะต้นตอ เช่น ป้าย <span class="mono">QL-PRC</span> = คุณภาพดีที่สุด เพื่อให้อุปกรณ์ปลายทางเลือกรับจังหวะจากแหล่งที่ดีที่สุดโดยอัตโนมัติ</li>
+      <li>SyncE ส่งได้ <strong>แค่ความถี่เท่านั้น</strong> — ไม่ได้บอก phase หรือเวลาไปด้วย</li>
+    </ul>
+  </section>
+
+  <!-- ============ 6. PTP ============ -->
+  <section id="ptp">
+    <span class="kicker"><span class="dot"></span>06 · กลไกที่ 2</span>
+    <h2>PTP ส่ง "ข้อความถาม-ตอบเวลา" เป็นแพ็กเก็ต</h2>
+    <p class="lede"><strong>PTP (Precision Time Protocol)</strong> ทำงานต่างจาก SyncE โดยสิ้นเชิง — แทนที่จะฝังจังหวะไว้ในสัญญาณไฟฟ้า มันส่ง "แพ็กเก็ตข้อความ" ไปมาระหว่างอุปกรณ์ต้นทาง (Master) กับปลายทาง (Slave) แล้วให้ Slave คำนวณเองว่าตอนนี้นาฬิกาตัวเองคลาดจาก Master อยู่เท่าไหร่</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● Master</span>
+        <span class="chip cyan">● Slave</span>
+      </div>
+      <canvas id="c-ptp" role="img" aria-label="แอนิเมชันข้อความ Sync, Follow_Up, Delay_Req, Delay_Resp วิ่งไปมาระหว่าง Master กับ Slave พร้อมค่าประทับเวลา แล้วคำนวณส่วนต่างเวลา"></canvas>
+    </div>
+    <p class="caption">Master ส่ง <span class="mono">Sync</span> พร้อมประทับเวลา t1 → Slave รับที่ t2 · แล้ว Master บอก t1 จริงผ่าน <span class="mono">Follow_Up</span> · Slave ยิงถามกลับด้วย <span class="mono">Delay_Req</span> ที่ t3 → Master รับที่ t4 แล้วตอบกลับผ่าน <span class="mono">Delay_Resp</span> — จากตัวเลขทั้ง 4 ตัวนี้ Slave คำนวณ "ส่วนต่างเวลา" กับ Master ได้เอง แล้วปรับนาฬิกาตัวเองให้ตรง</p>
+    <div class="callout">
+      <span class="tag">จุดสำคัญ</span>
+      <p>PTP ส่งได้ทั้ง <strong>phase และเวลาจริง</strong> (ต่างจาก SyncE ที่ส่งได้แค่ความถี่) เพราะมันคุยกันด้วยตัวเลขเวลาที่ประทับไว้ในแพ็กเก็ตโดยตรง แต่ก็มีจุดอ่อน — ถ้าแพ็กเก็ตไปกลับใช้เวลาไม่เท่ากัน (asymmetric delay) การคำนวณจะคลาดตามไปด้วย นี่คือเหตุผลที่บาง profile ของ PTP ยังต้องพึ่ง SyncE ช่วยเสริมความแม่นยำ</p>
+    </div>
+  </section>
+
+  <!-- ============ 7. Clock hierarchy ============ -->
+  <section id="hierarchy">
+    <span class="kicker"><span class="dot"></span>07 · โครงสร้าง</span>
+    <h2>ใครเป็นใครในสายโซ่นาฬิกา</h2>
+    <p class="lede">เครือข่ายจริงมีอุปกรณ์หลายชั้นต่อกันเป็นทอด ๆ แต่ละชั้นมีบทบาทต่างกัน:</p>
+    <ul class="points">
+      <li><strong>Grandmaster (GM)</strong> — นาฬิกาต้นตอที่แม่นยำที่สุดในเครือข่าย ปกติรับเวลามาจากดาวเทียม GNSS/GPS</li>
+      <li><strong>Boundary Clock (BC)</strong> — อุปกรณ์กลางที่รับเวลาจาก GM แล้ว "กลายเป็น master ตัวใหม่" ส่งต่อให้อุปกรณ์ถัดไป ช่วยไม่ให้ความคลาดเคลื่อนสะสมยาวไปทั้งเส้นทาง</li>
+      <li><strong>Ordinary Clock (OC)</strong> — อุปกรณ์ปลายทางที่รับเวลามาใช้เฉยๆ ไม่ส่งต่อให้ใคร</li>
+      <li><strong>Transparent Clock (TC)</strong> — อุปกรณ์ที่ "ไม่ปรับนาฬิกาตัวเอง" แต่วัดว่าแพ็กเก็ต PTP ผ่านตัวมันช้าไปกี่นาโนวินาที แล้วแก้ตัวเลขในแพ็กเก็ตให้ถูกต้องก่อนส่งต่อ — เหมือนบุรุษไปรษณีย์ที่ประทับเวลาจริงตอนจดหมายผ่านมือตัวเอง</li>
+    </ul>
+    <figure class="tree-figure">
+      <svg viewBox="0 0 720 360" role="img" aria-label="แผนภาพลำดับชั้นนาฬิกา จาก Grandmaster ด้านบน ไล่ลงมาที่ Boundary Clock สองตัว แล้วแตกไปยัง Ordinary Clock และ Transparent Clock ที่ปลายทาง โดยมีจุดสัญญาณไหลลงตามเส้นทางตลอดเวลา">
+        <defs>
+          <path id="e-gm-bc1" d="M360,66 L200,150"/>
+          <path id="e-gm-bc2" d="M360,66 L520,150"/>
+          <path id="e-bc1-oca" d="M200,182 L108,278"/>
+          <path id="e-bc1-ocb" d="M200,182 L292,278"/>
+          <path id="e-bc2-tc"  d="M520,182 L520,244"/>
+          <path id="e-tc-occ"  d="M520,276 L648,320" />
+        </defs>
+
+        <!-- edges -->
+        <use href="#e-gm-bc1" class="tree-edge"/>
+        <use href="#e-gm-bc2" class="tree-edge"/>
+        <use href="#e-bc1-oca" class="tree-edge"/>
+        <use href="#e-bc1-ocb" class="tree-edge"/>
+        <use href="#e-bc2-tc" class="tree-edge"/>
+        <use href="#e-tc-occ" class="tree-edge"/>
+
+        <!-- flow dots -->
+        <circle class="flow-dot" style="offset-path:path('M360,66 L200,150'); animation-delay:0s"/>
+        <circle class="flow-dot" style="offset-path:path('M360,66 L520,150'); animation-delay:.5s"/>
+        <circle class="flow-dot" style="offset-path:path('M200,182 L108,278'); animation-delay:1.1s"/>
+        <circle class="flow-dot" style="offset-path:path('M200,182 L292,278'); animation-delay:1.6s"/>
+        <circle class="flow-dot" style="offset-path:path('M520,182 L520,244'); animation-delay:.9s; animation-duration:.9s"/>
+        <circle class="flow-dot" style="offset-path:path('M520,276 L648,320'); animation-delay:1.8s"/>
+
+        <!-- GM -->
+        <g class="tree-node gm">
+          <rect x="310" y="26" width="100" height="40" rx="9"/>
+          <text x="360" y="46" text-anchor="middle" font-size="13" font-weight="700">GM</text>
+          <text x="360" y="59" text-anchor="middle" font-size="9" class="sub">Grandmaster</text>
+        </g>
+
+        <!-- BC1 / BC2 -->
+        <g class="tree-node">
+          <rect x="150" y="150" width="100" height="40" rx="9"/>
+          <text x="200" y="170" text-anchor="middle" font-size="13" font-weight="700">BC</text>
+          <text x="200" y="183" text-anchor="middle" font-size="9" class="sub">Boundary Clock</text>
+        </g>
+        <g class="tree-node">
+          <rect x="470" y="150" width="100" height="40" rx="9"/>
+          <text x="520" y="170" text-anchor="middle" font-size="13" font-weight="700">BC</text>
+          <text x="520" y="183" text-anchor="middle" font-size="9" class="sub">Boundary Clock</text>
+        </g>
+
+        <!-- OC-a / OC-b -->
+        <g class="tree-node">
+          <rect x="60" y="278" width="96" height="40" rx="9"/>
+          <text x="108" y="298" text-anchor="middle" font-size="13" font-weight="700">OC</text>
+          <text x="108" y="311" text-anchor="middle" font-size="9" class="sub">Ordinary Clock</text>
+        </g>
+        <g class="tree-node">
+          <rect x="244" y="278" width="96" height="40" rx="9"/>
+          <text x="292" y="298" text-anchor="middle" font-size="13" font-weight="700">OC</text>
+          <text x="292" y="311" text-anchor="middle" font-size="9" class="sub">Ordinary Clock</text>
+        </g>
+
+        <!-- TC -->
+        <g class="tree-node tc">
+          <rect x="472" y="244" width="96" height="32" rx="8"/>
+          <text x="520" y="265" text-anchor="middle" font-size="12" font-weight="700">TC</text>
+        </g>
+
+        <!-- OC-c -->
+        <g class="tree-node">
+          <rect x="600" y="300" width="96" height="40" rx="9"/>
+          <text x="648" y="320" text-anchor="middle" font-size="13" font-weight="700">OC</text>
+          <text x="648" y="333" text-anchor="middle" font-size="9" class="sub">Ordinary Clock</text>
+        </g>
+
+        <text x="520" y="235" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-family="JetBrains Mono, monospace">ไม่ปรับนาฬิกา แค่แก้เวลาที่ผ่าน</text>
+      </svg>
+      <figcaption>เส้นสีจาง = เส้นทางส่งเวลา · จุดสีเหลือง = ข้อมูลเวลาที่ไหลลงตามลำดับชั้นอย่างต่อเนื่อง · กรอบเส้นประ = Transparent Clock ที่ปล่อยให้ผ่านแต่แก้ตัวเลขให้ถูกต้อง</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ 8. Profiles ============ -->
+  <section id="profiles">
+    <span class="kicker"><span class="dot"></span>08 · เลือกใช้แบบไหน</span>
+    <h2>PTP Profile ต่างกันยังไง</h2>
+    <p class="lede">"Profile" คือชุดกฎที่กำหนดว่าจะใช้ PTP แบบไหนในสถานการณ์ไหน — โดยเฉพาะว่าจะบังคับให้มี SyncE ควบคู่ไปด้วยหรือไม่ ยิ่งเข้มงวดเท่าไหร่ ยิ่งแม่นยำเท่านั้น แต่ก็ต้องการให้อุปกรณ์ทุกตัวตลอดเส้นทางรองรับมากขึ้นเท่านั้น</p>
+
+    <div class="profiles">
+      <div class="profile-card">
+        <h3>G.8275.1</h3>
+        <div class="sub">Full Timing Support / Telecom Profile</div>
+        <div class="chain" aria-hidden="true">
+          <div class="node"><div class="dotpair"><span class="on amber"></span><span class="on cyan"></span></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"><span class="on amber"></span><span class="on cyan"></span></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"><span class="on amber"></span><span class="on cyan"></span></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"><span class="on amber"></span><span class="on cyan"></span></div></div>
+        </div>
+        <ul>
+          <li>ต้องมี <strong>SyncE คู่กับ PTP ทุก hop</strong> ตลอดเส้นทาง</li>
+          <li>ทุกอุปกรณ์ระหว่างทางต้องรองรับทั้งสองอย่าง — เข้มงวดที่สุด</li>
+          <li>เหมาะกับ 5G/4G ที่ต้องการ phase &amp; time แม่นยำสูง</li>
+        </ul>
+        <span class="badge-acc">เป้าหมายความแม่นยำ ~1.5 µs ที่ปลายทาง</span>
+      </div>
+
+      <div class="profile-card">
+        <h3>G.8275.2</h3>
+        <div class="sub">Partial Timing Support (APTS)</div>
+        <div class="chain" aria-hidden="true">
+          <div class="node"><div class="dotpair"><span class="on cyan"></span></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"></div></div>
+          <div class="seg"></div>
+          <div class="node"><div class="dotpair"><span class="on cyan"></span></div></div>
+        </div>
+        <ul>
+          <li><strong>ไม่ต้องมี SyncE</strong> ตลอดเส้นทาง วิ่งผ่านอุปกรณ์ทั่วไปที่ไม่รองรับ PTP บางจุดได้</li>
+          <li>ใช้ PTP แบบ unicast ผ่าน network เดิมที่มีอยู่</li>
+          <li>แม่นยำน้อยกว่า และไวต่อความหน่วง/ความไม่สมมาตรของเส้นทางมากกว่า</li>
+        </ul>
+        <span class="badge-acc">ยืดหยุ่นกว่า แลกกับความแม่นยำที่ลดลง</span>
+      </div>
+    </div>
+
+    <p>ยังมี <strong>G.8265.1 (Frequency Profile)</strong> ซึ่งใช้ PTP ส่ง "ความถี่อย่างเดียว" ผ่านเครือข่ายทั่วไปได้โดยไม่ต้องมี SyncE เลย เหมาะกับกรณีที่ต้องการแค่จังหวะให้ตรงกัน ไม่สนใจ phase หรือเวลาจริง</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Profile</th><th>ต้องมี SyncE ไหม</th><th>ส่งอะไรได้บ้าง</th><th>ใช้ตอนไหน</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" data-label="Profile">G.8275.1</td>
+            <td data-label="ต้องมี SyncE ไหม">ต้องมี ทุก hop</td>
+            <td data-label="ส่งอะไรได้บ้าง">ความถี่ + เฟส + เวลา</td>
+            <td data-label="ใช้ตอนไหน">5G/4G ที่ต้องการความแม่นยำสูงสุด</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="Profile">G.8275.2</td>
+            <td data-label="ต้องมี SyncE ไหม">ไม่จำเป็น</td>
+            <td data-label="ส่งอะไรได้บ้าง">เฟส + เวลา (แม่นน้อยกว่า)</td>
+            <td data-label="ใช้ตอนไหน">เครือข่ายที่ยังไม่พร้อมรองรับ SyncE ทุกจุด</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="Profile">G.8265.1</td>
+            <td data-label="ต้องมี SyncE ไหม">ไม่ต้องเลย</td>
+            <td data-label="ส่งอะไรได้บ้าง">ความถี่อย่างเดียว</td>
+            <td data-label="ใช้ตอนไหน">งานที่ต้องการแค่จังหวะตรงกัน</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 9. Summary ============ -->
+  <section id="summary">
+    <span class="kicker"><span class="dot"></span>09 · สรุป</span>
+    <h2>เอามารวมกันแล้วทำงานยังไง</h2>
+    <p class="lede">ใน G.8275.1 ซึ่งเข้มงวดที่สุด SyncE และ PTP ทำงาน <strong>คู่กัน</strong> ไม่ใช่แทนกัน:</p>
+    <ul class="points">
+      <li><span class="amber-text">SyncE</span> กระจาย "ความถี่" ไปทีละ hop ผ่านสัญญาณ physical layer โดยตรง — ให้ทุกอุปกรณ์เดินจังหวะเท่ากัน</li>
+      <li><span class="cyan-text">PTP</span> (ผ่านสายโซ่ Boundary Clock) กระจาย "เฟสและเวลาจริง" ผ่านแพ็กเก็ตข้อความถาม-ตอบ — ให้ทุกอุปกรณ์รู้ว่าตอนนี้กี่โมงกี่วินาทีตรงกัน</li>
+      <li>รวมกันแล้ว เครือข่ายจึงมีทั้ง "ความเร็วเท่ากัน" และ "รู้ช่วงเวลาเดียวกันเป๊ะ" — ครบทั้งสามอย่างที่พูดถึงตั้งแต่ต้น: ความถี่ เฟส และเวลา</li>
+    </ul>
+  </section>
+
+  <p style="margin-top:-1rem;padding-bottom:3rem;"><a href="../index.html">← กลับไปดูโพสต์อื่น ๆ</a></p>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="mark">running config</div>
+    <div>อธิบายแนวคิด SyncE และ PTP profile แบบเข้าใจง่าย · G.8275.1 · G.8275.2 · G.8265.1</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function readColors(){
+    var cs = getComputedStyle(document.documentElement);
+    function g(n){ return cs.getPropertyValue(n).trim(); }
+    return {
+      bg:g('--bg'), raised:g('--bg-raised'), sunk:g('--bg-sunk'),
+      ink:g('--ink'), soft:g('--ink-soft'), muted:g('--muted'),
+      line:g('--line'), lineStrong:g('--line-strong'),
+      amber:g('--amber'), amberSoft:g('--amber-soft'),
+      cyan:g('--cyan'), cyanSoft:g('--cyan-soft'),
+      good:g('--good')
+    };
+  }
+  var C = readColors();
+  function refresh(){ C = readColors(); }
+  if (window.matchMedia) {
+    try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refresh); } catch(e){}
+  }
+  new MutationObserver(refresh).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+  function ease(t){ return t<0?0:t>1?1:(t*t*(3-2*t)); } // smoothstep
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp01(x){ return x<0?0:x>1?1:x; }
+
+  function mount(canvas, draw, staticT){
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var running = false, raf = null, start = null;
+
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio||1, 2);
+      var rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width*dpr));
+      canvas.height = Math.max(1, Math.round(rect.height*dpr));
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function renderAt(t){
+      var rect = canvas.getBoundingClientRect();
+      draw(ctx, rect.width, rect.height, t, C);
+    }
+
+    if (REDUCED) {
+      renderAt(staticT);
+      window.addEventListener('resize', function(){ renderAt(staticT); });
+      new MutationObserver(function(){ renderAt(staticT); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+      return;
+    }
+
+    function frame(ts){
+      if(start === null) start = ts;
+      var t = (ts - start) / 1000;
+      renderAt(t);
+      if (running) raf = requestAnimationFrame(frame);
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting && !running){ running = true; start = null; raf = requestAnimationFrame(frame); }
+        else if (!e.isIntersecting && running){ running = false; if(raf) cancelAnimationFrame(raf); }
+      });
+    }, {threshold:.12});
+    io.observe(canvas);
+  }
+
+  /* ---------------- Hero ambient ---------------- */
+  mount(document.getElementById('c-hero'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var rows = 4;
+    for (var r=0;r<rows;r++){
+      var y = h*(0.15+r*0.24);
+      var speed = 46 + r*9;
+      var spacing = 64 + (r%2)*10;
+      var col = r%2===0 ? C.amber : C.cyan;
+      ctx.globalAlpha = 0.35 - r*0.03;
+      ctx.fillStyle = col;
+      var offset = (t*speed) % spacing;
+      for (var x = w + spacing - offset; x > -spacing; x -= spacing){
+        ctx.beginPath();
+        ctx.arc(x, y, 2.6, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }, 2.4);
+
+  /* ---------------- Frequency ---------------- */
+  mount(document.getElementById('c-freq'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 9, tt = t % cycle;
+    var refSpacing = Math.max(46, w/11);
+    var v = 92;
+    var startSpacing = refSpacing*0.62;
+    var spacingLocal;
+    if (tt < 1) spacingLocal = startSpacing;
+    else if (tt < 4.6) spacingLocal = lerp(startSpacing, refSpacing, ease((tt-1)/3.6));
+    else spacingLocal = refSpacing;
+    var locked = tt >= 4.6;
+
+    var y1 = h*0.36, y2 = h*0.68, tickH = 34;
+
+    function row(y, spacing, color, phase){
+      ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap='round';
+      var offset = (t*v + phase) % spacing;
+      for (var x = w + spacing - offset; x > -spacing; x -= spacing){
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.moveTo(x, y-tickH/2); ctx.lineTo(x, y+tickH/2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    row(y1, refSpacing, C.amber, 0);
+    row(y2, spacingLocal, C.cyan, 0);
+
+    if (locked){
+      var glow = 0.5 + 0.5*Math.sin(t*6);
+      ctx.strokeStyle = C.good;
+      ctx.globalAlpha = 0.18 + 0.12*glow;
+      ctx.lineWidth = (h*0.68 - h*0.36) + tickH;
+      ctx.beginPath(); ctx.moveTo(0,(y1+y2)/2); ctx.lineTo(w,(y1+y2)/2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.font = '600 13px "Chakra Petch", sans-serif';
+    ctx.fillStyle = locked ? C.good : C.muted;
+    ctx.textAlign = 'right';
+    ctx.fillText(locked ? '✓ จังหวะตรงกันแล้ว' : 'กำลังจับจังหวะ…', w-14, 22);
+  }, 7);
+
+  /* ---------------- Phase ---------------- */
+  mount(document.getElementById('c-phase'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 9, tt = t % cycle;
+    var startOffset = Math.PI*0.85;
+    var phi;
+    if (tt < 1) phi = startOffset;
+    else if (tt < 4.6) phi = lerp(startOffset, 0, ease((tt-1)/3.6));
+    else phi = 0;
+    var locked = tt >= 4.6;
+
+    var k = (Math.PI*2*3)/w;
+    var omega = 2.1;
+    var A = h*0.13;
+    var y1 = h*0.36, y2 = h*0.68;
+
+    function wave(y, phase, color){
+      ctx.strokeStyle = color; ctx.lineWidth = 3.4; ctx.beginPath();
+      for (var x=0; x<=w; x+=4){
+        var yy = y + A*Math.sin(k*x - t*omega - phase);
+        if (x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+    }
+    wave(y1, 0, C.amber);
+    wave(y2, phi, C.cyan);
+
+    if (locked){
+      ctx.strokeStyle = C.good; ctx.setLineDash([3,4]); ctx.lineWidth=1.4; ctx.globalAlpha=.55+.35*Math.sin(t*6);
+      for (var px = (k*0 - t*omega)*0; px<w; px+=1){}
+      var period = (2*Math.PI)/k;
+      var phaseShift = ((t*omega) % (2*Math.PI))/k;
+      for (var xp = (period*0.25) - (phaseShift%period); xp<w; xp+=period){
+        ctx.beginPath(); ctx.moveTo(xp, y1-A-8); ctx.lineTo(xp, y2+A+8); ctx.stroke();
+      }
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+    }
+    ctx.font = '600 13px "Chakra Petch", sans-serif';
+    ctx.fillStyle = locked ? C.good : C.muted;
+    ctx.textAlign = 'right';
+    ctx.fillText(locked ? '✓ เฟสตรงกันแล้ว' : 'กำลังปรับเฟส…', w-14, 22);
+  }, 7);
+
+  /* ---------------- Clock (Time) ---------------- */
+  mount(document.getElementById('c-clock'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 9, tt = t % cycle;
+    var startOffsetMs = -420, offsetMs;
+    if (tt < 1) offsetMs = startOffsetMs;
+    else if (tt < 3.6) offsetMs = lerp(startOffsetMs, 0, ease((tt-1)/2.6));
+    else offsetMs = 0;
+    var locked = tt >= 3.6;
+
+    var cx1 = w*0.28, cx2 = w*0.72, cy = h*0.42, R = Math.min(h*0.30, w*0.16);
+
+    function face(cx,cy,R,color){
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+      ctx.strokeStyle = C.lineStrong; ctx.lineWidth=2; ctx.stroke();
+      for (var i=0;i<12;i++){
+        var a = i*Math.PI/6;
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(a)*(R-6), cy+Math.sin(a)*(R-6));
+        ctx.lineTo(cx+Math.cos(a)*(R-1), cy+Math.sin(a)*(R-1));
+        ctx.strokeStyle = C.muted; ctx.lineWidth=1.4; ctx.stroke();
+      }
+    }
+    function hand(cx,cy,R,angle,len,width,color){
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+Math.cos(angle)*len, cy+Math.sin(angle)*len);
+      ctx.stroke();
+    }
+
+    var baseAngle = -Math.PI/2 + t*1.15;
+    face(cx1,cy,R);
+    hand(cx1,cy,R, baseAngle, R*0.78, 3.2, C.amber);
+    hand(cx1,cy,R, baseAngle*0.083, R*0.5, 4.2, C.amber);
+    ctx.beginPath(); ctx.arc(cx1,cy,3.4,0,Math.PI*2); ctx.fillStyle=C.amber; ctx.fill();
+
+    var offsetAngle = (offsetMs/1000) * 1.2;
+    face(cx2,cy,R);
+    hand(cx2,cy,R, baseAngle+offsetAngle, R*0.78, 3.2, C.cyan);
+    hand(cx2,cy,R, (baseAngle+offsetAngle)*0.083, R*0.5, 4.2, C.cyan);
+    ctx.beginPath(); ctx.arc(cx2,cy,3.4,0,Math.PI*2); ctx.fillStyle=C.cyan; ctx.fill();
+
+    ctx.textAlign='center';
+    ctx.font='500 12px "Chakra Petch", sans-serif'; ctx.fillStyle=C.muted;
+    ctx.fillText('อ้างอิง', cx1, cy+R+22);
+    ctx.fillText('อุปกรณ์', cx2, cy+R+22);
+
+    ctx.font = '600 15px "JetBrains Mono", monospace';
+    ctx.fillStyle = locked ? C.good : C.soft;
+    ctx.fillText((locked ? '✓ Δt = 0 ms' : 'Δt = ' + Math.round(offsetMs) + ' ms'), w/2, h-16);
+  }, 6.5);
+
+  /* ---------------- SyncE chain ---------------- */
+  mount(document.getElementById('c-synce'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var n = 5;
+    var pad = w*0.09;
+    var y = h*0.5;
+    var xs = [];
+    for (var i=0;i<n;i++) xs.push(pad + (w-2*pad)*(i/(n-1)));
+    var boxW = Math.min(64, (w-2*pad)/n*0.62), boxH = 40;
+
+    var hopTime = 1.0, pauseTime = 0.28;
+    var totalHop = hopTime+pauseTime;
+    var cycle = totalHop*(n-1);
+    var tt = t % cycle;
+
+    for (i=0;i<n-1;i++){
+      ctx.strokeStyle = C.lineStrong; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(xs[i]+boxW/2, y); ctx.lineTo(xs[i+1]-boxW/2, y); ctx.stroke();
+    }
+
+    var hopIndex = Math.floor(tt/totalHop);
+    var within = tt - hopIndex*totalHop;
+    var glowNode = -1, pulseX = null;
+    if (hopIndex < n-1){
+      if (within < hopTime){
+        var p = ease(within/hopTime);
+        pulseX = lerp(xs[hopIndex]+boxW/2, xs[hopIndex+1]-boxW/2, p);
+      } else {
+        glowNode = hopIndex+1;
+      }
+    }
+
+    for (i=0;i<n;i++){
+      var glowing = (i===glowNode) || (i===0 && tt < 0.3);
+      ctx.fillStyle = C.sunk;
+      ctx.strokeStyle = glowing ? C.amber : C.lineStrong;
+      ctx.lineWidth = glowing ? 2.6 : 1.6;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(xs[i]-boxW/2, y-boxH/2, boxW, boxH, 8) : ctx.rect(xs[i]-boxW/2, y-boxH/2, boxW, boxH);
+      ctx.fill(); ctx.stroke();
+      if (glowing){
+        ctx.globalAlpha = 0.22; ctx.fillStyle = C.amber;
+        ctx.beginPath();
+        ctx.arc(xs[i], y, boxW*0.62, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = C.soft;
+      ctx.font = '600 10px "JetBrains Mono", monospace';
+      ctx.textAlign='center';
+      ctx.fillText(i===0? 'SRC' : ('N'+i), xs[i], y+3);
+    }
+
+    if (pulseX !== null){
+      ctx.fillStyle = C.amber;
+      ctx.beginPath(); ctx.arc(pulseX, y, 6, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(pulseX, y, 12, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    }
+
+    ctx.font='500 11px "Chakra Petch", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+    ctx.fillText('QL: PRC (คุณภาพสูงสุด)', xs[0], y-boxH/2-14);
+  }, 2.2);
+
+  /* ---------------- PTP exchange ---------------- */
+  mount(document.getElementById('c-ptp'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var mx = w*0.20, sx = w*0.80, ny = h*0.32, boxW=88, boxH=46;
+    var cycle = 8, tt = t % cycle;
+
+    function box(x,y,label,sub,color){
+      ctx.fillStyle = C.sunk; ctx.strokeStyle = color; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x-boxW/2,y-boxH/2,boxW,boxH,9) : ctx.rect(x-boxW/2,y-boxH/2,boxW,boxH);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.font='700 13px "Chakra Petch", sans-serif'; ctx.textAlign='center';
+      ctx.fillText(label, x, y+2);
+      ctx.fillStyle = C.muted; ctx.font='500 9px "JetBrains Mono", monospace';
+      ctx.fillText(sub, x, y+16);
+    }
+    box(mx,ny,'Master','GM / BC', C.amber);
+    box(sx,ny,'Slave','downstream', C.cyan);
+
+    function arrow(x1,y1,x2,y2,p,color,label){
+      var xx = lerp(x1,x2,p), yy = lerp(y1,y2,p);
+      ctx.strokeStyle = color; ctx.lineWidth=2.4; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xx,yy); ctx.stroke();
+      var ang = Math.atan2(y2-y1,x2-x1);
+      ctx.beginPath();
+      ctx.moveTo(xx,yy);
+      ctx.lineTo(xx-8*Math.cos(ang-0.4), yy-8*Math.sin(ang-0.4));
+      ctx.lineTo(xx-8*Math.cos(ang+0.4), yy-8*Math.sin(ang+0.4));
+      ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+      ctx.fillStyle = color; ctx.font='600 10px "JetBrains Mono", monospace'; ctx.textAlign='center';
+      ctx.fillText(label, (x1+x2)/2, ny-boxH/2-10);
+    }
+
+    var y0 = ny;
+    var stamps = [];
+    function win(a,b){ return {a:a,b:b, p: clamp01((tt-a)/(b-a)), active: tt>=a && tt<b}; }
+
+    var wSync = win(0.0,1.0), wFol = win(1.3,2.3), wReq = win(2.6,3.6), wResp = win(3.9,4.9);
+
+    if (tt>=0.0) stamps.push(['t1', mx, ny+boxH/2+16, C.amber]);
+    if (wSync.active) arrow(mx,y0,sx,y0, ease(wSync.p), C.amber, 'Sync');
+    if (tt>=1.0) stamps.push(['t2', sx, ny+boxH/2+16, C.cyan]);
+
+    if (wFol.active) arrow(mx,y0,sx,y0, ease(wFol.p), C.amber, 'Follow_Up (t1)');
+
+    if (tt>=2.6) stamps.push(['t3', sx, ny+boxH/2+32, C.cyan]);
+    if (wReq.active) arrow(sx,y0,mx,y0, ease(wReq.p), C.cyan, 'Delay_Req');
+    if (tt>=3.6) stamps.push(['t4', mx, ny+boxH/2+32, C.amber]);
+
+    if (wResp.active) arrow(mx,y0,sx,y0, ease(wResp.p), C.cyan, 'Delay_Resp (t4)');
+
+    stamps.forEach(function(s){
+      ctx.fillStyle = s[3]; ctx.font='600 11px "JetBrains Mono", monospace'; ctx.textAlign='center';
+      ctx.fillText(s[0], s[1], s[2]);
+    });
+
+    if (tt >= 4.9){
+      var a2 = clamp01((tt-4.9)/0.4);
+      ctx.globalAlpha = a2;
+      ctx.fillStyle = C.good; ctx.font='700 13px "JetBrains Mono", monospace'; ctx.textAlign='center';
+      ctx.fillText('offset ≈ −212 ns   ·   mean delay ≈ 850 ns', w/2, h-14);
+      ctx.globalAlpha = 1;
+      if (tt < 5.3){
+        ctx.strokeStyle=C.good; ctx.lineWidth=2.4; ctx.globalAlpha=1-(tt-4.9)/0.4*0.4;
+        ctx.beginPath(); ctx.arc(sx,ny,boxW*0.62,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
+      }
+    }
+  }, 5.1);
+
+})();
+</script>
+</body>
+</html>

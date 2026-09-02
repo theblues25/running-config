@@ -1,0 +1,273 @@
+/* running-config — shared design system
+   Dark-first token system, generalized from the "ห้องทดลองซิงค์เวลา" post
+   so every future post and the index share one identity. */
+
+:root{
+  /* dark-first: bare :root carries the DARK palette */
+  --bg:#12141c; --bg-raised:#181c28; --bg-sunk:#0d0f16;
+  --ink:#eef0f6; --ink-soft:#b9bfd0; --muted:#7c8299;
+  --line:#262c3d; --line-strong:#343c53;
+  --amber:#e8a33d; --amber-soft:rgba(232,163,61,.14); --amber-ink:#f4c579;
+  --cyan:#57c3d6; --cyan-soft:rgba(87,195,214,.14); --cyan-ink:#8fdcea;
+  --good:#6fcf97; --good-soft:rgba(111,207,151,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 20px 40px -20px rgba(0,0,0,.55);
+  --radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f4ee; --bg-raised:#ffffff; --bg-sunk:#efece2;
+    --ink:#1b1e28; --ink-soft:#3c4152; --muted:#6a7082;
+    --line:#ddd8ca; --line-strong:#c7c1af;
+    --amber:#b06f18; --amber-soft:rgba(176,111,24,.10); --amber-ink:#8a5510;
+    --cyan:#0f7f93; --cyan-soft:rgba(15,127,147,.10); --cyan-ink:#0b616f;
+    --good:#2f8a58; --good-soft:rgba(47,138,88,.10);
+    --shadow:0 1px 2px rgba(20,20,10,.06), 0 16px 34px -18px rgba(20,20,10,.16);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f6f4ee; --bg-raised:#ffffff; --bg-sunk:#efece2;
+  --ink:#1b1e28; --ink-soft:#3c4152; --muted:#6a7082;
+  --line:#ddd8ca; --line-strong:#c7c1af;
+  --amber:#b06f18; --amber-soft:rgba(176,111,24,.10); --amber-ink:#8a5510;
+  --cyan:#0f7f93; --cyan-soft:rgba(15,127,147,.10); --cyan-ink:#0b616f;
+  --good:#2f8a58; --good-soft:rgba(47,138,88,.10);
+  --shadow:0 1px 2px rgba(20,20,10,.06), 0 16px 34px -18px rgba(20,20,10,.16);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-size:17px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display,.chip,.tag,button{ font-family:"Chakra Petch","Sarabun",sans-serif; }
+.mono{ font-family:"JetBrains Mono","Sarabun",monospace; font-variant-numeric:tabular-nums; }
+
+a{color:var(--cyan-ink)}
+:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; }
+
+.wrap{ max-width:980px; margin:0 auto; padding:0 1.4rem; }
+section{ padding:5.5rem 0; border-top:1px solid var(--line); }
+section:first-of-type{ border-top:none; }
+h2{
+  font-size:clamp(1.5rem,3.4vw,2.05rem); font-weight:700; letter-spacing:.01em;
+  margin:0 0 .6rem; text-wrap:balance; line-height:1.25;
+}
+.kicker{
+  display:inline-flex; align-items:center; gap:.5rem;
+  font-size:.78rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:.9rem;
+}
+.kicker .dot{ width:.5rem; height:.5rem; border-radius:50%; background:var(--amber); box-shadow:0 0 0 4px var(--amber-soft); }
+p{ margin:0 0 1.05rem; max-width:66ch; color:var(--ink-soft); }
+p.lede{ font-size:1.08rem; color:var(--ink); max-width:62ch; }
+strong{ color:var(--ink); font-weight:600; }
+.amber-text{ color:var(--amber-ink); }
+.cyan-text{ color:var(--cyan-ink); }
+
+/* ---------------- Site nav (every page) ---------------- */
+.site-nav{
+  border-bottom:1px solid var(--line);
+}
+.site-nav .wrap{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  padding-top:1.1rem; padding-bottom:1.1rem;
+}
+.site-nav .brand{
+  font-family:"Chakra Petch",sans-serif; font-weight:700; font-size:1.05rem;
+  color:var(--ink); text-decoration:none; letter-spacing:.01em;
+  display:inline-flex; align-items:baseline; gap:.5rem;
+}
+.site-nav .brand .prompt{ color:var(--amber); }
+.site-nav .brand::before{ content:"$"; color:var(--amber); font-family:"JetBrains Mono",monospace; }
+.site-nav .tagline{ font-size:.8rem; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+.site-nav a.back{
+  font-size:.85rem; color:var(--ink-soft); text-decoration:none;
+  display:inline-flex; align-items:center; gap:.4rem; font-family:"Chakra Petch",sans-serif;
+}
+.site-nav a.back:hover{ color:var(--cyan-ink); }
+
+/* ---------------- Hero ---------------- */
+.hero{
+  padding:5rem 0 4rem; border-top:none; position:relative; overflow:hidden;
+}
+.hero-inner{ position:relative; z-index:1; }
+.hero canvas{ position:absolute; inset:0; width:100%; height:100%; z-index:0; opacity:.55; }
+h1{
+  font-size:clamp(2.1rem,5.6vw,3.4rem); font-weight:700; line-height:1.18;
+  letter-spacing:.005em; margin:.3rem 0 1.1rem; max-width:16ch; text-wrap:balance;
+}
+.hero p.lede{ font-size:1.15rem; max-width:56ch; }
+.scroll-cue{
+  margin-top:2.4rem; display:inline-flex; align-items:center; gap:.6rem;
+  font-size:.85rem; color:var(--muted); font-family:"Chakra Petch",sans-serif;
+  letter-spacing:.04em;
+}
+.scroll-cue svg{ animation:bob 1.6s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+@media (prefers-reduced-motion: reduce){ .scroll-cue svg{ animation:none } }
+
+/* ---------------- Concept intro cards ---------------- */
+.trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin:2rem 0 .5rem; }
+@media (max-width:720px){ .trio{ grid-template-columns:1fr; } }
+.trio .card{
+  background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
+  padding:1.2rem 1.3rem; box-shadow:var(--shadow);
+}
+.trio .card .num{ font-family:"JetBrains Mono",monospace; color:var(--muted); font-size:.8rem; }
+.trio .card h3{ margin:.35rem 0 .4rem; font-size:1.05rem; }
+.trio .card p{ font-size:.92rem; margin:0; max-width:none; }
+
+/* ---------------- Canvas frame ---------------- */
+.stage{
+  background:var(--bg-sunk); border:1px solid var(--line-strong); border-radius:var(--radius);
+  box-shadow:var(--shadow); overflow:hidden; margin:1.7rem 0 1.3rem; position:relative;
+}
+.stage canvas{ display:block; width:100%; height:260px; }
+.stage .stage-label{
+  position:absolute; top:.8rem; left:1rem; display:flex; gap:.5rem; flex-wrap:wrap;
+  font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.02em;
+}
+.chip{
+  font-size:.72rem; font-weight:600; padding:.22rem .6rem; border-radius:999px;
+  border:1px solid; display:inline-flex; align-items:center; gap:.35rem;
+}
+.chip.amber{ color:var(--amber-ink); border-color:var(--amber); background:var(--amber-soft); }
+.chip.cyan{ color:var(--cyan-ink); border-color:var(--cyan); background:var(--cyan-soft); }
+.chip.good{ color:var(--good); border-color:var(--good); background:var(--good-soft); }
+.caption{ font-size:.85rem; color:var(--muted); margin:0 0 1.6rem; }
+
+/* ---------------- Two-col text/points ---------------- */
+.points{ list-style:none; margin:1.1rem 0 1.4rem; padding:0; display:grid; gap:.65rem; }
+.points li{
+  display:grid; grid-template-columns:1.5rem 1fr; gap:.7rem; font-size:.96rem; color:var(--ink-soft);
+}
+.points li::before{ content:"›"; color:var(--amber); font-weight:700; font-family:"Chakra Petch",sans-serif; }
+
+.callout{
+  border:1px solid var(--line); border-radius:var(--radius); padding:1rem 1.2rem;
+  background:var(--bg-raised); margin:1.3rem 0; box-shadow:var(--shadow);
+}
+.callout .tag{
+  font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  display:inline-block; margin-bottom:.5rem; color:var(--cyan-ink);
+}
+.callout p{ margin:0; max-width:none; font-size:.94rem; }
+
+/* ---------------- PTP profile comparison ---------------- */
+.profiles{ display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; margin:1.8rem 0; }
+@media (max-width:720px){ .profiles{ grid-template-columns:1fr; } }
+.profile-card{
+  border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--bg-raised);
+  padding:1.3rem 1.3rem 1.1rem; box-shadow:var(--shadow);
+}
+.profile-card h3{ margin:0 0 .15rem; font-size:1.08rem; }
+.profile-card .sub{ font-size:.8rem; color:var(--muted); margin-bottom:1rem; font-family:"JetBrains Mono",monospace; }
+.chain{ display:flex; align-items:center; gap:.25rem; margin:1rem 0 1.1rem; }
+.chain .node{
+  width:2.1rem; height:2.1rem; border-radius:8px; border:1.5px solid var(--line-strong);
+  display:flex; align-items:center; justify-content:center; position:relative; flex:0 0 auto;
+  background:var(--bg-sunk);
+}
+.chain .seg{ flex:1 1 auto; height:2px; background:var(--line-strong); position:relative; min-width:6px; }
+.dotpair{ display:flex; gap:3px; }
+.dotpair span{ width:6px; height:6px; border-radius:50%; background:var(--line-strong); }
+.dotpair span.on.amber{ background:var(--amber); box-shadow:0 0 6px var(--amber); animation:pulse-soft 1.8s ease-in-out infinite; }
+.dotpair span.on.cyan{ background:var(--cyan); box-shadow:0 0 6px var(--cyan); animation:pulse-soft 1.8s ease-in-out infinite .3s; }
+@keyframes pulse-soft{ 0%,100%{opacity:.55} 50%{opacity:1} }
+@media (prefers-reduced-motion: reduce){ .dotpair span.on{ animation:none; opacity:1 } }
+.profile-card ul{ margin:0; padding-left:1.15rem; font-size:.9rem; color:var(--ink-soft); }
+.profile-card ul li{ margin-bottom:.4rem; }
+.badge-acc{
+  display:inline-block; margin-top:.9rem; font-family:"JetBrains Mono",monospace; font-size:.78rem;
+  padding:.3rem .6rem; border-radius:8px; background:var(--bg-sunk); border:1px solid var(--line);
+  color:var(--ink-soft);
+}
+
+.table-wrap{ overflow-x:auto; margin:1.4rem 0; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+table{ border-collapse:collapse; width:100%; min-width:560px; background:var(--bg-raised); font-size:.88rem; }
+th,td{ padding:.65rem .9rem; text-align:left; border-bottom:1px solid var(--line); }
+thead th{ font-family:"Chakra Petch",sans-serif; font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg-sunk); }
+tbody tr:last-child td{ border-bottom:none; }
+
+/* On narrow screens, stop forcing sideways scroll — stack each row into its own labeled card instead */
+@media (max-width:600px){
+  .table-wrap{ overflow-x:visible; border:none; box-shadow:none; border-radius:0; }
+  table{ min-width:0; display:block; }
+  thead{ display:none; }
+  tbody{ display:grid; gap:.7rem; }
+  tbody tr{
+    display:block; background:var(--bg-raised); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:.2rem .95rem;
+  }
+  tbody tr td{
+    display:grid; grid-template-columns:9.2rem 1fr; gap:.8rem; align-items:baseline;
+    padding:.55rem 0; border-bottom:1px solid var(--line);
+  }
+  tbody tr td:last-child{ border-bottom:none; }
+  tbody tr td::before{
+    content:attr(data-label);
+    font-family:"Chakra Petch",sans-serif; font-size:.72rem; font-weight:600;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
+  }
+}
+
+/* ---------------- Hierarchy SVG ---------------- */
+.tree-figure{ margin:1.7rem 0 1rem; }
+.tree-figure svg{ width:100%; height:auto; display:block; }
+.tree-node rect{ fill:var(--bg-raised); stroke:var(--line-strong); stroke-width:1.4; }
+.tree-node.gm rect{ stroke:var(--amber); }
+.tree-node.tc rect{ stroke-dasharray:4 3; }
+.tree-node text{ fill:var(--ink); font-family:"Chakra Petch",sans-serif; }
+.tree-node text.sub{ fill:var(--muted); font-family:"JetBrains Mono",monospace; }
+.tree-edge{ stroke:var(--line-strong); stroke-width:1.6; fill:none; }
+.flow-dot{
+  r:3.2; fill:var(--amber);
+  offset-rotate:0deg;
+  animation:flow 2.2s linear infinite;
+}
+@keyframes flow{ from{ offset-distance:0% } to{ offset-distance:100% } }
+@media (prefers-reduced-motion: reduce){ .flow-dot{ animation:none; offset-distance:60%; } }
+figcaption{ font-size:.85rem; color:var(--muted); margin-top:.7rem; }
+
+/* ---------------- Post list (index) ---------------- */
+.post-list{ list-style:none; margin:2rem 0 0; padding:0; display:grid; gap:1rem; }
+.post-card{
+  display:block; text-decoration:none; color:inherit;
+  background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
+  padding:1.4rem 1.5rem; box-shadow:var(--shadow);
+  transition:border-color .15s ease, transform .15s ease;
+}
+.post-card:hover{ border-color:var(--line-strong); transform:translateY(-1px); }
+.post-card .post-meta{
+  display:flex; gap:.7rem; align-items:center; margin-bottom:.5rem;
+  font-family:"JetBrains Mono",monospace; font-size:.76rem; color:var(--muted);
+}
+.post-card .post-meta .tagset{ display:flex; gap:.4rem; flex-wrap:wrap; }
+.post-card .post-meta .tagset span{
+  border:1px solid var(--line-strong); border-radius:999px; padding:.08rem .55rem; color:var(--cyan-ink);
+}
+.post-card h2{ font-size:1.28rem; margin:0 0 .45rem; }
+.post-card p{ font-size:.95rem; margin:0; max-width:none; color:var(--ink-soft); }
+.post-card .read-more{
+  display:inline-flex; align-items:center; gap:.35rem; margin-top:.8rem;
+  font-family:"Chakra Petch",sans-serif; font-size:.85rem; font-weight:600; color:var(--amber-ink);
+}
+.post-card:hover .read-more{ color:var(--cyan-ink); }
+
+.empty-note{
+  border:1px dashed var(--line-strong); border-radius:var(--radius); padding:1.2rem 1.4rem;
+  color:var(--muted); font-size:.92rem; margin-top:1.2rem;
+}
+
+footer{
+  padding:3.5rem 0 4.5rem; text-align:center; color:var(--muted); font-size:.85rem;
+  border-top:1px solid var(--line); margin-top:1rem;
+}
+footer .mark{ font-family:"Chakra Petch",sans-serif; color:var(--ink-soft); margin-bottom:.4rem; }
+footer a{ color:var(--ink-soft); }
+
+::selection{ background:var(--amber-soft); color:var(--ink); }
