@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO -->
+  <title>IP Subnet Calculator — IPv4 &amp; IPv6 | Free Online Tool</title>
+  <meta name="description" content="Free online IP subnet calculator for IPv4 and IPv6. Instantly calculate network address, broadcast, usable host range, subnet mask, wildcard mask, CIDR notation, IP class, binary representation, and more. Export results to Excel.">
+  <meta name="keywords" content="ip subnet calculator, subnet calculator, ipv4 calculator, ipv6 calculator, cidr calculator, network calculator, subnet mask calculator, ip address calculator, wildcard mask, broadcast address, usable hosts">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://ip-subnet-calculator-dc0q.onrender.com/">
+
+  <!-- Open Graph (Facebook / LinkedIn) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="IP Subnet Calculator — IPv4 &amp; IPv6">
+  <meta property="og:description" content="Free online subnet calculator. Calculate network address, broadcast, usable hosts, subnet mask, binary representation for IPv4 and IPv6. Export to Excel.">
+  <meta property="og:url" content="https://ip-subnet-calculator-dc0q.onrender.com/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="IP Subnet Calculator — IPv4 &amp; IPv6">
+  <meta name="twitter:description" content="Free online subnet calculator for IPv4 and IPv6. Network address, broadcast, CIDR, wildcard mask, and more.">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "IP Subnet Calculator",
+    "description": "Free online IP subnet calculator supporting IPv4 and IPv6. Calculates network address, broadcast address, usable host range, subnet mask, wildcard mask, CIDR notation, IP class, binary representation, and lists all subnets in the containing network.",
+    "applicationCategory": "NetworkingApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "featureList": [
+      "IPv4 subnet calculation",
+      "IPv6 subnet calculation",
+      "Network address, broadcast address, usable host range",
+      "Subnet mask and wildcard mask",
+      "CIDR notation",
+      "IP class detection (A, B, C, D, E)",
+      "Binary representation with color-coded network and host bits",
+      "All possible subnets in containing network",
+      "Export results to Excel",
+      "Dark and light theme"
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        <h1 data-i18n="title.main">IP Subnet Calculator</h1>
+      </div>
+      <div class="header-controls">
+        <button id="theme-toggle" class="btn-icon" aria-label="Toggle theme">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h2 class="tools-heading" style="margin-bottom:0.75rem">Subnet Calculator</h2>
+    <section class="input-section">
+      <div class="input-card">
+        <label class="input-label" for="ip-input" data-i18n="label.input">Enter IP Address</label>
+        <div class="input-row">
+          <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" id="ip-input" class="ip-input"
+              placeholder="192.168.1.50/24 or 2001:db8::1/64"
+              autocomplete="off" spellcheck="false">
+          </div>
+          <button id="calc-btn" class="btn-primary" data-i18n="btn.calculate">Calculate</button>
+          <button id="clear-btn" class="btn-secondary" data-i18n="btn.clear">Clear</button>
+        </div>
+        <p class="hint-text" data-i18n="hint.format">Supports: 192.168.1.1/24 · 192.168.1.1 255.255.255.0 · 2001:db8::1/48</p>
+        <div id="error-msg" class="error-msg hidden"></div>
+      </div>
+    </section>
+
+    <section id="result-section" class="result-section hidden">
+
+      <!-- IPv4 Results -->
+      <div id="ipv4-results">
+        <div class="result-card">
+          <div class="card-header">
+            <span class="card-badge ipv4-badge">IPv4</span>
+            <h2 data-i18n="section.ipv4">IPv4 Results</h2>
+            <button id="export-btn" class="btn-export" onclick="exportToExcel()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Excel
+            </button>
+          </div>
+
+          <div class="result-table">
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipAddress">IP Address</span>
+              <span class="result-value mono" id="v4-ip-address"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipType">IP Type</span>
+              <span class="result-value" id="v4-ip-type"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipClass">IP Class</span>
+              <span class="result-value" id="v4-ip-class"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.cidr">CIDR Notation</span>
+              <span class="result-value mono" id="v4-cidr"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.networkAddress">Network Address</span>
+              <span class="result-value mono copyable" id="v4-network"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.broadcast">Broadcast Address</span>
+              <span class="result-value mono copyable" id="v4-broadcast"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.usableRange">Usable Host IP Range</span>
+              <span class="result-value mono copyable" id="v4-usable-range"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.totalHosts">Total Number of Hosts</span>
+              <span class="result-value" id="v4-total-hosts"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.usableHosts">Number of Usable Hosts</span>
+              <span class="result-value" id="v4-usable-hosts"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.subnetMask">Subnet Mask</span>
+              <span class="result-value mono copyable" id="v4-subnet-mask"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.wildcardMask">Wildcard Mask</span>
+              <span class="result-value mono copyable" id="v4-wildcard-mask"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.short">Short</span>
+              <span class="result-value mono" id="v4-short"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.arpa">in-addr.arpa</span>
+              <span class="result-value mono copyable" id="v4-arpa"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipv4mapped">IPv4 Mapped Address</span>
+              <span class="result-value mono" id="v4-ipv4mapped"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.6to4">6to4 Prefix</span>
+              <span class="result-value mono" id="v4-6to4"></span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="binary-section">
+            <h3 data-i18n="section.binary">Binary Representation</h3>
+            <div id="v4-binary-viz" class="binary-viz"></div>
+          </div>
+        </div>
+
+        <div class="result-card hidden" id="v4-all-networks-card">
+          <div class="card-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6">
+              <path d="M3 12h18M3 6h18M3 18h18"/>
+            </svg>
+            <h2 id="v4-all-networks-title"></h2>
+          </div>
+          <div class="table-wrapper">
+            <table class="networks-table">
+              <thead>
+                <tr>
+                  <th data-i18n="table.networkAddress">Network Address</th>
+                  <th data-i18n="table.usableRange">Usable Host Range</th>
+                  <th data-i18n="table.broadcast">Broadcast Address</th>
+                </tr>
+              </thead>
+              <tbody id="v4-all-networks-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- IPv6 Results -->
+      <div id="ipv6-results" class="hidden">
+        <div class="result-card">
+          <div class="card-header">
+            <span class="card-badge ipv6-badge">IPv6</span>
+            <h2 data-i18n="section.ipv6">IPv6 Results</h2>
+            <button class="btn-export" onclick="exportToExcel()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Excel
+            </button>
+          </div>
+
+          <div class="result-table">
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipAddress">IP Address</span>
+              <span class="result-value mono" id="v6-ip-address"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.fullIpAddress">Full IP Address</span>
+              <span class="result-value mono copyable" id="v6-full-ip"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.totalAddresses">Total IP Addresses</span>
+              <span class="result-value" id="v6-total"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.network">Network</span>
+              <span class="result-value mono copyable" id="v6-network"></span>
+            </div>
+            <div class="result-row">
+              <span class="result-label" data-i18n="row.ipType">IP Type</span>
+              <span class="result-value" id="v6-ip-type"></span>
+            </div>
+            <div class="result-row v6-range-row">
+              <span class="result-label" data-i18n="row.ipRange">IP Range</span>
+              <div class="result-value mono v6-range-val" id="v6-range"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="binary-section">
+            <h3>Hex Representation</h3>
+            <div id="v6-hex-viz" class="binary-viz"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="binary-section">
+            <h3>Address Structure</h3>
+            <div id="v6-breakdown-viz"></div>
+          </div>
+
+          <div id="v6-eui64-wrap" class="hidden">
+            <div class="divider"></div>
+            <div class="binary-section">
+              <h3>EUI-64 Generator</h3>
+              <p class="hint-text" style="margin-bottom:0.625rem">Generate SLAAC address from MAC — uses first 64 bits of network prefix</p>
+              <div class="eui64-row">
+                <input type="text" id="mac-input" class="ip-input" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" spellcheck="false" maxlength="17">
+                <button id="eui64-btn" class="btn-primary">Generate</button>
+              </div>
+              <div id="eui64-result" class="hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="tools-section">
+      <h2 class="tools-heading">Other Tools</h2>
+
+      <div class="result-card">
+        <div class="card-header collapsible" data-tool="cmp">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>
+          <h2>Compare Two IPs</h2>
+          <span class="tool-badge">IPv4 / IPv6</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tool-body" id="tool-body-cmp">
+          <div class="tool-body-inner">
+            <div class="tool-inputs">
+              <input type="text" id="cmp-ip1" class="ip-input" placeholder="192.168.1.1/24" autocomplete="off" spellcheck="false">
+              <span class="cmp-vs">vs</span>
+              <input type="text" id="cmp-ip2" class="ip-input" placeholder="192.168.2.1/24" autocomplete="off" spellcheck="false">
+              <button id="cmp-btn" class="btn-primary">Compare</button>
+            </div>
+          </div>
+          <div id="cmp-result" class="tool-result hidden"></div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="card-header collapsible" data-tool="split">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          <h2>Subnet Splitter</h2>
+          <span class="tool-badge">IPv4 / IPv6</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tool-body" id="tool-body-split">
+          <div class="tool-body-inner">
+            <div class="tool-inputs">
+              <input type="text" id="split-network" class="ip-input" placeholder="192.168.1.0/24 or 2001:db8::/32" autocomplete="off" spellcheck="false">
+              <span class="split-label">into /</span>
+              <input type="number" id="split-prefix" class="prefix-input" min="1" max="128" value="26">
+              <button id="split-btn" class="btn-primary">Split</button>
+            </div>
+            <p class="hint-text" style="margin-top:0.5rem">Max 1,000 subnets displayed &nbsp;·&nbsp; IPv4 up to /32 &nbsp;·&nbsp; IPv6 up to /128</p>
+          </div>
+          <div id="split-result" class="tool-result hidden"></div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="card-header collapsible" data-tool="summary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.6"><path d="m3 17 4-8 4 4 4-6 4 10"/></svg>
+          <h2>Route Summary</h2>
+          <span class="tool-badge">IPv4 / IPv6</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tool-body" id="tool-body-summary">
+          <div class="tool-body-inner">
+            <textarea id="summary-input" class="summary-textarea" rows="4" placeholder="One network per line (IPv4 or IPv6, not mixed):&#10;192.168.1.0/24&#10;192.168.2.0/24&#10;2001:db8:1::/48&#10;2001:db8:2::/48" spellcheck="false"></textarea>
+            <div class="tool-btn-row">
+              <button id="summary-btn" class="btn-primary">Summarize</button>
+            </div>
+            <p class="hint-text" style="margin-top:0.5rem">IPv4 or IPv6 — do not mix &nbsp;·&nbsp; Finds the smallest aggregate that covers all inputs</p>
+          </div>
+          <div id="summary-result" class="tool-result hidden"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SEO content block — visible to crawlers, hidden visually -->
+  <section class="seo-block" aria-hidden="true">
+    <h2>Free IP Subnet Calculator for IPv4 and IPv6</h2>
+    <p>
+      This free online <strong>IP subnet calculator</strong> supports both <strong>IPv4</strong> and <strong>IPv6</strong> addresses.
+      Enter any IP address in CIDR notation (e.g. <code>192.168.1.50/24</code> or <code>2001:db8::1/48</code>)
+      and instantly get the <strong>network address</strong>, <strong>broadcast address</strong>,
+      <strong>usable host IP range</strong>, <strong>subnet mask</strong>, <strong>wildcard mask</strong>,
+      <strong>IP class</strong>, <strong>CIDR notation</strong>, and <strong>binary representation</strong>.
+    </p>
+    <p>
+      The tool also lists all possible subnets of the same prefix length within the containing network block —
+      for example, all 64 possible <strong>/30 networks</strong> within a <strong>/24 network</strong>.
+      Results can be exported directly to <strong>Excel (.xlsx)</strong>.
+    </p>
+    <h3>Supported Input Formats</h3>
+    <ul>
+      <li>CIDR notation: <code>192.168.1.1/24</code></li>
+      <li>IP with subnet mask: <code>192.168.1.1 255.255.255.0</code></li>
+      <li>IPv6 with prefix: <code>2001:db8::1/48</code></li>
+    </ul>
+    <h3>What This Calculator Provides</h3>
+    <ul>
+      <li>Network address and broadcast address</li>
+      <li>First and last usable host IP addresses</li>
+      <li>Total and usable host counts</li>
+      <li>Subnet mask and wildcard mask</li>
+      <li>Binary subnet mask representation</li>
+      <li>IP class (A, B, C, D, E) and IP type (Public, Private, Loopback, Link-local, Multicast)</li>
+      <li>Binary ID, Integer ID, Hex ID, in-addr.arpa reverse DNS</li>
+      <li>IPv4-mapped address and 6to4 prefix</li>
+      <li>All possible subnets within the containing /24, /16, or /8 block</li>
+      <li>IPv6: full expanded address, total address count, IP range, IP type (Global Unicast, ULA, Link-local, etc.)</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>IP Subnet Calculator — IPv4 &amp; IPv6 — Pure client-side, no data sent to server</p>
+    <p>Created by Thananchai</p>
+  </footer>
+
+  <div id="copy-tooltip" class="copy-tooltip hidden"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
