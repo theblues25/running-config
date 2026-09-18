@@ -18,16 +18,16 @@
   .entries-row{ display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.6rem; }
   .entries-row label{ font-family:"Inter",sans-serif; font-size:.92rem; font-weight:600; color:var(--ink); }
   .entries-value{ font-size:1.1rem; font-weight:600; color:var(--amber-ink); }
-  #entries-slider{
+  .range-slider{
     width:100%; margin:.3rem 0 1.1rem; appearance:none; height:6px; border-radius:999px;
     background:var(--bg-sunk); outline:none; cursor:pointer;
   }
-  #entries-slider::-webkit-slider-thumb{
+  .range-slider::-webkit-slider-thumb{
     appearance:none; width:20px; height:20px; border-radius:50%;
     background:var(--amber); border:3px solid var(--bg-raised); box-shadow:0 0 0 1px var(--amber);
     cursor:grab;
   }
-  #entries-slider::-moz-range-thumb{
+  .range-slider::-moz-range-thumb{
     width:20px; height:20px; border-radius:50%; border:3px solid var(--bg-raised);
     background:var(--amber); box-shadow:0 0 0 1px var(--amber); cursor:grab;
   }
@@ -36,6 +36,19 @@
   .entries-stats .stat{ display:flex; flex-direction:column; gap:.15rem; }
   .stat-label{ font-size:.72rem; color:var(--muted); font-family:"Inter",sans-serif; }
   .stat-value{ font-size:.92rem; font-weight:600; color:var(--ink); }
+
+  /* Post-only: step-through control for the packet walkthrough (section 07) */
+  .step-row{ display:flex; align-items:center; gap:.7rem; margin-bottom:.5rem; }
+  .step-row label{ font-family:"Inter",sans-serif; font-size:.92rem; font-weight:600; color:var(--ink); flex:1; }
+  .step-btn{
+    font-family:"Inter",sans-serif; font-size:.85rem; font-weight:600; color:var(--ink);
+    background:var(--bg-sunk); border:1px solid var(--line); border-radius:999px;
+    width:2.1rem; height:2.1rem; line-height:1; cursor:pointer; flex:none;
+  }
+  .step-btn:hover:not(:disabled){ border-color:var(--amber); color:var(--amber-ink); }
+  .step-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .step-value{ font-size:.92rem; font-weight:600; color:var(--amber-ink); white-space:nowrap; }
+  .step-desc{ font-family:"Sarabun",sans-serif; font-size:.88rem; color:var(--ink-soft); margin:.2rem 0 .9rem; min-height:2.6em; }
 </style>
 </head>
 <body>
@@ -69,12 +82,12 @@
   <section id="sr">
     <span class="kicker"><span class="dot"></span>01 · จุดเริ่มต้น</span>
     <h2>Segment Routing คืออะไร (ไม่ต้องรู้ MPLS มาก่อน)</h2>
-    <p class="lede">เครือข่ายแบบเดิม แต่ละราวเตอร์ต้อง "เดาทาง" เองทีละ hop — เหมือนถามทางที่สี่แยกไปเรื่อย ๆ จนถึงปลายทาง <strong>Segment Routing</strong> เปลี่ยนวิธีคิดใหม่: ให้ราวเตอร์ต้นทางเขียน "รายการจุดแวะ" ทั้งหมดแนบไปกับแพ็กเก็ตตั้งแต่แรก แต่ละราวเตอร์ระหว่างทางแค่เปิดดูจุดแวะถัดไปในรายการแล้วส่งต่อ ไม่ต้องเดาเองเลย</p>
+    <p class="lede">เครือข่ายแบบเดิม แต่ละเราเตอร์ต้อง "เดาทาง" เองทีละ hop — เหมือนถามทางที่สี่แยกไปเรื่อย ๆ จนถึงปลายทาง <strong>Segment Routing</strong> เปลี่ยนวิธีคิดใหม่: ให้เราเตอร์ต้นทางเขียน "รายการจุดแวะ" ทั้งหมดแนบไปกับแพ็กเก็ตตั้งแต่แรก แต่ละเราเตอร์ระหว่างทางแค่เปิดดูจุดแวะถัดไปในรายการแล้วส่งต่อ ไม่ต้องเดาเองเลย</p>
     <div class="trio">
       <div class="card">
         <span class="num">01</span>
         <h3>ต้นทางตัดสินใจ</h3>
-        <p>ราวเตอร์ต้นทางเลือกเส้นทางทั้งหมดล่วงหน้า ไม่ปล่อยให้แต่ละจุดตัดสินใจเอง</p>
+        <p>เราเตอร์ต้นทางเลือกเส้นทางทั้งหมดล่วงหน้า ไม่ปล่อยให้แต่ละจุดตัดสินใจเอง</p>
       </div>
       <div class="card">
         <span class="num">02</span>
@@ -84,7 +97,7 @@
       <div class="card">
         <span class="num">03</span>
         <h3>แต่ละจุดทำตามคิวถัดไป</h3>
-        <p>ราวเตอร์ระหว่างทางแค่มองจุดแวะถัดไปในรายการ ทำตามแล้วส่งต่อ ไม่ต้องคิดอะไรเพิ่ม</p>
+        <p>เราเตอร์ระหว่างทางแค่มองจุดแวะถัดไปในรายการ ทำตามแล้วส่งต่อ ไม่ต้องคิดอะไรเพิ่ม</p>
       </div>
     </div>
   </section>
@@ -93,15 +106,15 @@
   <section id="srv6">
     <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
     <h2>SRv6 เอา "จุดแวะ" ไปฝังไว้ในที่อยู่ IPv6 เลย</h2>
-    <p class="lede">จากแนวคิด "ฝังรายการจุดแวะไปกับแพ็กเก็ต" ในข้อที่แล้ว คำถามต่อมาคือ — แต่ละจุดแวะจะเก็บด้วยอะไร? SRv6 (Segment Routing over IPv6) เลือกวิธีที่ตรงไปตรงมาที่สุด: ให้ <strong>จุดแวะแต่ละจุดคือที่อยู่ IPv6 หนึ่งตัวเลย</strong> ไม่ต้องมีเลข label แยกต่างหากแบบ MPLS รายการจุดแวะทั้งหมดถูกเก็บไว้ใน header พิเศษท้ายแพ็กเก็ตที่เรียกว่า SRH (Segment Routing Header) และที่อยู่ IPv6 แต่ละตัวยังแบ่งเป็น 2 ส่วนในตัวมันเอง: <strong>Locator</strong> (ราวเตอร์ไหน) และ <strong>Function</strong> (ทำอะไรที่นั่น)</p>
+    <p class="lede">จากแนวคิด "ฝังรายการจุดแวะไปกับแพ็กเก็ต" ในข้อที่แล้ว คำถามต่อมาคือ — แต่ละจุดแวะจะเก็บด้วยอะไร? SRv6 (Segment Routing over IPv6) เลือกวิธีที่ตรงไปตรงมาที่สุด: ให้ <strong>จุดแวะแต่ละจุดคือที่อยู่ IPv6 หนึ่งตัวเลย</strong> ไม่ต้องมีเลข label แยกต่างหากแบบ MPLS รายการจุดแวะทั้งหมดถูกเก็บไว้ใน header พิเศษท้ายแพ็กเก็ตที่เรียกว่า SRH (Segment Routing Header) และที่อยู่ IPv6 แต่ละตัวยังแบ่งเป็น 2 ส่วนในตัวมันเอง: <strong>Locator</strong> (เราเตอร์ไหน) และ <strong>Function</strong> (ทำอะไรที่นั่น)</p>
     <div class="stage">
       <div class="stage-label">
-        <span class="chip amber">● Locator (ราวเตอร์ไหน)</span>
+        <span class="chip amber">● Locator (เราเตอร์ไหน)</span>
         <span class="chip cyan">● Function (ทำอะไร)</span>
       </div>
-      <canvas id="c-srh" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางผ่านราวเตอร์ 3 ตัว พร้อมรายการจุดแวะที่แนบไปด้วยซึ่งสั้นลงทีละจุดทุกครั้งที่ผ่านราวเตอร์หนึ่งตัว"></canvas>
+      <canvas id="c-srh" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางผ่านเราเตอร์ 3 ตัว พร้อมรายการจุดแวะที่แนบไปด้วยซึ่งสั้นลงทีละจุดทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว"></canvas>
     </div>
-    <p class="caption">แพ็กเก็ตพกรายการจุดแวะ (สี่เหลี่ยมเล็ก ๆ ด้านบน) ไปด้วย ทุกครั้งที่ผ่านราวเตอร์หนึ่งตัว จุดแวะที่ทำเสร็จแล้วจะถูกตัดออกจากรายการ — ที่อยู่ปลายทางปัจจุบันก็จะเปลี่ยนเป็นจุดแวะถัดไปโดยอัตโนมัติ</p>
+    <p class="caption">แพ็กเก็ตพกรายการจุดแวะ (สี่เหลี่ยมเล็ก ๆ ด้านบน) ไปด้วย ทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว จุดแวะที่ทำเสร็จแล้วจะถูกตัดออกจากรายการ — ที่อยู่ปลายทางปัจจุบันก็จะเปลี่ยนเป็นจุดแวะถัดไปโดยอัตโนมัติ</p>
   </section>
 
   <!-- ============ 3. Overhead problem ============ -->
@@ -138,8 +151,8 @@
     <p class="lede">จาก Micro-SID ที่บีบทุกจุดแวะเหลือ 16 บิตในข้อที่แล้ว คำถามถัดมาคือ 16 บิตนั้นเก็บอะไรบ้าง? ลองนึกถึง <strong>เบอร์โทรศัพท์</strong>: รหัสพื้นที่ + เลขในสาย — พื้นที่ 16 บิตของ Micro-SID ก็ถูกตัดแบ่งแบบเดียวกัน ด้วยตัวเลขตัวเดียวที่ตั้งครั้งเดียวทั้งเครือข่าย</p>
     <div class="stage">
       <div class="stage-label">
-        <span class="chip amber">● GIB — รหัสพื้นที่ (ราวเตอร์ไหน)</span>
-        <span class="chip cyan">● LIB — เลขในสาย (ทำอะไรในราวเตอร์นั้น)</span>
+        <span class="chip amber">● GIB — รหัสพื้นที่ (เราเตอร์ไหน)</span>
+        <span class="chip cyan">● LIB — เลขในสาย (ทำอะไรในเราเตอร์นั้น)</span>
       </div>
       <canvas id="c-giblib" role="img" aria-label="แผนภาพแท่งแสดงพื้นที่ 16 บิต แบ่งเป็นสองโซนสี ตำแหน่งเส้นแบ่งเปลี่ยนตามค่าที่เลือกจากแถบเลื่อนด้านล่าง"></canvas>
     </div>
@@ -148,27 +161,27 @@
         <label for="entries-slider">ลองลากเปลี่ยนค่า <span class="mono">global-sid-entries</span> เอง</label>
         <span class="entries-value mono" id="entries-readout">16</span>
       </div>
-      <input type="range" id="entries-slider" min="4" max="60" step="4" value="16" aria-describedby="entries-caption">
+      <input type="range" class="range-slider" id="entries-slider" min="4" max="60" step="4" value="16" aria-describedby="entries-caption">
       <div class="entries-stats">
-        <div class="stat"><span class="stat-label">GIB (ราวเตอร์)</span><span class="stat-value mono" id="gib-readout">—</span></div>
+        <div class="stat"><span class="stat-label">GIB (เราเตอร์)</span><span class="stat-value mono" id="gib-readout">—</span></div>
         <div class="stat"><span class="stat-label">LIB (function)</span><span class="stat-value mono" id="lib-readout">—</span></div>
         <div class="stat"><span class="stat-label">un value ตั้งได้</span><span class="stat-value mono" id="un-readout">—</span></div>
         <div class="stat"><span class="stat-label">ต้องจอง label</span><span class="stat-value mono" id="label-readout">—</span></div>
       </div>
     </div>
-    <p class="caption" id="entries-caption">ยิ่งลากค่า <span class="mono">global-sid-entries</span> ขึ้น ยิ่งเผื่อที่ให้ GIB มาก (รองรับราวเตอร์ได้เยอะขึ้น) แต่ LIB จะเหลือน้อยลง (ทำ service ต่อราวเตอร์ได้น้อยลง) และคลัง label ที่ต้องจองก็เล็กลงตาม LIB ไปด้วย</p>
+    <p class="caption" id="entries-caption">ยิ่งลากค่า <span class="mono">global-sid-entries</span> ขึ้น ยิ่งเผื่อที่ให้ GIB มาก (รองรับเราเตอร์ได้เยอะขึ้น) แต่ LIB จะเหลือน้อยลง (ทำ service ต่อเราเตอร์ได้น้อยลง) และคลัง label ที่ต้องจองก็เล็กลงตาม LIB ไปด้วย</p>
     <ul class="points">
-      <li><strong>GIB (Global)</strong> ต้อง unique ทั้งเครือข่าย ห้ามซ้ำข้ามราวเตอร์ — เหมือนรหัสพื้นที่ที่บอกว่าเบอร์นี้อยู่จังหวัดไหน</li>
-      <li><strong>LIB (Local)</strong> unique แค่ภายในราวเตอร์ตัวเดียว ราวเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขต่อภายในออฟฟิศที่ซ้ำกับออฟฟิศอื่นได้</li>
-      <li>ตัวเลขตัวเดียวที่ตั้งครั้งเดียว (เท่ากันทุกราวเตอร์ในเครือข่าย) กำหนดว่าเส้นแบ่งอยู่ตรงไหน</li>
+      <li><strong>GIB (Global)</strong> ต้อง unique ทั้งเครือข่าย ห้ามซ้ำข้ามเราเตอร์ — เหมือนรหัสพื้นที่ที่บอกว่าเบอร์นี้อยู่จังหวัดไหน</li>
+      <li><strong>LIB (Local)</strong> unique แค่ภายในเราเตอร์ตัวเดียว เราเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขต่อภายในออฟฟิศที่ซ้ำกับออฟฟิศอื่นได้</li>
+      <li>ตัวเลขตัวเดียวที่ตั้งครั้งเดียว (เท่ากันทุกเราเตอร์ในเครือข่าย) กำหนดว่าเส้นแบ่งอยู่ตรงไหน</li>
     </ul>
   </section>
 
   <!-- ============ 6. un = router's own GIB value ============ -->
   <section id="un">
     <span class="kicker"><span class="dot"></span>06 · ลงลึกอีกนิด</span>
-    <h2>ตัวเลขราวเตอร์ (GIB) ตั้งยังไง แล้วพลาดได้ตรงไหน</h2>
-    <p class="lede">รู้แล้วว่า GIB คือส่วนที่บอกว่า "ราวเตอร์ไหน" — คำถามต่อมาคือ แล้วราวเตอร์แต่ละตัวได้ค่า GIB ของตัวเองมาจากไหน? ค่า "รหัสพื้นที่" ของราวเตอร์แต่ละตัวถูกตั้งด้วยคำสั่งที่ชื่อ <span class="mono">un</span> (ย่อจาก uSID Node) — ตัวอย่างจริงจากเอกสาร: ราวเตอร์หนึ่งตั้ง <span class="mono">un value 1</span> อีกตัวตั้ง <span class="mono">un value 1281</span> ทั้งสองค่าต้องอยู่ในโซน GIB เท่านั้น (ห้ามหลุดไปโซน LIB) และห้ามซ้ำกับราวเตอร์ตัวอื่นในเครือข่ายเดียวกันเด็ดขาด</p>
+    <h2>ตัวเลขเราเตอร์ (GIB) ตั้งยังไง แล้วพลาดได้ตรงไหน</h2>
+    <p class="lede">รู้แล้วว่า GIB คือส่วนที่บอกว่า "เราเตอร์ไหน" — คำถามต่อมาคือ แล้วเราเตอร์แต่ละตัวได้ค่า GIB ของตัวเองมาจากไหน? ค่า "รหัสพื้นที่" ของเราเตอร์แต่ละตัวถูกตั้งด้วยคำสั่งที่ชื่อ <span class="mono">un</span> (ย่อจาก uSID Node) — ตัวอย่างจริงจากเอกสาร: เราเตอร์หนึ่งตั้ง <span class="mono">un value 1</span> อีกตัวตั้ง <span class="mono">un value 1281</span> ทั้งสองค่าต้องอยู่ในโซน GIB เท่านั้น (ห้ามหลุดไปโซน LIB) และห้ามซ้ำกับเราเตอร์ตัวอื่นในเครือข่ายเดียวกันเด็ดขาด</p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip good">● ตั้งถูก — ตกอยู่ในโซน GIB</span>
@@ -179,7 +192,7 @@
     <p class="caption">ช่วงตัวเลขที่ระบบยอมให้พิมพ์ในคำสั่ง <span class="mono">un value</span> คือ 1 ถึง 1,048,575 เสมอ — ไม่ว่าจะตั้ง GIB ไว้ใหญ่แค่ไหนก็ตาม ระบบไม่เช็คให้ว่าเลขที่พิมพ์ไปนั้นยังอยู่ในโซน GIB จริงหรือเปล่า</p>
     <div class="callout">
       <span class="tag">จุดพลาดจริงที่เกิดได้</span>
-      <p>สมมติตั้ง GIB ไว้แค่ 1–16,383 (ค่าเริ่มต้น) แต่ดันพิมพ์ <span class="mono">un value 20000</span> ไป — ระบบจะ<strong>รับค่านั้นทันที ไม่มี error ไม่มี warning</strong> ทั้งที่ 20,000 มันไปตกอยู่ในโซน LIB แทน ซึ่งเป็นพื้นที่ที่กันไว้ให้ service function ของราวเตอร์ตัวอื่นใช้ กลายเป็นเลขไปชนกับพื้นที่ที่ไม่ควรชนโดยไม่มีใครรู้ตัว</p>
+      <p>สมมติตั้ง GIB ไว้แค่ 1–16,383 (ค่าเริ่มต้น) แต่ดันพิมพ์ <span class="mono">un value 20000</span> ไป — ระบบจะ<strong>รับค่านั้นทันที ไม่มี error ไม่มี warning</strong> ทั้งที่ 20,000 มันไปตกอยู่ในโซน LIB แทน ซึ่งเป็นพื้นที่ที่กันไว้ให้ service function ของเราเตอร์ตัวอื่นใช้ กลายเป็นเลขไปชนกับพื้นที่ที่ไม่ควรชนโดยไม่มีใครรู้ตัว</p>
     </div>
     <ul class="points">
       <li>กฎที่ต้องเช็คเองทุกครั้ง: <span class="mono">un value</span> ต้อง<strong>น้อยกว่า global-sid-entries × 1024</strong> เสมอ</li>
@@ -236,19 +249,34 @@
   <section id="forward">
     <span class="kicker"><span class="dot"></span>07 · เห็นภาพรวม</span>
     <h2>เดินตามแพ็กเก็ตทีละ hop จริง ๆ</h2>
-    <p class="lede">เอาทุกอย่างที่ผ่านมารวมกัน — สมมติลูกค้าที่ CE1 ต้องส่งข้อมูลไปถึงบริการหนึ่งที่อยู่หลัง R3 เส้นทางจริงต้องผ่าน <strong>R1 → R2 → R3</strong> ที่อยู่ปลายทางที่ราวเตอร์ต้นทางประกอบไว้ให้จึงเป็นการเอา 3 "ช่อง" มาต่อกันเรียงตามลำดับที่ต้องผ่าน — แต่ละช่องคือ <span class="amber-text">GIB</span> (ราวเตอร์ไหน) บวก <span class="cyan-text">LIB</span> (ทำอะไรที่นั่น) รวมกัน</p>
+    <p class="lede">เอาทุกอย่างที่ผ่านมารวมกัน — สมมติลูกค้าที่ CE1 ต้องส่งข้อมูลไปถึงบริการหนึ่งที่อยู่หลัง R3 เส้นทางจริงต้องผ่าน <strong>R1 → R2 → R3</strong> ที่อยู่ปลายทางที่เราเตอร์ต้นทางประกอบไว้ให้จึงเป็นการเอา 3 "ช่อง" มาต่อกันเรียงตามลำดับที่ต้องผ่าน — แต่ละช่องคือ <span class="amber-text">GIB</span> (เราเตอร์ไหน) บวก <span class="cyan-text">LIB</span> (ทำอะไรที่นั่น) รวมกัน กดปุ่มด้านล่างเพื่อเดินทีละขั้นเอง จะได้อ่านรายละเอียดทันทุกจุด</p>
     <div class="stage">
       <div class="stage-label">
-        <span class="chip amber">● GIB ตรงกับ un ของราวเตอร์นั้น</span>
+        <span class="chip amber">● GIB ตรงกับ un ของเราเตอร์นั้น</span>
         <span class="chip cyan">● LIB บอกว่าต้องทำอะไร</span>
       </div>
-      <canvas id="c-forward" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางจาก CE1 ผ่าน R1, R2, R3 ไปถึง CE2 แต่ละราวเตอร์เปิดดูช่อง GIB บวก LIB ของตัวเองในที่อยู่ ถ้า GIB ตรงกับตัวเองก็ดู LIB ว่าต้องทำอะไร แล้วส่งต่อไปช่องถัดไปจนถึงปลายทาง"></canvas>
+      <canvas id="c-forward" role="img" aria-label="แผนภาพเราเตอร์ CE1, R1, R2, R3, CE2 เรียงกัน พร้อมแพ็กเก็ตที่เลื่อนตำแหน่งตามขั้นที่เลือกจากปุ่มควบคุมด้านล่าง"></canvas>
     </div>
-    <p class="caption">ทุกราวเตอร์ตรวจช่องที่ "อยู่หน้าสุด" ของที่อยู่ปลายทางเสมอ — ถ้า GIB ตรงกับ <span class="mono">un</span> ของตัวเอง ก็รู้ว่าถึงคิวตัวเองแล้ว จากนั้นดู LIB ว่าต้องทำอะไร ก่อนเผยช่องถัดไปให้เป็นที่อยู่ปลายทางใหม่ แล้วส่งต่อ</p>
+    <div class="entries-control">
+      <div class="step-row">
+        <label for="forward-slider">ลองเดินแพ็กเก็ตทีละขั้นเอง</label>
+        <button type="button" class="step-btn" id="forward-prev" aria-label="ขั้นก่อนหน้า">‹</button>
+        <span class="step-value mono" id="forward-readout">ขั้น 1 / 5</span>
+        <button type="button" class="step-btn" id="forward-next" aria-label="ขั้นถัดไป">›</button>
+      </div>
+      <input type="range" class="range-slider" id="forward-slider" min="0" max="4" step="1" value="0" aria-describedby="forward-desc">
+      <p class="step-desc" id="forward-desc"></p>
+      <div class="entries-stats">
+        <div class="stat"><span class="stat-label">ตำแหน่งปัจจุบัน</span><span class="stat-value mono" id="forward-node">—</span></div>
+        <div class="stat"><span class="stat-label">GIB เทียบกับ un</span><span class="stat-value mono" id="forward-gib">—</span></div>
+        <div class="stat"><span class="stat-label">LIB → การกระทำ</span><span class="stat-value mono" id="forward-lib">—</span></div>
+        <div class="stat"><span class="stat-label">ช่องที่เหลือใน SRH</span><span class="stat-value mono" id="forward-remaining">—</span></div>
+      </div>
+    </div>
     <ul class="points">
-      <li><strong>GIB ตรงกับ un ตัวเอง</strong> → ราวเตอร์รู้ทันทีว่านี่คือคิวของตัวเอง ไม่ใช่ของคนอื่น</li>
+      <li><strong>GIB ตรงกับ un ตัวเอง</strong> → เราเตอร์รู้ทันทีว่านี่คือคิวของตัวเอง ไม่ใช่ของคนอื่น</li>
       <li><strong>LIB = 0</strong> → ไม่มีคำสั่งพิเศษ แค่ส่งต่อไปช่องถัดไปเฉย ๆ (R1, R2 ในตัวอย่างนี้)</li>
-      <li><strong>LIB ≠ 0</strong> → มีคำสั่งเฉพาะให้ทำที่ราวเตอร์นี้ เช่น ถอดรหัสส่งเข้า VPN แล้วส่งต่อไปหาปลายทางจริง (R3 ในตัวอย่างนี้)</li>
+      <li><strong>LIB ≠ 0</strong> → มีคำสั่งเฉพาะให้ทำที่เราเตอร์นี้ เช่น ถอดรหัสส่งเข้า VPN แล้วส่งต่อไปหาปลายทางจริง (R3 ในตัวอย่างนี้)</li>
     </ul>
   </section>
 
@@ -256,15 +284,15 @@
   <section id="whylabel">
     <span class="kicker"><span class="dot"></span>08 · จุดที่มักงง</span>
     <h2>ก็บอกไม่มี MPLS แล้ว ทำไมยังเห็นคำว่า label</h2>
-    <p class="lede">เดินตามแพ็กเก็ตทีละ hop ในข้อที่แล้ว จะเห็นว่าตลอดทางไม่มีคำว่า label โผล่มาเลยสักครั้ง แต่พอเปิดคอนฟิกจริงบน Nokia SR OS กลับเจอคำว่า label เต็มไปหมด — คำตอบสั้น ๆ คือ <strong>บนสายสัญญาณจริง ไม่มี MPLS label ปนอยู่เลยแม้แต่นิดเดียว</strong> แพ็กเก็ตที่วิ่งระหว่างราวเตอร์เป็น IPv6 + SRH ล้วน ๆ ตลอดเส้นทาง — แต่ <strong>ภายในตัวราวเตอร์บางรุ่น</strong> (ที่ใช้ชิปประมวลผลรุ่นที่มีอยู่แล้วสำหรับ MPLS) ระบบเลือกใช้กลไก lookup table แบบเดียวกับที่ MPLS ใช้อยู่แล้ว มาช่วยค้นหาว่า "เลข LIB นี้ต้องทำอะไร" ให้เร็วขึ้น ซึ่งกลไกนั้นต้องการ "เลข label" เป็นดัชนีค้นหาภายในตัวมันเอง</p>
+    <p class="lede">เดินตามแพ็กเก็ตทีละ hop ในข้อที่แล้ว จะเห็นว่าตลอดทางไม่มีคำว่า label โผล่มาเลยสักครั้ง แต่พอเปิดคอนฟิกจริงบน Nokia SR OS กลับเจอคำว่า label เต็มไปหมด — คำตอบสั้น ๆ คือ <strong>บนสายสัญญาณจริง ไม่มี MPLS label ปนอยู่เลยแม้แต่นิดเดียว</strong> แพ็กเก็ตที่วิ่งระหว่างเราเตอร์เป็น IPv6 + SRH ล้วน ๆ ตลอดเส้นทาง — แต่ <strong>ภายในตัวเราเตอร์บางรุ่น</strong> (ที่ใช้ชิปประมวลผลรุ่นที่มีอยู่แล้วสำหรับ MPLS) ระบบเลือกใช้กลไก lookup table แบบเดียวกับที่ MPLS ใช้อยู่แล้ว มาช่วยค้นหาว่า "เลข LIB นี้ต้องทำอะไร" ให้เร็วขึ้น ซึ่งกลไกนั้นต้องการ "เลข label" เป็นดัชนีค้นหาภายในตัวมันเอง</p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip good">● บนสาย = IPv6 ล้วน ไม่มี label</span>
         <span class="chip amber">● ภายในกล่อง = แปลงเป็น label ชั่วคราว</span>
       </div>
-      <canvas id="c-wire" role="img" aria-label="แอนิเมชันแพ็กเก็ต IPv6 ล้วนเดินทางระหว่างราวเตอร์สองตัวโดยไม่มี label ติดไปด้วย เมื่อถึงราวเตอร์จะมีสัญลักษณ์เฟืองหมุนแปลงค่าเป็น label ภายในกล่องชั่วคราว ก่อนแพ็กเก็ตออกไปต่อแบบ IPv6 ล้วนเหมือนเดิม"></canvas>
+      <canvas id="c-wire" role="img" aria-label="แอนิเมชันแพ็กเก็ต IPv6 ล้วนเดินทางระหว่างเราเตอร์สองตัวโดยไม่มี label ติดไปด้วย เมื่อถึงเราเตอร์จะมีสัญลักษณ์เฟืองหมุนแปลงค่าเป็น label ภายในกล่องชั่วคราว ก่อนแพ็กเก็ตออกไปต่อแบบ IPv6 ล้วนเหมือนเดิม"></canvas>
     </div>
-    <p class="caption">แพ็กเก็ตที่ออกจากราวเตอร์ยังเป็น IPv6 ล้วนเหมือนเดิมทุกประการ — label เกิดขึ้นแค่ชั่วขณะที่อยู่ในหน่วยประมวลผลภายในกล่องเดียวเท่านั้น ไม่เคยถูกส่งออกไปข้างนอก</p>
+    <p class="caption">แพ็กเก็ตที่ออกจากเราเตอร์ยังเป็น IPv6 ล้วนเหมือนเดิมทุกประการ — label เกิดขึ้นแค่ชั่วขณะที่อยู่ในหน่วยประมวลผลภายในกล่องเดียวเท่านั้น ไม่เคยถูกส่งออกไปข้างนอก</p>
     <div class="callout">
       <span class="tag">สรุปให้จำง่าย</span>
       <p>label ที่เห็นในคอนฟิกไม่ใช่ "MPLS แอบแฝงอยู่" แต่เป็นแค่เลขดัชนีภายในฮาร์ดแวร์ ยืมกลไกที่มีอยู่แล้วมาใช้ให้ค้นหาเร็วขึ้นเฉยๆ</p>
@@ -286,8 +314,8 @@
     <p class="caption">สองแท่งนี้ยาวเท่ากันเป๊ะ (จำนวน entries เท่ากัน) แต่อยู่คนละช่วงตัวเลขกันโดยสิ้นเชิง — LIB เป็นเลข hex ในที่อยู่ IPv6 (เช่น E000-FFFF) ส่วน label pool เป็นเลข MPLS label ธรรมดา (เช่น 30000-38191) ระบบจับคู่ให้เองภายใน ไม่ต้องให้ตัวเลขตรงกัน</p>
     <div class="callout">
       <span class="tag">แล้วทำไม GIB ไม่ต้องมีคลัง label บ้าง</span>
-      <p><strong>GIB</strong> บอกแค่ "ราวเตอร์ไหน" — งานของราวเตอร์ตอนเช็คส่วนนี้ คือดูว่า GIB ในแพ็กเก็ตตรงกับค่า <span class="mono">un</span> ของตัวเองหรือเปล่า เหมือนเช็คว่าจดหมายส่งถึงบ้านเลขที่ตัวเองไหม ซึ่งเป็นการจับคู่กับ <strong>prefix เดียว</strong> ที่ตัวเองประกาศออกไปทาง IGP ตามปกติอยู่แล้ว (เหมือน route lookup ทั่วไป) ไม่จำเป็นต้องมีตาราง lookup แยกไว้ล่วงหน้าสำหรับทุกค่า GIB ที่เป็นไปได้ในเครือข่าย เพราะราวเตอร์แต่ละตัวสนใจแค่ค่าของตัวเองค่าเดียว — จึงไม่ต้องมีคลัง label มารองรับส่วนนี้เลย</p>
-      <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในราวเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงราวเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) ราวเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้ครบทุกค่าที่ LIB มีทางเป็นไปได้ทั้งหมดล่วงหน้า ไม่ใช่แค่ค่าที่ใช้งานจริงตอนนั้น</p>
+      <p><strong>GIB</strong> บอกแค่ "เราเตอร์ไหน" — งานของเราเตอร์ตอนเช็คส่วนนี้ คือดูว่า GIB ในแพ็กเก็ตตรงกับค่า <span class="mono">un</span> ของตัวเองหรือเปล่า เหมือนเช็คว่าจดหมายส่งถึงบ้านเลขที่ตัวเองไหม ซึ่งเป็นการจับคู่กับ <strong>prefix เดียว</strong> ที่ตัวเองประกาศออกไปทาง IGP ตามปกติอยู่แล้ว (เหมือน route lookup ทั่วไป) ไม่จำเป็นต้องมีตาราง lookup แยกไว้ล่วงหน้าสำหรับทุกค่า GIB ที่เป็นไปได้ในเครือข่าย เพราะเราเตอร์แต่ละตัวสนใจแค่ค่าของตัวเองค่าเดียว — จึงไม่ต้องมีคลัง label มารองรับส่วนนี้เลย</p>
+      <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในเราเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงเราเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) เราเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้ครบทุกค่าที่ LIB มีทางเป็นไปได้ทั้งหมดล่วงหน้า ไม่ใช่แค่ค่าที่ใช้งานจริงตอนนั้น</p>
     </div>
     <div class="callout">
       <span class="tag">กฎที่ต้องจำ</span>
@@ -299,10 +327,10 @@
   <section id="numbers">
     <span class="kicker"><span class="dot"></span>10 · ตัวอย่างตัวเลขจริง</span>
     <h2>ลองคำนวณดูจริง ๆ</h2>
-    <p class="lede">รวมทุกกลไกที่ผ่านมาเข้าด้วยกัน จะเห็นว่ามีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับราวเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
+    <p class="lede">รวมทุกกลไกที่ผ่านมาเข้าด้วยกัน จะเห็นว่ามีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับเราเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>ค่าที่เลือก</th><th>จุดตัด (×1024)</th><th>GIB ≈ รองรับกี่ราวเตอร์</th><th>LIB ≈ ต้องจอง label กี่ช่อง</th></tr></thead>
+        <thead><tr><th>ค่าที่เลือก</th><th>จุดตัด (×1024)</th><th>GIB ≈ รองรับกี่เราเตอร์</th><th>LIB ≈ ต้องจอง label กี่ช่อง</th></tr></thead>
         <tbody>
           <tr>
             <td class="mono" data-label="ค่าที่เลือก">16 (ค่าเริ่มต้น)</td>
@@ -325,7 +353,7 @@
         </tbody>
       </table>
     </div>
-    <p class="caption">เห็น trade-off ชัดเจน: เลือก 60 รองรับราวเตอร์ได้เยอะสุด แต่เหลือที่ให้ทำ function ต่อราวเตอร์แค่ ~4,095 ช่อง — ต้องเลือกให้เหมาะกับขนาดเครือข่ายจริง ไม่ใช่เลือกสูงสุดไว้ก่อนเสมอไป</p>
+    <p class="caption">เห็น trade-off ชัดเจน: เลือก 60 รองรับเราเตอร์ได้เยอะสุด แต่เหลือที่ให้ทำ function ต่อเราเตอร์แค่ ~4,095 ช่อง — ต้องเลือกให้เหมาะกับขนาดเครือข่ายจริง ไม่ใช่เลือกสูงสุดไว้ก่อนเสมอไป</p>
   </section>
 
   <!-- ============ 9. Warning ============ -->
@@ -347,8 +375,8 @@
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
       <li><span class="amber-text">SRv6</span> เอาที่อยู่ IPv6 มาเป็นจุดแวะโดยตรง ไม่มี MPLS label ปนบนสายเลย</li>
       <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้ถึง 8 จุดในที่อยู่เดียว แก้ปัญหา overhead</li>
-      <li>16 บิตนั้นแบ่งเป็น <strong>GIB</strong> (ระบุราวเตอร์) กับ <strong>LIB</strong> (ระบุ function ในราวเตอร์นั้น) ด้วยตัวเลขตัวเดียว</li>
-      <li>ค่าราวเตอร์ (<span class="mono">un</span>) ต้องเลือกเองให้อยู่ในโซน GIB เสมอ — CLI ยอมรับตัวเลขกว้างกว่านั้นมาก และไม่เตือนถ้าเผลอหลุดไปโซน LIB</li>
+      <li>16 บิตนั้นแบ่งเป็น <strong>GIB</strong> (ระบุเราเตอร์) กับ <strong>LIB</strong> (ระบุ function ในเราเตอร์นั้น) ด้วยตัวเลขตัวเดียว</li>
+      <li>ค่าเราเตอร์ (<span class="mono">un</span>) ต้องเลือกเองให้อยู่ในโซน GIB เสมอ — CLI ยอมรับตัวเลขกว้างกว่านั้นมาก และไม่เตือนถ้าเผลอหลุดไปโซน LIB</li>
       <li>label ที่เห็นในคอนฟิกเป็นแค่กลไก lookup ภายในฮาร์ดแวร์บางรุ่น ไม่เคยออกไปบนสายจริง</li>
       <li><strong>GIB ไม่ต้องมีคลัง label</strong> เพราะแค่จับคู่กับ prefix เดียวของตัวเองผ่าน IGP ตามปกติ แต่ <strong>LIB ต้องมี</strong> เพราะแต่ละค่าคืองานคนละอย่างที่ต้องแยกแยะแบบ index ต่อค่า</li>
       <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — จองผิดขนาดแล้วไม่มี warning ให้เห็นด้วย ต้องคำนวณเองให้ครบตั้งแต่แรก</li>
@@ -709,14 +737,17 @@
     var settle = tt < 1 ? 0 : (tt<2.6 ? ease((tt-1)/1.6) : (tt<3.6?1:(tt<4.6?ease((tt-3.6)/1)+0:1)));
     var pf = showSafe ? safeFrac : unsafeFrac;
     var px = barX + barW*pf;
-    var py = barY - 46;
+    // pin sits BELOW the bar (not above) — the stage-label chips are absolutely
+    // positioned over the top of the canvas, so anything drawn above the bar
+    // collides with them; there is ample free space below the bar instead.
+    var py = barY + barH + 44;
 
     var visible = (tt<2.6) || (tt>=3.6);
     if (visible){
       var ok = showSafe;
       ctx.strokeStyle = ok ? C.good : '#e0526a';
       ctx.lineWidth = 2.4;
-      ctx.beginPath(); ctx.moveTo(px, py+14); ctx.lineTo(px, barY-2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, barY+barH+2); ctx.lineTo(px, py-14); ctx.stroke();
       ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2);
       ctx.fillStyle = ok ? C.good : '#e0526a'; ctx.fill();
       ctx.font='700 12px "Inter", sans-serif'; ctx.fillStyle = ok ? C.good : '#e0526a'; ctx.textAlign='center';
@@ -726,144 +757,151 @@
       var label = ok ? 'un value 6 — อยู่ใน GIB' : 'un value 20000 — หลุดไปโซน LIB!';
       ctx.textAlign = pf > 0.75 ? 'right' : (pf < 0.1 ? 'left' : 'center');
       var lx = pf > 0.75 ? Math.min(px+2, barX+barW) : (pf < 0.1 ? Math.max(px-2, barX) : px);
-      ctx.fillText(label, lx, py-14);
+      ctx.fillText(label, lx, py+22);
       if (!ok){
         ctx.font='500 9px "Inter", sans-serif'; ctx.fillStyle=C.muted;
-        ctx.fillText('CLI ยอมรับค่านี้ ไม่มีคำเตือนใด ๆ', lx, py-28);
+        ctx.fillText('CLI ยอมรับค่านี้ ไม่มีคำเตือนใด ๆ', lx, py+36);
       }
     }
   }, 1);
 
-  /* ---------------- Full packet walkthrough: CE1 -> R1 -> R2 -> R3 -> CE2 ---------------- */
-  mount(document.getElementById('c-forward'), function(ctx,w,h,t,C){
-    ctx.clearRect(0,0,w,h);
+  /* ---------------- Full packet walkthrough: CE1 -> R1 -> R2 -> R3 -> CE2 (reader-controlled, step by step) ---------------- */
+  (function(){
+    var canvas = document.getElementById('c-forward');
+    var slider = document.getElementById('forward-slider');
+    if (!canvas || !slider) return;
+    var ctx = canvas.getContext('2d');
+    var prevBtn = document.getElementById('forward-prev');
+    var nextBtn = document.getElementById('forward-next');
+    var stepReadout = document.getElementById('forward-readout');
+    var descEl = document.getElementById('forward-desc');
+    var nodeEl = document.getElementById('forward-node');
+    var gibEl = document.getElementById('forward-gib');
+    var libEl = document.getElementById('forward-lib');
+    var remainingEl = document.getElementById('forward-remaining');
+
     var nodes = ['CE1','R1','R2','R3','CE2'];
     var un = {R1:1, R2:2, R3:3};
-    // per-hop: [GIB, LIB label, isFunction]
-    var hops = [
-      {gib:1, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ'},
-      {gib:2, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ'},
-      {gib:3, lib:'e012', fn:true, note:'ถอดรหัส ส่งเข้า VPN'}
+    var hops = {
+      R1:{gib:1, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ ไม่มีคำสั่งพิเศษ'},
+      R2:{gib:2, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ ไม่มีคำสั่งพิเศษ'},
+      R3:{gib:3, lib:'e012', fn:true, note:'ถอดรหัส ส่งเข้า VPN'}
+    };
+    var remainingCount = [3,2,1,0,0];
+    var remainingLabels = [
+      '3 ช่อง (R1, R2, R3)',
+      '2 ช่อง (R2, R3)',
+      '1 ช่อง (R3)',
+      '0 ช่อง — ประมวลผลที่ R3 แล้ว',
+      '0 ช่อง — ถึงปลายทางแล้ว'
+    ];
+    var descriptions = [
+      'แพ็กเก็ตเริ่มต้นที่ CE1 พร้อมที่อยู่ปลายทางที่ประกอบไว้แล้ว 3 ช่องเรียงกัน: R1 → R2 → R3',
+      'มาถึง R1 — GIB ตรงกับ un=1 ของตัวเอง (✓) ส่วน LIB=0 แปลว่าไม่มีคำสั่งพิเศษ ส่งต่อไปช่องถัดไปทันที',
+      'มาถึง R2 — GIB ตรงกับ un=2 ของตัวเอง (✓) LIB=0 เหมือนเดิม ส่งต่อไปช่องถัดไปทันที',
+      'มาถึง R3 — GIB ตรงกับ un=3 (✓) แต่ LIB=e012 ไม่ใช่ 0 แปลว่ามีคำสั่งเฉพาะ: ถอดรหัสส่งเข้า VPN ก่อนส่งต่อไปหาปลายทางจริง',
+      'ถึงปลายทางที่ CE2 แล้ว — งานของ SRv6 เสร็จสมบูรณ์'
     ];
 
-    var pad = w*0.08;
-    var y = h*0.56;
-    var xs = [];
-    for (var i=0;i<nodes.length;i++) xs.push(pad + (w-2*pad)*(i/(nodes.length-1)));
-    var boxW = Math.min(56, (w-2*pad)/nodes.length*0.55), boxH = 40;
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio||1, 2);
+      var rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width*dpr));
+      canvas.height = Math.max(1, Math.round(rect.height*dpr));
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
 
-    // timeline boundaries (seconds)
-    var travelHop = 1.2, pauseHop = 1.0, pauseFn = 1.3, travelFinal = 1.0, pauseFinal = 1.0, gap = 0.4;
-    var b = [0];
-    b.push(b[0]+travelHop);            // 1: arrive R1
-    b.push(b[1]+pauseHop);             // 2: done R1
-    b.push(b[2]+travelHop);            // 3: arrive R2
-    b.push(b[3]+pauseHop);             // 4: done R2
-    b.push(b[4]+travelHop);            // 5: arrive R3
-    b.push(b[5]+pauseFn);              // 6: done R3
-    b.push(b[6]+travelFinal);          // 7: arrive CE2
-    b.push(b[7]+pauseFinal);           // 8: done, loop
-    var cycle = b[8]+gap;
-    var tt = t % cycle;
+    function draw(step){
+      var rect = canvas.getBoundingClientRect();
+      var w = rect.width, h = rect.height;
+      ctx.clearRect(0,0,w,h);
 
-    // path line + node boxes
-    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(xs[xs.length-1], y); ctx.stroke();
+      var pad = w*0.08;
+      var y = h*0.56;
+      var xs = [];
+      for (var i=0;i<nodes.length;i++) xs.push(pad + (w-2*pad)*(i/(nodes.length-1)));
+      var boxW = Math.min(56, (w-2*pad)/nodes.length*0.55), boxH = 40;
 
-    var activeIdx = 0, litRouter = -1, litGood = false;
-    if (tt<b[1]) activeIdx = 0;
-    else if (tt<b[2]) { activeIdx = 1; litRouter=1; }
-    else if (tt<b[3]) activeIdx = 1;
-    else if (tt<b[4]) { activeIdx = 2; litRouter=2; }
-    else if (tt<b[5]) activeIdx = 2;
-    else if (tt<b[6]) { activeIdx = 3; litRouter=3; litGood = tt > b[5]+pauseFn*0.35; }
-    else if (tt<b[7]) activeIdx = 3;
-    else activeIdx = 4;
+      ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(xs[xs.length-1], y); ctx.stroke();
 
-    for (i=0;i<nodes.length;i++){
-      var isLit = (i===litRouter);
-      ctx.fillStyle = C.sunk;
-      ctx.strokeStyle = isLit ? (litGood ? C.good : C.amber) : C.lineStrong;
-      ctx.lineWidth = isLit ? 2.6 : 1.6;
-      ctx.beginPath(); roundRectPath(ctx, xs[i]-boxW/2, y-boxH/2, boxW, boxH, 9); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = C.soft; ctx.font='600 11px "Inter", sans-serif'; ctx.textAlign='center';
-      ctx.fillText(nodes[i], xs[i], y+4);
-      if (un[nodes[i]]){
-        ctx.font='500 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.muted;
-        ctx.fillText('un='+un[nodes[i]], xs[i], y+boxH/2+14);
+      var hop = hops[nodes[step]];
+      var isDone = step === nodes.length-1;
+      var litGood = hop ? hop.fn : false;
+
+      for (i=0;i<nodes.length;i++){
+        var isCurrent = (i===step);
+        ctx.fillStyle = C.sunk;
+        ctx.strokeStyle = isCurrent ? (litGood ? C.good : C.amber) : C.lineStrong;
+        ctx.lineWidth = isCurrent ? 2.6 : 1.6;
+        ctx.beginPath(); roundRectPath(ctx, xs[i]-boxW/2, y-boxH/2, boxW, boxH, 9); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = C.soft; ctx.font='600 11px "Inter", sans-serif'; ctx.textAlign='center';
+        ctx.fillText(nodes[i], xs[i], y+4);
+        if (un[nodes[i]]){
+          ctx.font='500 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.muted;
+          ctx.fillText('un='+un[nodes[i]], xs[i], y+boxH/2+14);
+        }
       }
-    }
 
-    // traveling packet position
-    var px;
-    if (tt<b[1]) px = lerp(xs[0], xs[1], ease(tt/travelHop));
-    else if (tt<b[2]) px = xs[1];
-    else if (tt<b[3]) px = lerp(xs[1], xs[2], ease((tt-b[2])/travelHop));
-    else if (tt<b[4]) px = xs[2];
-    else if (tt<b[5]) px = lerp(xs[2], xs[3], ease((tt-b[4])/travelHop));
-    else if (tt<b[6]) px = xs[3];
-    else if (tt<b[7]) px = lerp(xs[3], xs[4], ease((tt-b[6])/travelFinal));
-    else px = xs[4];
+      var px = xs[step];
+      var pillW = 46, pillH = 20, py = y - boxH/2 - 30;
+      ctx.fillStyle = C.raised; ctx.strokeStyle = isDone ? C.good : C.amber; ctx.lineWidth = 2;
+      ctx.beginPath(); roundRectPath(ctx, px-pillW/2, py-pillH/2, pillW, pillH, 10); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.ink; ctx.font='600 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
+      ctx.fillText(isDone ? 'data' : 'IPv6', px, py+3);
 
-    var pillW = 42, pillH = 20, py = y - boxH/2 - 30;
-    ctx.fillStyle = C.raised; ctx.strokeStyle = (tt>=b[7]) ? C.good : C.amber; ctx.lineWidth = 2;
-    ctx.beginPath(); roundRectPath(ctx, px-pillW/2, py-pillH/2, pillW, pillH, 10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = C.ink; ctx.font='600 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
-    ctx.fillText(tt>=b[7] ? 'data' : 'IPv6', px, py+3);
-
-    // remaining segment squares above the packet
-    var remaining = 3;
-    if (tt>=b[2]) remaining = 2;
-    if (tt>=b[4]) remaining = 1;
-    if (tt>=b[6]) remaining = 0;
-    var sq=11, gapPx=4;
-    var totalW = remaining>0 ? remaining*sq+(remaining-1)*gapPx : 0;
-    var sx0 = px - totalW/2, scy = py - pillH/2 - 13;
-    for (var s=0;s<remaining;s++){
-      var cx = sx0 + s*(sq+gapPx) + sq/2;
-      ctx.fillStyle = s===0 ? C.cyanSoft : C.sunk;
-      ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.3;
-      ctx.beginPath(); roundRectPath(ctx, cx-sq/2, scy-sq/2, sq, sq, 3); ctx.fill(); ctx.stroke();
-    }
-
-    // GIB/LIB readout box while paused at a router
-    var pauseWindows = [
-      {start:b[0], end:b[1], hop:null},
-      {start:b[1], end:b[2], hop:0, x:xs[1]},
-      {start:b[3], end:b[4], hop:1, x:xs[2]},
-      {start:b[5], end:b[6], hop:2, x:xs[3]}
-    ];
-    var readoutText = null, readoutX = px, readoutGood = false;
-    for (var pw=0; pw<pauseWindows.length; pw++){
-      var win = pauseWindows[pw];
-      if (win.hop!==null && tt>=win.start && tt<win.end){
-        var hop = hops[win.hop];
-        readoutGood = hop.fn;
-        readoutText = ['GIB='+hop.gib+' ✓ ตรงกับ un', 'LIB='+hop.lib+' → '+hop.note];
-        readoutX = win.x;
+      var remaining = remainingCount[step];
+      if (remaining>0){
+        var sq=11, gapPx=4;
+        var totalW = remaining*sq+(remaining-1)*gapPx;
+        var sx0 = px - totalW/2, scy = py - pillH/2 - 13;
+        for (var s=0;s<remaining;s++){
+          var cx = sx0 + s*(sq+gapPx) + sq/2;
+          ctx.fillStyle = s===0 ? C.cyanSoft : C.sunk;
+          ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.3;
+          ctx.beginPath(); roundRectPath(ctx, cx-sq/2, scy-sq/2, sq, sq, 3); ctx.fill(); ctx.stroke();
+        }
       }
-    }
-    if (tt>=b[7]){
-      readoutText = ['✓ ถึงปลายทาง (CE2)'];
-      readoutGood = true;
-      readoutX = xs[4];
-    }
-    if (readoutText){
-      var rw = Math.min(168, w*0.7), rh = readoutText.length>1 ? 40 : 22;
-      var cx2 = Math.max(rw/2+6, Math.min(readoutX, w-rw/2-6)); // keep the box on-canvas at narrow widths
-      var ry = py - pillH/2 - 22 - rh;
-      ctx.fillStyle = readoutGood ? C.good : C.amber;
-      ctx.globalAlpha = 0.14;
-      ctx.beginPath(); roundRectPath(ctx, cx2-rw/2, ry, rw, rh, 8); ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = readoutGood ? C.good : C.amber; ctx.lineWidth = 1.4;
-      ctx.beginPath(); roundRectPath(ctx, cx2-rw/2, ry, rw, rh, 8); ctx.stroke();
-      ctx.font='600 9px "JetBrains Mono", monospace'; ctx.fillStyle = C.ink; ctx.textAlign='center';
-      for (var li=0; li<readoutText.length; li++){
-        ctx.fillText(readoutText[li], cx2, ry+15+li*15);
+
+      // HTML readouts sit below the canvas instead of floating over it — plenty of room to read
+      var nodeLabel = nodes[step] + (un[nodes[step]] ? ' (un='+un[nodes[step]]+')' : '');
+      var gibText, libText;
+      if (hop){
+        gibText = 'GIB='+hop.gib+' ✓ ตรงกับ un';
+        libText = 'LIB='+hop.lib+' → '+hop.note;
+      } else if (step===0){
+        gibText = '— ยังไม่ถึงเราเตอร์ใด';
+        libText = '—';
+      } else {
+        gibText = '✓ ถึงปลายทางแล้ว';
+        libText = '—';
       }
+
+      if (nodeEl) nodeEl.textContent = nodeLabel;
+      if (gibEl) gibEl.textContent = gibText;
+      if (libEl) libEl.textContent = libText;
+      if (remainingEl) remainingEl.textContent = remainingLabels[step];
+      if (descEl) descEl.textContent = descriptions[step];
+      if (stepReadout) stepReadout.textContent = 'ขั้น ' + (step+1) + ' / ' + nodes.length;
+      if (prevBtn) prevBtn.disabled = step===0;
+      if (nextBtn) nextBtn.disabled = step===nodes.length-1;
     }
-  }, 3.4);
+
+    function currentStep(){ return parseInt(slider.value, 10); }
+    function render(){ resize(); draw(currentStep()); }
+    function goTo(step){
+      step = Math.max(0, Math.min(nodes.length-1, step));
+      slider.value = step;
+      draw(step);
+    }
+
+    slider.addEventListener('input', function(){ draw(currentStep()); });
+    if (prevBtn) prevBtn.addEventListener('click', function(){ goTo(currentStep()-1); });
+    if (nextBtn) nextBtn.addEventListener('click', function(){ goTo(currentStep()+1); });
+    window.addEventListener('resize', render);
+    new MutationObserver(render).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+    render();
+  })();
 
   /* ---------------- Wire vs internal label ---------------- */
   mount(document.getElementById('c-wire'), function(ctx,w,h,t,C){
