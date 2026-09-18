@@ -331,6 +331,15 @@
       <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในเราเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงเราเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) เราเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้ครบทุกค่าที่ LIB มีทางเป็นไปได้ทั้งหมดล่วงหน้า ไม่ใช่แค่ค่าที่ใช้งานจริงตอนนั้น</p>
     </div>
     <div class="callout">
+      <span class="tag">static-function: ผ่า LIB อีกชั้นเป็นโซน static กับ dynamic</span>
+      <p>ภายใน LIB เดียวกัน (ที่คลัง label ก้อนเดียวครอบคลุมอยู่แล้ว) ยังถูกผ่าอีกชั้นด้วยค่า <span class="mono">static-function max-entries</span>: ตั้งแต่ต้น LIB ไปจนถึง max-entries คือโซน <strong>static</strong> — operator พิมพ์ค่าฟังก์ชันเองตรง ๆ ได้ค่าเดิมทุกครั้งแม้ reboot ส่วนที่เหลือทั้งหมดคือโซน <strong>dynamic</strong> — ระบบเลือกช่องว่างให้เองอัตโนมัติ ไม่การันตีว่าจะได้เลขเดิมทุกครั้ง</p>
+      <p>สิ่งที่ต้องเป็น static เสมอ เพราะมีคนอื่นอ้างอิงค่าตรง ๆ จึงต้องคาดเดาได้แน่นอน: <strong>uA</strong> ที่กำหนด adjacency เอง, <strong>service micro-SID</strong> ที่ระบุ function value เอง (uDT4/uDT6/uDT46/uDX2/uDX6), และ <strong>binding-SID (uB6)</strong> ของ SRv6 policy — ทั้งสามชนิดแย่งที่กันในโซน static เดียวกัน ไม่ใช่คนละโควตาแยกกัน ส่วน <span class="mono">un</span> (GIB) ไม่เกี่ยวข้องกับโซนนี้เลย เพราะอยู่คนละ pool ตั้งแต่ต้น ไม่กินโควตา static-function แม้แต่ช่องเดียว</p>
+    </div>
+    <div class="callout">
+      <span class="tag">ข้อควรระวังจริง: แก้ max-entries ทีหลัง = service สะดุดทั้ง block</span>
+      <p>ค่าเริ่มต้นของ <span class="mono">max-entries</span> คือ <strong>1</strong> — ถ้าจะใช้ static function มากกว่า 1 ตัว ต้องปรับเพิ่มเอง และที่สำคัญกว่านั้น: <strong>การแก้ค่า max-entries ทีหลังจะสลับ admin-state ของ block ทั้งก้อนโดยอัตโนมัติ</strong> ตาม CLI warning ของจริง แปลว่า service ทุกตัวที่ผูกกับ block นั้นจะสะดุดชั่วขณะทันที — ต้องวางแผนจำนวน static function ที่ต้องใช้ให้ครบตั้งแต่วันแรก ไม่ใช่ค่อยขยายทีหลัง</p>
+    </div>
+    <div class="callout">
       <span class="tag">กฎที่ต้องจำ</span>
       <p>สิ่งเดียวที่ต้องตรงคือ <strong>"จำนวน" (count)</strong> — คลัง label ต้องมีจำนวนช่องอย่างน้อยเท่ากับขนาดของ LIB จะเริ่มที่เลขอะไรก็ได้ ขอแค่ไม่ไปชนกับ label range อื่นที่ใช้อยู่ในเครื่องเดียวกัน</p>
     </div>
