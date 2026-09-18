@@ -170,7 +170,7 @@
   <section id="overhead">
     <span class="kicker"><span class="dot"></span>03 · ปัญหาที่ตามมา</span>
     <h2>ยิ่งเส้นทางซับซ้อน ยิ่งต้องแบกรายการยาว</h2>
-    <p class="lede">วิธีของ SRv6 ในข้อที่แล้วเรียบง่ายดี แต่แลกมาด้วยต้นทุนที่มองข้ามไม่ได้: ที่อยู่ IPv6 หนึ่งตัวยาวถึง <strong>128 บิต</strong> ถ้าเส้นทางหนึ่งต้องผ่าน 6 จุดแวะ ก็ต้องแนบที่อยู่ 6 ตัวเต็ม ๆ ไปกับทุกแพ็กเก็ต — ยิ่งเครือข่ายใหญ่ ยิ่งทำ traffic engineering ซับซ้อน รายการนี้ก็ยิ่งยาว กินพื้นที่และแรงประมวลผลทุก hop</p>
+    <p class="lede">วิธีของ SRv6 ที่เพิ่งเห็นไปเรียบง่ายดี แต่แลกมาด้วยต้นทุนที่มองข้ามไม่ได้: ที่อยู่ IPv6 หนึ่งตัวยาวถึง <strong>128 บิต</strong> ถ้าเส้นทางหนึ่งต้องผ่าน 6 จุดแวะ ก็ต้องแนบที่อยู่ 6 ตัวเต็ม ๆ ไปกับทุกแพ็กเก็ต — ยิ่งเครือข่ายใหญ่ ยิ่งทำ traffic engineering ซับซ้อน รายการนี้ก็ยิ่งยาว กินพื้นที่และแรงประมวลผลทุก hop</p>
     <div class="stage">
       <div class="stage-label"><span class="chip amber">● ขนาด SRH ที่ต้องแบก</span></div>
       <canvas id="c-overhead" role="img" aria-label="แอนิเมชันแท่งกราฟที่ยาวขึ้นเรื่อย ๆ เมื่อจำนวนจุดแวะเพิ่มจาก 1 ไปจนถึง 6 จุด แสดงจำนวนบิตที่ต้องแบกไปด้วย"></canvas>
@@ -201,11 +201,11 @@
   <section id="giblib">
     <span class="kicker"><span class="dot"></span>05 · พื้นฐานที่ 2</span>
     <h2>แต่ละช่อง 16 บิต เป็น GIB หรือ LIB — แยกด้วยช่วงตัวเลข ไม่ใช่แบ่งบิต</h2>
-    <p class="lede">จาก Micro-SID ที่บีบทุกจุดแวะเหลือ 16 บิตในข้อที่แล้ว คำถามถัดมาคือ 16 บิตนั้นมีความหมายว่าอะไร? <strong>ข้อควรระวัง: มันไม่ใช่ "หนึ่งช่อง 16 บิต ถูกผ่าซอยครึ่งเป็นสองส่วนย่อย"</strong> — ทุกช่อง 16 บิตทั้งช่อง มีความหมายเดียวเต็ม ๆ ไม่ว่าจะเป็น "เราเตอร์ไหน" (GIB) หรือ "ทำอะไรที่นั่น" (LIB) โดยตัดสินจาก<strong>ค่าตัวเลขที่ใส่ในช่องนั้น</strong> ว่าตกอยู่ในช่วงไหนของทั้งหมด 0x0001–0xFFFF ที่ใช้ร่วมกันทุกช่อง — เราเตอร์ตัวหนึ่งจะมีช่อง un (GIB) ของตัวเองหนึ่งช่อง แล้วถ้ามันมีงานให้ทำ ก็จะมีอีกช่องแยกต่างหากถัดไปทันทีสำหรับค่า function (LIB)</p>
+    <p class="lede">จาก Micro-SID ที่บีบทุกจุดแวะเหลือ 16 บิตเมื่อกี้ คำถามถัดมาคือ 16 บิตนั้นมีความหมายว่าอะไร? <strong>ข้อควรระวัง: มันไม่ใช่ "หนึ่งช่อง 16 บิต ถูกผ่าซอยครึ่งเป็นสองส่วนย่อย"</strong> — ทุกช่อง 16 บิตทั้งช่อง มีความหมายเดียวเต็ม ๆ ไม่ว่าจะเป็น "เราเตอร์ไหน" (GIB) หรือ "ทำอะไรที่นั่น" (LIB) โดยตัดสินจาก<strong>ค่าตัวเลขที่ใส่ในช่องนั้น</strong> ว่าตกอยู่ในช่วงไหนของทั้งหมด 0x0001–0xFFFF ที่ใช้ร่วมกันทุกช่อง — เราเตอร์ตัวหนึ่งจะมีช่อง un (GIB) ของตัวเองหนึ่งช่อง แล้วถ้ามันมีงานให้ทำ ก็จะมีอีกช่องแยกต่างหากถัดไปทันทีสำหรับค่า function (LIB)</p>
     <div class="stage">
       <div class="stage-label">
-        <span class="chip amber">● GIB — รหัสพื้นที่ (เราเตอร์ไหน)</span>
-        <span class="chip cyan">● LIB — เลขในสาย (ทำอะไรในเราเตอร์นั้น)</span>
+        <span class="chip amber">● GIB — เลขประจำเราเตอร์ (เราเตอร์ไหน)</span>
+        <span class="chip cyan">● LIB — เลขงานภายในเครื่อง (ทำอะไรในเราเตอร์นั้น)</span>
       </div>
       <canvas id="c-giblib" role="img" aria-label="แผนภาพแท่งแสดงพื้นที่ 16 บิต แบ่งเป็นสองโซนสี ตำแหน่งเส้นแบ่งเปลี่ยนตามค่าที่เลือกจากแถบเลื่อนด้านล่าง"></canvas>
     </div>
@@ -224,8 +224,8 @@
     </div>
     <p class="caption" id="entries-caption">ยิ่งลากค่า <span class="mono">global-sid-entries</span> ขึ้น ยิ่งเผื่อที่ให้ GIB มาก (รองรับเราเตอร์ได้เยอะขึ้น) แต่ LIB จะเหลือน้อยลง (ทำ service ต่อเราเตอร์ได้น้อยลง) และคลัง label ที่ต้องจองก็เล็กลงตาม LIB ไปด้วย</p>
     <ul class="points">
-      <li><strong>GIB (Global)</strong> ต้อง unique ทั้งเครือข่าย ห้ามซ้ำข้ามเราเตอร์ — เหมือนรหัสพื้นที่ที่บอกว่าเบอร์นี้อยู่จังหวัดไหน</li>
-      <li><strong>LIB (Local)</strong> unique แค่ภายในเราเตอร์ตัวเดียว เราเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขต่อภายในออฟฟิศที่ซ้ำกับออฟฟิศอื่นได้</li>
+      <li><strong>GIB (Global)</strong> ต้อง unique ทั้งเครือข่าย ห้ามซ้ำข้ามเราเตอร์ — เหมือนเลขทะเบียนที่ต้องไม่ซ้ำกันทั้งประเทศ</li>
+      <li><strong>LIB (Local)</strong> unique แค่ภายในเราเตอร์ตัวเดียว เราเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขห้องภายในตึกที่ซ้ำกับตึกอื่นได้</li>
       <li>ตัวเลขตัวเดียวที่ตั้งครั้งเดียว (เท่ากันทุกเราเตอร์ในเครือข่าย) กำหนดว่าเส้นแบ่งอยู่ตรงไหน</li>
     </ul>
     <div class="callout">
@@ -436,68 +436,105 @@
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">0. FPE (Forwarding Path Extension) — ต้องมีก่อนเสมอ</h3>
     <p>SRv6 บน FP-based platform ต้องมี FPE ทำหน้าที่ origination/termination เสมอ (คือที่มาของ <span class="mono">origination-fpe [1]</span> / <span class="mono">termination-fpe [2]</span> ที่อ้างถึงในข้อ 1 ด้านล่าง) — FPE ต้องผูกกับพอร์ตผ่าน <span class="mono">port-xc (pxc)</span> แต่ไม่จำเป็นต้องเสียพอร์ตหน้าเครื่องจริงเลย ใช้ MAC loopback ภายในการ์ดแทนได้:</p>
-    <div class="code-block"><pre>configure card 1 mda 1 xconnect mac 1
-    loopback 1 { }
+    <div class="code-block"><pre>configure {
+    card 1 {
+        mda 1 {
+            xconnect {
+                mac 1 {
+                    loopback 1 {
+                    }
+                }
+            }
+        }
+    }
+    port 1/1/m1/1 {
+        admin-state enable
+    }
+}
 
-configure port 1/1/m1/1
-    admin-state enable
-
-configure port-xc
-    pxc 1
+[ro:/configure]
+A:admin@pe1# info port-xc
+    pxc 1 {
         admin-state enable
         port-id 1/1/m1/1
-    pxc 2
+    }
+    pxc 2 {
         admin-state enable
         port-id 1/1/m1/1
+    }
 
-configure router "Base" fwd-path-ext
-    fpe 1
-        path
+[ro:/configure]
+A:admin@pe1# info fwd-path-ext
+    fpe 1 {
+        path {
             pxc 1
-        application
-            srv6
+        }
+        application {
+            srv6 {
                 type origination
-    fpe 2
-        path
+            }
+        }
+    }
+    fpe 2 {
+        path {
             pxc 2
-        application
-            srv6
-                type termination</pre></div>
+        }
+        application {
+            srv6 {
+                type termination
+            }
+        }
+    }</pre></div>
     <p class="caption"><span class="mono">pxc 1</span> กับ <span class="mono">pxc 2</span> ชี้พอร์ต loopback เดียวกันได้ ไม่ต้องแยกพอร์ตจริง — ต้องเปิด <span class="mono">admin-state enable</span> ที่ <span class="mono">port pxc-1.a / pxc-1.b / pxc-2.a / pxc-2.b</span> ด้วย ระบบจะสร้าง interface <span class="mono">_tmnx_fpe_1.a/.b</span> และ <span class="mono">_tmnx_fpe_2.a/.b</span> ให้เองหลังจากนั้น</p>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">1. คลัง label + locator + un (PE1, un=1)</h3>
-    <div class="code-block"><pre>configure router "Base" mpls-labels
-    reserved-label-block "SRv6-uSID-Alg0"
+    <div class="code-block"><pre>[ro:/configure]
+A:admin@pe1# info router "Base" mpls-labels
+    reserved-label-block "SRv6-uSID-Alg0" {
         start-label 30000
         end-label 79151
+    }
 
-configure router "Base" isis 0 segment-routing-v6
+[ro:/configure]
+A:admin@pe1# info router "Base" isis 0 segment-routing-v6
     admin-state enable
-    micro-segment-locator "uSID-Alg0-Loc"
+    micro-segment-locator "uSID-Alg0-Loc" {
         level-capability 2
-        level 2 metric 1
+        level 2 {
+            metric 1
+        }
+    }
 
-configure router "Base" segment-routing segment-routing-v6
-    origination-fpe [1]
-    source-address 2001:db8::1
-    micro-segment
-        block-length 32
-        global-sid-entries 16
-        sid-length 16
-        block "uSID-BLK"
+[ro:/configure]
+A:admin@pe1# info router "Base" segment-routing
+    segment-routing-v6 {
+        origination-fpe [1]
+        source-address 2001:db8::1
+        micro-segment {
+            block-length 32
+            global-sid-entries 16
+            sid-length 16
+            block "uSID-BLK" {
+                admin-state enable
+                termination-fpe [2]
+                label-block "SRv6-uSID-Alg0"
+                prefix {
+                    ip-prefix 2001:bbbb::/32
+                }
+                static-function {
+                    max-entries 16
+                }
+            }
+        }
+        micro-segment-locator "uSID-Alg0-Loc" {
             admin-state enable
-            termination-fpe [2]
-            label-block "SRv6-uSID-Alg0"
-            prefix
-                ip-prefix 2001:bbbb::/32
-            static-function
-                max-entries 16
-    micro-segment-locator "uSID-Alg0-Loc"
-        admin-state enable
-        block "uSID-BLK"
-        un
-            srh-mode usp
-            value 1</pre></div>
+            block "uSID-BLK"
+            un {
+                srh-mode usp
+                value 1
+            }
+        }
+    }</pre></div>
     <p class="caption">PE2 ตั้งเหมือนกันทุกบรรทัด ยกเว้น <span class="mono">source-address 2001:db8::2</span> และ <span class="mono">un value 2</span> — block, global-sid-entries, static-function ต้องเท่ากันทั้งโดเมนเสมอ</p>
     <div class="callout">
       <span class="tag">ทำไมจองเท่านี้ ไม่ใช่จองเต็มเพดานเสมอไป</span>
@@ -505,42 +542,78 @@ configure router "Base" segment-routing segment-routing-v6
     </div>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">2. static uA ต่ออินเทอร์เฟซแต่ละเส้น (PE1)</h3>
-    <div class="code-block"><pre>configure router "Base" segment-routing segment-routing-v6 base-routing-instance
-    micro-segment-locator "uSID-Alg0-Loc"
-        function
-            ua 1
+    <div class="code-block"><pre>[ro:/configure]
+A:admin@pe1# info router "Base" segment-routing segment-routing-v6 base-routing-instance
+    micro-segment-locator "uSID-Alg0-Loc" {
+        function {
+            ua 1 {
                 srh-mode psp
                 protection unprotected
                 interface-name "to-pe2-1"
-            ua 2
+            }
+            ua 2 {
                 srh-mode psp
                 protection unprotected
                 interface-name "to-pe2-2"
-            ua 3
+            }
+            ua 3 {
                 srh-mode psp
                 protection unprotected
-                interface-name "to-pe2-3"</pre></div>
-    <p class="caption">index 1/2/3 → Oper Func จริง 0x4000/0x4001/0x4002 ตามสูตร <span class="mono">LIB start + index − 1</span> ที่คุยกันในข้อ 10 — ฝั่ง PE2 ใช้ <span class="mono">ua-auto-allocate psp protection unprotected</span> แทน (dynamic) เพื่อเทียบกัน</p>
+                interface-name "to-pe2-3"
+            }
+        }
+    }</pre></div>
+    <p class="caption">index 1/2/3 → Oper Func จริง 0x4000/0x4001/0x4002 ตามสูตร <span class="mono">LIB start + index − 1</span> ที่คุยกันในข้อ 10 — ฝั่ง PE2 ใช้แบบ dynamic แทนเพื่อเทียบกัน:</p>
+    <div class="code-block"><pre>[ro:/configure]
+A:admin@pe2# info router "Base" segment-routing segment-routing-v6 base-routing-instance
+    micro-segment-locator "uSID-Alg0-Loc" {
+        function {
+            ua-auto-allocate psp protection unprotected { }
+        }
+    }</pre></div>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">3. VPRN บน Micro-SID (uDT46)</h3>
-    <div class="code-block"><pre>configure service vprn "VPRN-100"
+    <div class="code-block"><pre>[ro:/configure]
+A:admin@pe1# info service vprn "VPRN-100"
     admin-state enable
     service-id 100
     customer "1"
-    segment-routing-v6 1
-        micro-segment-locator "uSID-Alg0-Loc"
-            function
-                udt46 { }
-    bgp-ipvpn
-        segment-routing-v6 1
+    segment-routing-v6 1 {
+        micro-segment-locator "uSID-Alg0-Loc" {
+            function {
+                udt46 {
+                }
+            }
+        }
+    }
+    bgp-ipvpn {
+        segment-routing-v6 1 {
             admin-state enable
             route-distinguisher "10.0.0.1:100"
             source-address 2001:db8::1
-            vrf-target
+            vrf-target {
                 community "target:65000:100"
-            srv6
+            }
+            srv6 {
                 instance 1
-                default-locator "uSID-Alg0-Loc"</pre></div>
+                default-locator "uSID-Alg0-Loc"
+            }
+        }
+    }
+    interface "loopback-100" {
+        loopback true
+        ipv4 {
+            primary {
+                address 172.16.1.1
+                prefix-length 32
+            }
+        }
+        ipv6 {
+            address 2001:db8:100::1 {
+                prefix-length 128
+            }
+        }
+    }</pre></div>
     <p class="caption">ชื่อ function ในโหมด uSID คือ <span class="mono">udt46</span>/<span class="mono">udt4</span>/<span class="mono">udt6</span> (ไม่ใช่ <span class="mono">end-dt46</span> แบบ classic SRv6) และไม่ระบุ index จึงเป็น dynamic — ได้ Oper Func 0x4010 พอดี (= LIB start + max-entries ตามที่คุยไว้ในข้อ 10)</p>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">4. Verify — คำสั่งจริงที่ใช้ตรวจสอบ</h3>
@@ -573,6 +646,9 @@ SIDs : 5</pre></div>
     <p class="caption">คอลัมน์ <span class="mono">Function</span> ของ <span class="mono">uN</span> (=1) คือค่า GIB ส่วนของ uA/uDT46 (0x4000 ขึ้นไป) คือค่า LIB — คนละ number space กันโดยสิ้นเชิง แต่พิมพ์ในคอลัมน์เดียวกัน (จุดที่ทำให้งงบ่อยที่สุด ตามที่คุยในข้อ 10)</p>
     <div class="code-block"><pre>A:admin@pe1# show router segment-routing-v6 base-routing-instance micro
 
+===============================================================================
+Micro Segment Routing v6 Base Routing Instance
+===============================================================================
 Micro Segment Locator
  Type          Function  SID                                     Status/InstId
   SRH-mode     Oper Func Interface                               Protection
@@ -583,7 +659,13 @@ uSID-Alg0-Loc
  uA            2         2001:bbbb:1:4001::                      ok
   PSP          16385     to-pe2-2                                Unprotected
  uA            3         2001:bbbb:1:4002::                      ok
-  PSP          16386     to-pe2-3                                Unprotected</pre></div>
+  PSP          16386     to-pe2-3                                Unprotected
+-------------------------------------------------------------------------------
+ Auto-allocated uA:
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+===============================================================================
+Legend: * - System allocated</pre></div>
     <p class="caption">คำสั่งนี้แหละที่โชว์ทั้ง <strong>Function</strong> (index ที่พิมพ์ในคอนฟิก) กับ <strong>Oper Func</strong> (ค่า LIB จริง) คู่กัน พร้อมชื่อ interface ที่ผูกไว้ — ใช้เช็คว่า uA ตัวไหนแมปกับลิงก์ไหนได้ตรง ๆ</p>
     <div class="callout">
       <span class="tag">ดูค่าจริงที่ไหน ไม่ให้สับสนสองคอลัมน์</span>
@@ -591,6 +673,16 @@ uSID-Alg0-Loc
     </div>
     <div class="code-block"><pre>A:admin@pe1# show router mpls-labels label-range
 
+===============================================================================
+Label Ranges
+===============================================================================
+Label Type      Start Label End Label   Aging       Available   Total
+-------------------------------------------------------------------------------
+Static          32          18431       -           18400       18400
+Dynamic         18432       524287      0           456704      505856
+    Seg-Route   0           0           -           0           0
+
+-------------------------------------------------------------------------------
 Reserved Label Blocks
 -------------------------------------------------------------------------------
 Reserved Label                               Start       End         Total
@@ -598,13 +690,41 @@ Block Name                                   Label       Label
 -------------------------------------------------------------------------------
 SRv6-uSID-Alg0                               30000       79151       49152
 -------------------------------------------------------------------------------
+No. of Reserved Label Blocks: 1
+-------------------------------------------------------------------------------
+===============================================================================</pre></div>
+    <p class="caption">Dynamic Available ลดลง 49,152 พอดี (505,856 − 456,704 = 49,152) ยืนยันว่า block ถูก carve ออกจาก dynamic pool จริง ไม่ได้เพิ่ม label ลอย ๆ</p>
+    <div class="code-block"><pre>A:admin@pe1# show router bgp routes vpn-ipv4 hunt
 
-A:admin@pe1# show router 100 route-table
-172.16.1.1/32                                 Local   Local     00h21m51s  0
-       loopback-100                                                 0
-172.16.1.2/32                                 Remote  BGP VPN   00h00m34s  170
-       2001:bbbb:2:4013:: (tunneled:SRV6)                           11</pre></div>
-    <p class="caption">route-table ยืนยันว่า control plane ครบวงจรจริง — BGP แจก SRv6 L3 Service TLV มาให้ (Full Sid, Behavior: End.uDT46), route ถูกโปรแกรมเป็น tunneled:SRV6 ชี้ไปที่ SID ของอีกฝั่งถูกต้อง <strong>ข้อจำกัดที่ต้องบอกตรง ๆ:</strong> SR-SIM (ตัวจำลอง SR OS ที่ใช้ทดสอบ) ไม่ forward SRv6 VPN dataplane จริง — ping ข้าม VPRN บน SR-SIM จะ timeout เสมอแม้ config/control-plane ถูกทุกจุด ดังนั้นสิ่งที่ยืนยันได้จากแล็บนี้คือ CLI syntax, validation ตอน commit, ค่า SID/label ที่คำนวณจริง, และ BGP advertisement — ไม่ใช่การ forward แพ็กเก็ตจริงบนฮาร์ดแวร์</p>
+-------------------------------------------------------------------------------
+RIB In Entries
+-------------------------------------------------------------------------------
+Network        : 172.16.1.2/32
+Nexthop        : 10.0.0.2
+Route Dist.    : 10.0.0.2:100           VPN Label      : 16403
+From           : 2001:db8::2
+Community      : target:65000:100
+SRv6 TLV Type  : SRv6 L3 Service TLV (5)
+SRv6 SubTLV    : SRv6 SID Information (1)
+Sid            : 2001:bbbb:2::
+Full Sid       : 2001:bbbb:2:4013::
+Behavior       : End.uDT46 (64)
+SRv6 SubSubTLV : SRv6 SID Structure (1)
+Loc-Block-Len  : 32                     Loc-Node-Len   : 16
+Func-Len       : 16                     Arg-Len        : 0
+Tpose-Len      : 16                     Tpose-offset   : 48
+-------------------------------------------------------------------------------
+RIB Out Entries
+-------------------------------------------------------------------------------
+Network        : 172.16.1.1/32
+Route Dist.    : 10.0.0.1:100           VPN Label      : 16400
+Sid            : 2001:bbbb:1::
+Full Sid       : 2001:bbbb:1:4010::
+Behavior       : End.uDT46 (64)
+Loc-Block-Len  : 32                     Loc-Node-Len   : 16
+Func-Len       : 16                     Arg-Len        : 0
+Tpose-Len      : 16                     Tpose-offset   : 48</pre></div>
+    <p class="caption">BGP แจก SRv6 L3 Service TLV มาให้ครบ — <span class="mono">Full Sid</span> ตรงกับที่คำนวณไว้ทุกจุด (PE2 uDT46 dynamic = <span class="mono">4013::</span>/16403 หลัง 3 uA auto-allocate, PE1 uDT46 dynamic = <span class="mono">4010::</span>/16400) และ <span class="mono">Tpose-offset 48</span> = block 32 บิต + node 16 บิต ตรงตามที่คุยกันมาตลอด <strong>ข้อจำกัดที่ต้องบอกตรง ๆ:</strong> SR-SIM (ตัวจำลอง SR OS ที่ใช้ทดสอบ) ไม่ forward SRv6 VPN dataplane จริง — ping ข้าม VPRN บน SR-SIM จะ timeout เสมอแม้ control plane ถูกทุกจุด ดังนั้นสิ่งที่ยืนยันได้จากแล็บนี้คือ CLI syntax, validation ตอน commit, ค่า SID/label ที่คำนวณจริง, และ BGP advertisement — ไม่ใช่การ forward แพ็กเก็ตจริงบนฮาร์ดแวร์</p>
   </section>
 
   <!-- ============ 8. Worked numbers ============ -->
