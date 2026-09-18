@@ -415,7 +415,7 @@
     <div class="code-block"><pre>configure router "Base" mpls-labels
     reserved-label-block "SRv6-uSID-Alg0"
         start-label 30000
-        end-label 38191
+        end-label 79151
 
 configure router "Base" isis 0 segment-routing-v6
     admin-state enable
@@ -445,6 +445,10 @@ configure router "Base" segment-routing segment-routing-v6
             srh-mode usp
             value 1</pre></div>
     <p class="caption">PE2 ตั้งเหมือนกันทุกบรรทัด ยกเว้น <span class="mono">source-address 2001:db8::2</span> และ <span class="mono">un value 2</span> — block, global-sid-entries, static-function ต้องเท่ากันทั้งโดเมนเสมอ</p>
+    <div class="callout">
+      <span class="tag">จุดที่เคยผิดในร่างแรก — ตัวอย่างจริงของ "จองไม่พอ"</span>
+      <p>ร่างแรกของ config นี้เคยตั้ง <span class="mono">end-label 38191</span> (จองแค่ 8,192 ช่อง) ทั้งที่ <span class="mono">global-sid-entries 16</span> ต้องการ LIB เต็ม ๆ ถึง <strong>49,152 ช่อง</strong> ตามกฎในข้อ 09 — สาเหตุคือลอกเลขจากตัวอย่างในเอกสารเล่มหนึ่งที่ตั้ง global-sid-entries คนละค่ามาใช้ตรง ๆ โดยไม่คำนวณใหม่ ของแบบนี้ <strong>lab ยังรันผ่านและ ping ได้ปกติ</strong> เพราะตอนนั้นมีแค่ 4 function จริง (3 uA + 1 uDT46) ซึ่งยังอยู่ใน 8,192 ช่องแรกพอดี — เป็นตัวอย่างสดของ "จองน้อยไปแต่ยังไม่ชนขอบ เลยดูเหมือนไม่มีปัญหา" ตามที่เตือนไว้ในข้อ 13 เป๊ะ ค่าที่แก้แล้ว (<span class="mono">end-label 79151</span> = 49,152 ช่อง) คือขนาดที่ถูกต้องสำหรับ config ชุดนี้</p>
+    </div>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">2. static uA ต่ออินเทอร์เฟซแต่ละเส้น (PE1)</h3>
     <div class="code-block"><pre>configure router "Base" segment-routing segment-routing-v6 base-routing-instance
@@ -534,7 +538,7 @@ Reserved Label Blocks
 Reserved Label                               Start       End         Total
 Block Name                                   Label       Label
 -------------------------------------------------------------------------------
-SRv6-uSID-Alg0                               30000       38191       8192
+SRv6-uSID-Alg0                               30000       79151       49152
 -------------------------------------------------------------------------------
 
 A:admin@pe1# ping 172.16.1.2 router-instance "VPRN-100" source-address 172.16.1.1 count 3
