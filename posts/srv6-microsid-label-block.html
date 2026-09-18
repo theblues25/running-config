@@ -160,14 +160,14 @@
     <div class="stage">
       <div class="stage-label">
         <span class="chip cyan">● แบบเดิม (1 จุดแวะ/128 บิต)</span>
-        <span class="chip amber">● Micro-SID (block 48 บิต + 5 ช่อง)</span>
+        <span class="chip amber">● Micro-SID (block 32 บิต + 6 ช่อง)</span>
       </div>
-      <canvas id="c-compress" role="img" aria-label="แอนิเมชันเปรียบเทียบที่อยู่ 128 บิตสองแบบ แบบซ้ายมีจุดแวะเดียวเต็มพื้นที่ แบบขวากันพื้นที่ส่วนหน้าไว้ให้ SID block 48 บิต แล้วแบ่งที่เหลือเป็น 5 ช่องเล็กเติมจุดแวะทีละช่องจนเต็ม"></canvas>
+      <canvas id="c-compress" role="img" aria-label="แอนิเมชันเปรียบเทียบที่อยู่ 128 บิตสองแบบ แบบซ้ายมีจุดแวะเดียวเต็มพื้นที่ แบบขวากันพื้นที่ส่วนหน้าไว้ให้ SID block 32 บิต แล้วแบ่งที่เหลือเป็น 6 ช่องเล็กเติมจุดแวะทีละช่องจนเต็ม"></canvas>
     </div>
-    <p class="caption">ที่อยู่ 128 บิตก้อนเดียวกัน ฝั่งซ้ายเก็บได้แค่ 1 จุดแวะเต็ม ๆ ฝั่งขวา (Micro-SID) กัน 48 บิตแรกไว้ให้ block เหลือ 80 บิต → 80 ÷ 16 = <strong>5 ช่อง</strong> — overhead ที่เห็นไปก่อนหน้านี้หายไปเกือบหมด</p>
+    <p class="caption">ที่อยู่ 128 บิตก้อนเดียวกัน ฝั่งซ้ายเก็บได้แค่ 1 จุดแวะเต็ม ๆ ฝั่งขวา (Micro-SID) กัน 32 บิตแรกไว้ให้ block เหลือ 96 บิต → 96 ÷ 16 = <strong>6 ช่อง</strong> — overhead ที่เห็นไปก่อนหน้านี้หายไปเกือบหมด</p>
     <div class="callout">
       <span class="tag">จำนวนช่องไม่ใช่ค่าตายตัว</span>
-      <p>ตัวเลข 5 ช่องข้างบนมาจากการเลือก block ยาว 48 บิต (ค่าที่ใช้ในเอกสารและในแล็บจริง) ถ้า block สั้นลงเหลือ 32 บิต ก็จะเหลือที่ 96 บิต = <strong>6 ช่อง</strong> — สูตรคือ <span class="mono">(128 − block length) ÷ 16</span> เสมอ ไม่ใช่ 128 ÷ 16 อย่างที่มักเข้าใจกัน และถ้าเส้นทางยาวเกินจำนวนช่องที่มี ก็ต้องใส่ที่อยู่ก้อนถัดไปต่อใน SRH เพิ่ม</p>
+      <p>ตัวเลข 6 ช่องข้างบนมาจากการเลือก block ยาว 32 บิต (ค่าที่ใช้ในตัวอย่างและ config ที่ทดสอบจริงตลอดทั้งโพสต์นี้ — block <span class="mono">2001:bbbb::/32</span>) ถ้า block ยาวขึ้นเป็น 48 บิต จะเหลือที่แค่ 80 บิต = <strong>5 ช่อง</strong> — สูตรคือ <span class="mono">(128 − block length) ÷ 16</span> เสมอ ไม่ใช่ 128 ÷ 16 อย่างที่มักเข้าใจกัน และถ้าเส้นทางยาวเกินจำนวนช่องที่มี ก็ต้องใส่ที่อยู่ก้อนถัดไปต่อใน SRH เพิ่ม</p>
     </div>
   </section>
 
@@ -441,11 +441,21 @@
   <!-- ============ 9. Warning ============ -->
   <section id="warning">
     <span class="kicker"><span class="dot"></span>12 · ข้อควรระวัง</span>
-    <h2>จองน้อยไป ระบบไม่เตือนสักคำ</h2>
-    <p class="lede">เห็น trade-off ของการเลือกตัวเลขไปแล้วในข้อที่แล้ว คราวนี้มาดูว่าถ้าคำนวณคลัง label ผิดจะเกิดอะไรขึ้น — ถ้าคลัง label ที่จองไว้เล็กกว่าขนาด LIB จริง <strong>คำสั่งตั้งค่าจะผ่านปกติ ไม่มี error ไม่มี warning เลยแม้แต่บรรทัดเดียว</strong> — แต่พอมี function ที่ดันไปตกอยู่ในโซนที่ label หมดพอดี prefix ของ function นั้นจะเงียบหายไปเองโดยไม่มีการแจ้งเตือนใด ๆ ต้องมานั่งไล่หาทีหลังว่าทำไม service บางตัวไม่ขึ้น</p>
+    <h2>จองน้อยไป — ส่วนใหญ่ระบบเตือน มีจุดเดียวที่เงียบ</h2>
+    <p class="lede">เห็น trade-off ของการเลือกตัวเลขไปแล้วในข้อที่แล้ว ทีนี้มาดูว่าถ้าคำนวณคลัง label ผิดจริง ๆ จะเกิดอะไรขึ้น — <strong>ผลทดสอบจริงบน SR-SIM พลิกความเข้าใจเดิม:</strong> การละเมิดขอบเขต static ถูก <strong>reject ตอน commit ทันที ถึง 3 ใน 4 กรณี</strong> มีแค่กรณีเดียวเท่านั้นที่เงียบจริง</p>
+    <ul class="points">
+      <li><strong>ลด max-entries ต่ำกว่าจำนวน static function ที่ใช้อยู่</strong> → reject ทันที: <span class="mono">MINOR: MGMT_CORE #4001: ... Cannot configure function value as it is exceeding max entries</span></li>
+      <li><strong>ตั้ง static index เกิน max-entries</strong> (เช่น <span class="mono">ua 17</span> ตอน max-entries 16) → reject ด้วย error เดียวกัน</li>
+      <li><strong>ย่อ label-block ให้เล็กกว่า max-entries</strong> → reject ทันที: <span class="mono">MINOR: MGMT_CORE #4001: ... Start and end labels range 2 must be more than max-entries</span></li>
+    </ul>
+    <div class="callout">
+      <span class="tag">จุดเดียวที่เงียบจริง: โซน dynamic หมด</span>
+      <p>ถ้า reserved-label-block เหลือที่ไม่พอสำหรับ dynamic function ตัวถัดไป (เช่น static ใช้ไป 16 ช่องตาม max-entries แล้ว label-block มีแค่ 17 ช่อง เหลือ dynamic แค่ 1 ช่องซึ่งถูกใช้ไปแล้ว) แล้วสร้าง service ใหม่ที่ต้องการ function แบบ dynamic อีกตัว — <strong>commit ผ่านปกติ ไม่มี error, service ขึ้น Admin/Oper State: Up หลอกตาเต็มที่ แต่ไม่มี SID เกิดขึ้นจริงเลย</strong> VPN นั้น blackhole เงียบ ๆ หลักฐานเดียวที่มีคือ log ระดับ MINOR:</p>
+      <p class="mono" style="font-size:.85rem">MINOR: SVCMGR #2135 Base "Allocation of function failed for vprn 200 srv6-instance 1 micro-segment-locator uSID-Alg0-Loc function udt46 value 0."</p>
+    </div>
     <div class="callout">
       <span class="tag">บทเรียน</span>
-      <p>ก่อนจองคลัง label ทุกครั้ง ต้องเปิดตารางดูว่าค่าที่เลือกไว้ให้ LIB ขนาดเท่าไหร่ก่อน แล้วจองให้ครบหรือมากกว่านั้นเสมอ — อย่าเดาหรือกะเอาคร่าว ๆ</p>
+      <p><span class="mono">show router mpls-labels label-range</span> ไม่มีคอลัมน์ used/available สำหรับ reserved-label-block เลย (มีแค่ Name/Start/End/Total) จึงไม่มีทางรู้ล่วงหน้าว่าใกล้เต็มหรือยังจากคำสั่ง show ปกติ — วิธีเดียวที่จะจับกรณีนี้ได้บน production คือ<strong>ตั้ง monitor บน log event SVCMGR #2135</strong> ไว้เตือนล่วงหน้า ควบคู่กับการคำนวณขนาด LIB ให้ครบตั้งแต่ต้นตามที่คุยกันมาตลอดบทความนี้</p>
     </div>
   </section>
 
@@ -456,12 +466,14 @@
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
       <li><span class="amber-text">SRv6</span> เอาที่อยู่ IPv6 มาเป็นจุดแวะโดยตรง ไม่มี MPLS label ปนบนสายเลย</li>
-      <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้หลายจุดในที่อยู่เดียว (จำนวนขึ้นกับ SID block length เช่น block 48 บิต ใส่ได้ 5 จุด) แก้ปัญหา overhead</li>
+      <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้หลายจุดในที่อยู่เดียว (จำนวนขึ้นกับ SID block length เช่น block 32 บิต ใส่ได้ 6 จุด) แก้ปัญหา overhead</li>
       <li>ทุกช่อง 16 บิตเป็นได้ทั้ง <strong>GIB</strong> (ระบุเราเตอร์) หรือ <strong>LIB</strong> (ระบุ function) — แยกกันด้วยช่วงตัวเลข ไม่ใช่แบ่งบิตภายในช่องเดียว</li>
       <li>ค่าเราเตอร์ (<span class="mono">un</span>) ต้องเลือกเองให้อยู่ในโซน GIB เสมอ — CLI ยอมรับตัวเลขกว้างกว่านั้นมาก และไม่เตือนถ้าเผลอหลุดไปโซน LIB</li>
       <li>label ที่เห็นในคอนฟิกเป็นแค่กลไก lookup ภายในฮาร์ดแวร์บางรุ่น ไม่เคยออกไปบนสายจริง</li>
       <li><strong>GIB ไม่ต้องมีคลัง label</strong> เพราะแค่จับคู่กับ prefix เดียวของตัวเองผ่าน IGP ตามปกติ แต่ <strong>LIB ต้องมี</strong> เพราะแต่ละค่าคืองานคนละอย่างที่ต้องแยกแยะแบบ index ต่อค่า</li>
-      <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — จองผิดขนาดแล้วไม่มี warning ให้เห็นด้วย ต้องคำนวณเองให้ครบตั้งแต่แรก</li>
+      <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — ละเมิดขอบเขต static ส่วนใหญ่ reject ทันทีตอน commit แต่ถ้าโซน dynamic หมดพอดี จะเงียบจริง (commit ผ่าน, service ขึ้น Up หลอกตา, ไม่มี SID) ต้องคำนวณให้ครบตั้งแต่แรกและ monitor log SVCMGR #2135 ไว้</li>
+      <li><strong>static-function</strong> ผ่า LIB อีกชั้นเป็นโซน static (uA/service-SID/binding-SID ที่ตั้งเอง) กับ dynamic (ระบบเลือกให้) — ค่าที่พิมพ์เป็น index ไม่ใช่ hex ของ LIB ตรง ๆ (สูตรจริง: LIB start + index − 1) และแก้ max-entries ทีหลังจะทำให้ block ทั้งก้อน admin-state toggle</li>
+      <li><strong>binding-SID (uB6)</strong> ของ SRv6 policy ต้องอ้างอิงแบบเต็มรูป <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เสมอ ใส่แค่ค่า uB6 ลอย ๆ ไม่ได้</li>
     </ul>
   </section>
 
@@ -682,16 +694,16 @@
     ctx.font='700 11px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
     ctx.fillText('1 จุดแวะ', leftX+boxW/2, y+boxH/2+4);
 
-    // right: 48-bit SID block reserved up front, then 5 x 16-bit uSID slots
+    // right: 32-bit SID block reserved up front, then 6 x 16-bit uSID slots
     var inner = boxW-6;
-    var blockW = inner*(48/128);
+    var blockW = inner*(32/128);
     ctx.fillStyle = C.sunk; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.4;
     ctx.beginPath(); roundRectPath(ctx, rightX+3, y+3, blockW-2, boxH-6, 4); ctx.fill(); ctx.stroke();
     ctx.font='600 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.muted; ctx.textAlign='center';
     ctx.fillText('block', rightX+3+blockW/2, y+boxH/2-1);
-    ctx.fillText('48 บิต', rightX+3+blockW/2, y+boxH/2+10);
+    ctx.fillText('32 บิต', rightX+3+blockW/2, y+boxH/2+10);
 
-    var slots = 5;
+    var slots = 6;
     var fillCount = Math.floor(clamp01(tt/3.4)*slots + 0.001);
     var slotW = (inner-blockW)/slots;
     for (var i=0;i<slots;i++){
@@ -708,7 +720,7 @@
     }
     if (fillCount>=slots){
       ctx.font='700 12px "Inter", sans-serif'; ctx.fillStyle=C.good; ctx.textAlign='center';
-      ctx.fillText('✓ 80 บิตที่เหลือ = 5 ช่อง', rightX+boxW/2, y-14);
+      ctx.fillText('✓ 96 บิตที่เหลือ = 6 ช่อง', rightX+boxW/2, y-14);
     }
   }, 4.2);
 
