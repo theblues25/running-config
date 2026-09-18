@@ -1299,18 +1299,39 @@ A:admin@pe1# show router 100 route-table ipv6
       }
 
       var px = xs[step];
-      var pillW = Math.min(210, w*0.62), pillH = 32, py = y - boxH/2 - 34;
-      var cx2 = Math.max(pillW/2+4, Math.min(px, w-pillW/2-4)); // keep on-canvas at narrow widths
-      var isPlain = step === 0;
-      ctx.fillStyle = C.raised; ctx.strokeStyle = isPlain ? C.lineStrong : (isDone ? C.good : C.amber); ctx.lineWidth = 2;
-      ctx.beginPath(); roundRectPath(ctx, cx2-pillW/2, py-pillH/2, pillW, pillH, 10); ctx.fill(); ctx.stroke();
-      ctx.font='500 8px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
-      ctx.fillText(isPlain ? 'ก่อน encapsulate' : (isDone ? 'ปลายทางจริง (หลัง decap)' : 'DA จริงใน SRH ตอนนี้'), cx2, py-pillH/2+11);
-      ctx.font='700 9px "JetBrains Mono", monospace'; ctx.fillStyle = C.ink;
-      ctx.fillText(daText[step], cx2, py+pillH/2-8);
-      // connector line from the pill down to the packet's actual position on the path
-      ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(px, py+pillH/2); ctx.lineTo(px, y-boxH/2-4); ctx.stroke();
+      var hasSrh = (step===1 || step===2); // R1/R2: still wrapped in SRH, only the DA shrinks
+      var dataW = 46, dataH = 16;
+
+      if (hasSrh){
+        // outer box = SRH + DA (grows/shrinks), inner box = the customer's original data — unchanged, just carried along
+        var outerW = Math.min(210, w*0.62), outerH = 52, py = y - boxH/2 - 46;
+        var cx2 = Math.max(outerW/2+4, Math.min(px, w-outerW/2-4));
+        ctx.fillStyle = C.raised; ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
+        ctx.beginPath(); roundRectPath(ctx, cx2-outerW/2, py-outerH/2, outerW, outerH, 10); ctx.fill(); ctx.stroke();
+        ctx.font='500 8px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+        ctx.fillText('SRH DA จริงตอนนี้ (payload เดิมยังอยู่ข้างใน)', cx2, py-outerH/2+11);
+        ctx.font='700 9px "JetBrains Mono", monospace'; ctx.fillStyle = C.ink;
+        ctx.fillText(daText[step], cx2, py-outerH/2+24);
+        // inner "data" box nested at the bottom — same size/label at every hop, never touched by the shift
+        ctx.fillStyle = C.cyanSoft; ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.4;
+        ctx.beginPath(); roundRectPath(ctx, cx2-dataW/2, py+outerH/2-dataH-5, dataW, dataH, 6); ctx.fill(); ctx.stroke();
+        ctx.font='700 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.cyanInk||C.ink;
+        ctx.fillText('data', cx2, py+outerH/2-dataH/2-1);
+        ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(px, py+outerH/2); ctx.lineTo(px, y-boxH/2-4); ctx.stroke();
+      } else {
+        // no SRH at this point: before PE1 encapsulates, or after R3 already decapped it
+        var py2 = y - boxH/2 - 34;
+        var cx3 = Math.max(dataW/2+4, Math.min(px, w-dataW/2-4));
+        ctx.font='500 8px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+        ctx.fillText(step===0 ? 'ก่อน encapsulate' : (isDone ? 'ปลายทางจริง' : 'หลัง decap ที่ R3'), cx3, py2-dataH/2-6);
+        ctx.fillStyle = C.cyanSoft; ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.4;
+        ctx.beginPath(); roundRectPath(ctx, cx3-dataW/2, py2-dataH/2, dataW, dataH, 6); ctx.fill(); ctx.stroke();
+        ctx.font='700 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.cyanInk||C.ink;
+        ctx.fillText('data', cx3, py2+3);
+        ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(px, py2+dataH/2); ctx.lineTo(px, y-boxH/2-4); ctx.stroke();
+      }
 
       // HTML readouts sit below the canvas instead of floating over it — plenty of room to read
       var nodeLabel = nodes[step] + (un[nodes[step]] ? ' (un='+un[nodes[step]]+')' : '');
