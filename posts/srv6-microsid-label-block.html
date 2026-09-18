@@ -1318,7 +1318,7 @@ A:admin@pe1# show router 100 route-table ipv6
         ctx.font='700 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.cyanInk||C.ink;
         ctx.fillText('data', cx2, py+outerH/2-dataH/2-1);
         ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(px, py+outerH/2); ctx.lineTo(px, y-boxH/2-4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, py+outerH/2); ctx.lineTo(px, y-boxH/2); ctx.stroke();
       } else {
         // no SRH at this point: before PE1 encapsulates, or after R3 already decapped it
         var py2 = y - boxH/2 - 34;
@@ -1330,7 +1330,7 @@ A:admin@pe1# show router 100 route-table ipv6
         ctx.font='700 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.cyanInk||C.ink;
         ctx.fillText('data', cx3, py2+3);
         ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(px, py2+dataH/2); ctx.lineTo(px, y-boxH/2-4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, py2+dataH/2); ctx.lineTo(px, y-boxH/2); ctx.stroke();
       }
 
       // HTML readouts sit below the canvas instead of floating over it — plenty of room to read
