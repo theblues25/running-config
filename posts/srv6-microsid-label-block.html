@@ -106,15 +106,15 @@
   <section id="srv6">
     <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
     <h2>SRv6 เอา "จุดแวะ" ไปฝังไว้ในที่อยู่ IPv6 เลย</h2>
-    <p class="lede">จากแนวคิด "ฝังรายการจุดแวะไปกับแพ็กเก็ต" ในข้อที่แล้ว คำถามต่อมาคือ — แต่ละจุดแวะจะเก็บด้วยอะไร? SRv6 (Segment Routing over IPv6) เลือกวิธีที่ตรงไปตรงมาที่สุด: ให้ <strong>จุดแวะแต่ละจุดคือที่อยู่ IPv6 หนึ่งตัวเลย</strong> ไม่ต้องมีเลข label แยกต่างหากแบบ MPLS รายการจุดแวะทั้งหมดถูกเก็บไว้ใน header พิเศษท้ายแพ็กเก็ตที่เรียกว่า SRH (Segment Routing Header) และที่อยู่ IPv6 แต่ละตัวยังแบ่งเป็น 2 ส่วนในตัวมันเอง: <strong>Locator</strong> (เราเตอร์ไหน) และ <strong>Function</strong> (ทำอะไรที่นั่น)</p>
+    <p class="lede">จากแนวคิด "ฝังรายการจุดแวะไปกับแพ็กเก็ต" ในข้อที่แล้ว คำถามต่อมาคือ — แต่ละจุดแวะจะเก็บด้วยอะไร? SRv6 (Segment Routing over IPv6) เลือกวิธีที่ตรงไปตรงมาที่สุด: ให้ <strong>จุดแวะแต่ละจุดคือที่อยู่ IPv6 หนึ่งตัวเลย</strong> ไม่ต้องมีเลข label แยกต่างหากแบบ MPLS รายการจุดแวะทั้งหมดถูกเก็บไว้ใน <strong>SRH (Segment Routing Header)</strong> ซึ่งเป็น IPv6 extension header ที่อยู่<strong>ต่อจาก IPv6 header ทันที ก่อนถึง payload</strong> (ไม่ใช่ต่อท้ายแพ็กเก็ต) และที่อยู่ IPv6 แต่ละตัวยังแบ่งเป็น 2 ส่วนในตัวมันเอง: <strong>Locator</strong> (เราเตอร์ไหน) และ <strong>Function</strong> (ทำอะไรที่นั่น)</p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip amber">● Locator (เราเตอร์ไหน)</span>
         <span class="chip cyan">● Function (ทำอะไร)</span>
       </div>
-      <canvas id="c-srh" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางผ่านเราเตอร์ 3 ตัว พร้อมรายการจุดแวะที่แนบไปด้วยซึ่งสั้นลงทีละจุดทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว"></canvas>
+      <canvas id="c-srh" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางผ่านเราเตอร์ 3 ตัว พร้อมตัวนับจุดแวะที่เหลือ (Segments Left) ซึ่งลดลงทีละจุดทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว"></canvas>
     </div>
-    <p class="caption">แพ็กเก็ตพกรายการจุดแวะ (สี่เหลี่ยมเล็ก ๆ ด้านบน) ไปด้วย ทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว จุดแวะที่ทำเสร็จแล้วจะถูกตัดออกจากรายการ — ที่อยู่ปลายทางปัจจุบันก็จะเปลี่ยนเป็นจุดแวะถัดไปโดยอัตโนมัติ</p>
+    <p class="caption">แพ็กเก็ตพกรายการจุดแวะทั้งหมดไว้ใน SRH เหมือนเดิมตลอดเส้นทาง (สี่เหลี่ยมเล็ก ๆ ด้านบนแทนตัวนับ <span class="mono">Segments Left</span> ที่เหลืออยู่ ไม่ใช่รายการที่ถูกตัดทิ้ง) ทุกครั้งที่ผ่านเราเตอร์หนึ่งตัว ค่า Segments Left จะลดลง 1 แล้วที่อยู่ปลายทาง (DA) จะถูกเปลี่ยนให้ชี้ไปยังจุดแวะถัดไปในรายการเดิม — รายการใน SRH เองไม่ได้ถูกลบออกจริง ยกเว้นเปิดใช้ PSP/USP ที่อนุญาตให้ตัด header ทิ้งตอนถึงจุดท้าย ๆ</p>
   </section>
 
   <!-- ============ 3. Overhead problem ============ -->
@@ -133,22 +133,26 @@
   <section id="usid">
     <span class="kicker"><span class="dot"></span>04 · กลไกที่ 1</span>
     <h2>Micro-SID: บีบแต่ละจุดแวะให้เหลือแค่ 16 บิต</h2>
-    <p class="lede"><strong>Micro-SID (uSID)</strong> แก้ปัญหา overhead ที่เพิ่งเห็นไปด้วยวิธีบีบอัด — แทนที่จะใช้ที่อยู่เต็ม 128 บิตต่อจุดแวะ 1 จุด ก็บีบแต่ละจุดแวะให้เหลือแค่ <strong>16 บิต</strong> เมื่อเล็กขนาดนี้ ก็เอาหลาย ๆ จุดแวะมาต่อกันในที่อยู่ 128 บิตเดียวได้เลย — 128 ÷ 16 = ใส่ได้ถึง <strong>8 จุดแวะ</strong> ในพื้นที่ที่แต่ก่อนใส่ได้แค่ 1 จุด</p>
+    <p class="lede"><strong>Micro-SID (uSID)</strong> แก้ปัญหา overhead ที่เพิ่งเห็นไปด้วยวิธีบีบอัด — แทนที่จะใช้ที่อยู่เต็ม 128 บิตต่อจุดแวะ 1 จุด ก็บีบแต่ละจุดแวะให้เหลือแค่ <strong>16 บิต</strong> แล้วเอามาต่อกันในที่อยู่ 128 บิตเดียว แต่มีข้อควรระวังที่คนคำนวณผิดกันบ่อย: <strong>128 บิตนั้นไม่ได้ว่างทั้งก้อน</strong> — ส่วนหน้าต้องกันไว้ให้ <span class="mono">SID block</span> (คำนำหน้าที่ใช้ร่วมกันทั้งโดเมน) ก่อนเสมอ ที่เหลือถึงจะเอามาซอยเป็นช่องละ 16 บิตได้</p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip cyan">● แบบเดิม (1 จุดแวะ/128 บิต)</span>
-        <span class="chip amber">● Micro-SID (สูงสุด 8 จุดแวะ/128 บิต)</span>
+        <span class="chip amber">● Micro-SID (block 48 บิต + 5 ช่อง)</span>
       </div>
-      <canvas id="c-compress" role="img" aria-label="แอนิเมชันเปรียบเทียบที่อยู่ 128 บิตสองแบบ แบบซ้ายมีจุดแวะเดียวเต็มพื้นที่ แบบขวาถูกแบ่งเป็น 8 ช่องเล็กแล้วเติมจุดแวะทีละช่องจนเต็ม"></canvas>
+      <canvas id="c-compress" role="img" aria-label="แอนิเมชันเปรียบเทียบที่อยู่ 128 บิตสองแบบ แบบซ้ายมีจุดแวะเดียวเต็มพื้นที่ แบบขวากันพื้นที่ส่วนหน้าไว้ให้ SID block 48 บิต แล้วแบ่งที่เหลือเป็น 5 ช่องเล็กเติมจุดแวะทีละช่องจนเต็ม"></canvas>
     </div>
-    <p class="caption">ที่อยู่ 128 บิตก้อนเดียวกัน ฝั่งซ้ายเก็บได้แค่ 1 จุดแวะเต็ม ๆ ฝั่งขวา (Micro-SID) แบ่งเป็น 8 ช่องเล็ก เก็บได้ถึง 8 จุดแวะ — ปัญหา overhead ที่เห็นไปก่อนหน้านี้หายไปเกือบหมด</p>
+    <p class="caption">ที่อยู่ 128 บิตก้อนเดียวกัน ฝั่งซ้ายเก็บได้แค่ 1 จุดแวะเต็ม ๆ ฝั่งขวา (Micro-SID) กัน 48 บิตแรกไว้ให้ block เหลือ 80 บิต → 80 ÷ 16 = <strong>5 ช่อง</strong> — overhead ที่เห็นไปก่อนหน้านี้หายไปเกือบหมด</p>
+    <div class="callout">
+      <span class="tag">จำนวนช่องไม่ใช่ค่าตายตัว</span>
+      <p>ตัวเลข 5 ช่องข้างบนมาจากการเลือก block ยาว 48 บิต (ค่าที่ใช้ในเอกสารและในแล็บจริง) ถ้า block สั้นลงเหลือ 32 บิต ก็จะเหลือที่ 96 บิต = <strong>6 ช่อง</strong> — สูตรคือ <span class="mono">(128 − block length) ÷ 16</span> เสมอ ไม่ใช่ 128 ÷ 16 อย่างที่มักเข้าใจกัน และถ้าเส้นทางยาวเกินจำนวนช่องที่มี ก็ต้องใส่ที่อยู่ก้อนถัดไปต่อใน SRH เพิ่ม</p>
+    </div>
   </section>
 
   <!-- ============ 5. GIB / LIB ============ -->
   <section id="giblib">
     <span class="kicker"><span class="dot"></span>05 · พื้นฐานที่ 2</span>
-    <h2>16 บิตนั้น แบ่งเป็น 2 ส่วน: GIB กับ LIB</h2>
-    <p class="lede">จาก Micro-SID ที่บีบทุกจุดแวะเหลือ 16 บิตในข้อที่แล้ว คำถามถัดมาคือ 16 บิตนั้นเก็บอะไรบ้าง? ลองนึกถึง <strong>เบอร์โทรศัพท์</strong>: รหัสพื้นที่ + เลขในสาย — พื้นที่ 16 บิตของ Micro-SID ก็ถูกตัดแบ่งแบบเดียวกัน ด้วยตัวเลขตัวเดียวที่ตั้งครั้งเดียวทั้งเครือข่าย</p>
+    <h2>แต่ละช่อง 16 บิต เป็น GIB หรือ LIB — แยกด้วยช่วงตัวเลข ไม่ใช่แบ่งบิต</h2>
+    <p class="lede">จาก Micro-SID ที่บีบทุกจุดแวะเหลือ 16 บิตในข้อที่แล้ว คำถามถัดมาคือ 16 บิตนั้นมีความหมายว่าอะไร? <strong>ข้อควรระวัง: มันไม่ใช่ "หนึ่งช่อง 16 บิต ถูกผ่าซอยครึ่งเป็นสองส่วนย่อย"</strong> — ทุกช่อง 16 บิตทั้งช่อง มีความหมายเดียวเต็ม ๆ ไม่ว่าจะเป็น "เราเตอร์ไหน" (GIB) หรือ "ทำอะไรที่นั่น" (LIB) โดยตัดสินจาก<strong>ค่าตัวเลขที่ใส่ในช่องนั้น</strong> ว่าตกอยู่ในช่วงไหนของทั้งหมด 0x0001–0xFFFF ที่ใช้ร่วมกันทุกช่อง — เราเตอร์ตัวหนึ่งจะมีช่อง un (GIB) ของตัวเองหนึ่งช่อง แล้วถ้ามันมีงานให้ทำ ก็จะมีอีกช่องแยกต่างหากถัดไปทันทีสำหรับค่า function (LIB)</p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip amber">● GIB — รหัสพื้นที่ (เราเตอร์ไหน)</span>
@@ -175,6 +179,15 @@
       <li><strong>LIB (Local)</strong> unique แค่ภายในเราเตอร์ตัวเดียว เราเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขต่อภายในออฟฟิศที่ซ้ำกับออฟฟิศอื่นได้</li>
       <li>ตัวเลขตัวเดียวที่ตั้งครั้งเดียว (เท่ากันทุกเราเตอร์ในเครือข่าย) กำหนดว่าเส้นแบ่งอยู่ตรงไหน</li>
     </ul>
+    <div class="callout">
+      <span class="tag">อย่าเข้าใจผิด: GIB กับ LIB ไม่ได้ซ้อนอยู่ในช่อง 16 บิตเดียวกัน</span>
+      <p>คู่มือ Nokia (Segment Routing and PCE User Guide) ยกตัวอย่างที่อยู่ไว้ตรง ๆ: <span class="mono">2001:db8:00d1:d547::</span> — <span class="mono">2001:db8</span> คือ SID block (ใช้ร่วมกันทั้งเครือข่าย), <span class="mono">00d1</span> คือเลขประจำเราเตอร์ตัวนั้น (GIB) และ <span class="mono">d547</span> คือเลขงานภายในเราเตอร์ตัวเดียวกัน (LIB) — <strong>ทั้งสามคือคนละช่อง 16 บิตกันเลย เรียงต่อกันในที่อยู่เดียวกัน ไม่ได้ซ้อนกันอยู่ในช่องเดียว</strong> จาก show command จริงบนเราเตอร์ก็เห็นแบบเดียวกัน: <span class="mono">2001:bbbb:6::</span> (un=6, ช่องที่ 3) กับ <span class="mono">2001:bbbb:6:4004::</span> (function=16388, ช่องที่ 4 ถัดไปทันที) — ค่า 6 กับ 16388 ใช้หน่วยตัวเลขเดียวกัน (6 อยู่โซน GIB, 16388 อยู่โซน LIB) แต่อยู่กันคนละช่อง</p>
+    </div>
+    <div class="callout">
+      <span class="tag">แล้วทำไมสองโซนนี้ห้ามทับกันเด็ดขาด</span>
+      <p>เหตุผลไม่ใช่แค่ระเบียบการจัดสรร แต่เป็นกลไกจริงในฮาร์ดแวร์ — เวลาเราเตอร์กินช่องของตัวเองเสร็จแล้ว<strong>เลื่อนที่อยู่ไปทางซ้าย</strong> ค่าในช่องถัดไปจะขยับขึ้นมานั่งใน<strong>ตำแหน่งเดียวกับที่ค่า un เคยอยู่</strong> พอดี แปลว่าตำแหน่งนั้นอาจมีค่า GIB หรือค่า LIB ก็ได้ เราเตอร์จึงต้องแยกให้ออกด้วยช่วงตัวเลขเพียงอย่างเดียว</p>
+      <p>คู่มือ Nokia ยืนยันเรื่องนี้ชัดในหัวข้อ microbinding SID: เวลา program FIB ระบบจะลง <strong>2 รายการ</strong> คือ <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;::/(block-length+32)</span> และ <span class="mono">&lt;block&gt;&lt;uB6&gt;::/(block-length+16)</span> — สังเกตรายการที่สอง: ค่า <span class="mono">uB6</span> ซึ่งเป็นค่าโซน LIB ไปนั่งติดกับ block เลย คือตำแหน่งของ un พอดี รายการนี้จะปลอดภัยได้ก็ต่อเมื่อ GIB กับ LIB ไม่มีทางทับกันเท่านั้น ถ้าทับเมื่อไหร่ แพ็กเก็ตที่ตั้งใจจะวิ่งผ่านไปหาเราเตอร์ที่มี un ตรงกับเลขนั้น จะโดนเครื่องนี้ดักกินเป็น function ของตัวเองทันที</p>
+    </div>
   </section>
 
   <!-- ============ 6. un = router's own GIB value ============ -->
@@ -249,11 +262,11 @@
   <section id="forward">
     <span class="kicker"><span class="dot"></span>07 · เห็นภาพรวม</span>
     <h2>เดินตามแพ็กเก็ตทีละ hop จริง ๆ</h2>
-    <p class="lede">เอาทุกอย่างที่ผ่านมารวมกัน — สมมติลูกค้าที่ CE1 ต้องส่งข้อมูลไปถึงบริการหนึ่งที่อยู่หลัง R3 เส้นทางจริงต้องผ่าน <strong>R1 → R2 → R3</strong> ที่อยู่ปลายทางที่เราเตอร์ต้นทางประกอบไว้ให้จึงเป็นการเอา 3 "ช่อง" มาต่อกันเรียงตามลำดับที่ต้องผ่าน — แต่ละช่องคือ <span class="amber-text">GIB</span> (เราเตอร์ไหน) บวก <span class="cyan-text">LIB</span> (ทำอะไรที่นั่น) รวมกัน กดปุ่มด้านล่างเพื่อเดินทีละขั้นเอง จะได้อ่านรายละเอียดทันทุกจุด</p>
+    <p class="lede">เอาทุกอย่างที่ผ่านมารวมกัน — สมมติลูกค้าที่ CE1 ต้องส่งข้อมูลไปถึงบริการหนึ่งที่อยู่หลัง R3 เส้นทางจริงต้องผ่าน <strong>R1 → R2 → R3</strong> เราเตอร์ต้นทางจึงประกอบที่อยู่ปลายทางโดยเอาช่อง 16 บิตมาเรียงต่อกัน: <span class="mono">&lt;block&gt;</span> แล้วตามด้วยค่า un ของ <span class="amber-text">R1, R2, R3</span> (ค่าโซน GIB ทั้งสามช่อง) แล้วปิดท้ายด้วยค่า <span class="cyan-text">function</span> ของบริการที่ R3 (ค่าโซน LIB) ทุก hop จะดู<strong>ช่องหน้าสุด</strong>ช่องเดียวเสมอ แล้วเลื่อนช่องที่กินแล้วทิ้งไป กดปุ่มด้านล่างเพื่อเดินทีละขั้นเอง จะได้อ่านรายละเอียดทันทุกจุด</p>
     <div class="stage">
       <div class="stage-label">
-        <span class="chip amber">● GIB ตรงกับ un ของเราเตอร์นั้น</span>
-        <span class="chip cyan">● LIB บอกว่าต้องทำอะไร</span>
+        <span class="chip amber">● ช่องหน้าสุดเป็นค่าโซน GIB → เลื่อนแล้วส่งต่อ</span>
+        <span class="chip cyan">● ช่องหน้าสุดเป็นค่าโซน LIB → ทำ function ที่นี่</span>
       </div>
       <canvas id="c-forward" role="img" aria-label="แผนภาพเราเตอร์ CE1, R1, R2, R3, CE2 เรียงกัน พร้อมแพ็กเก็ตที่เลื่อนตำแหน่งตามขั้นที่เลือกจากปุ่มควบคุมด้านล่าง"></canvas>
     </div>
@@ -268,15 +281,15 @@
       <p class="step-desc" id="forward-desc"></p>
       <div class="entries-stats">
         <div class="stat"><span class="stat-label">ตำแหน่งปัจจุบัน</span><span class="stat-value mono" id="forward-node">—</span></div>
-        <div class="stat"><span class="stat-label">GIB เทียบกับ un</span><span class="stat-value mono" id="forward-gib">—</span></div>
-        <div class="stat"><span class="stat-label">LIB → การกระทำ</span><span class="stat-value mono" id="forward-lib">—</span></div>
+        <div class="stat"><span class="stat-label">ค่าในช่องหน้าสุด</span><span class="stat-value mono" id="forward-gib">—</span></div>
+        <div class="stat"><span class="stat-label">เราเตอร์นี้ทำอะไร</span><span class="stat-value mono" id="forward-lib">—</span></div>
         <div class="stat"><span class="stat-label">ช่องที่เหลือใน SRH</span><span class="stat-value mono" id="forward-remaining">—</span></div>
       </div>
     </div>
     <ul class="points">
-      <li><strong>GIB ตรงกับ un ตัวเอง</strong> → เราเตอร์รู้ทันทีว่านี่คือคิวของตัวเอง ไม่ใช่ของคนอื่น</li>
-      <li><strong>LIB = 0</strong> → ไม่มีคำสั่งพิเศษ แค่ส่งต่อไปช่องถัดไปเฉย ๆ (R1, R2 ในตัวอย่างนี้)</li>
-      <li><strong>LIB ≠ 0</strong> → มีคำสั่งเฉพาะให้ทำที่เราเตอร์นี้ เช่น ถอดรหัสส่งเข้า VPN แล้วส่งต่อไปหาปลายทางจริง (R3 ในตัวอย่างนี้)</li>
+      <li><strong>ค่าในช่องหน้าสุดอยู่โซน GIB และตรงกับ un ของตัวเอง</strong> → รู้ว่าถึงคิวตัวเองแล้ว เลื่อนช่องนั้นทิ้ง แล้วส่งต่อตามช่องถัดไป (R1, R2 ในตัวอย่างนี้)</li>
+      <li><strong>ค่าในช่องหน้าสุดอยู่โซน LIB</strong> → ไม่ใช่ที่อยู่ของเราเตอร์ตัวไหนแล้ว แต่เป็นเลขงานภายในของเราเตอร์ที่เพิ่ง match ไป → ลงมือทำ function นั้นเลย เช่น ถอดรหัสส่งเข้า VPN (R3 ในตัวอย่างนี้)</li>
+      <li>ค่าโซน LIB <strong>ไม่ได้แปลว่าจบเส้นทางเสมอไป</strong> — function ประเภท uDX/uDT จะจบจริง (ถอดรหัสแล้วส่งเข้า service) แต่ประเภท uA (adjacency) จะทำงานแล้วเลื่อนช่องส่งต่อได้อีก ตัวที่บอกว่าหมดจริงคือค่า <span class="mono">0x0000</span> (End of Container)</li>
     </ul>
   </section>
 
@@ -335,25 +348,25 @@
           <tr>
             <td class="mono" data-label="ค่าที่เลือก">16 (ค่าเริ่มต้น)</td>
             <td class="mono" data-label="จุดตัด">0x4000</td>
-            <td data-label="GIB">~16,383 ตัว</td>
-            <td data-label="LIB">~49,151 ช่อง</td>
+            <td data-label="GIB">16,383 ตัว</td>
+            <td data-label="LIB">49,152 ช่อง</td>
           </tr>
           <tr>
             <td class="mono" data-label="ค่าที่เลือก">56</td>
             <td class="mono" data-label="จุดตัด">0xE000</td>
-            <td data-label="GIB">~57,343 ตัว</td>
-            <td data-label="LIB">~8,191 ช่อง</td>
+            <td data-label="GIB">57,343 ตัว</td>
+            <td data-label="LIB">8,192 ช่อง</td>
           </tr>
           <tr>
             <td class="mono" data-label="ค่าที่เลือก">60 (สูงสุด)</td>
             <td class="mono" data-label="จุดตัด">0xF000</td>
-            <td data-label="GIB">~61,439 ตัว</td>
-            <td data-label="LIB">~4,095 ช่อง</td>
+            <td data-label="GIB">61,439 ตัว</td>
+            <td data-label="LIB">4,096 ช่อง</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="caption">เห็น trade-off ชัดเจน: เลือก 60 รองรับเราเตอร์ได้เยอะสุด แต่เหลือที่ให้ทำ function ต่อเราเตอร์แค่ ~4,095 ช่อง — ต้องเลือกให้เหมาะกับขนาดเครือข่ายจริง ไม่ใช่เลือกสูงสุดไว้ก่อนเสมอไป</p>
+    <p class="caption">เห็น trade-off ชัดเจน: เลือก 60 รองรับเราเตอร์ได้เยอะสุด แต่เหลือที่ให้ทำ function ต่อเราเตอร์แค่ 4,096 ช่อง — ต้องเลือกให้เหมาะกับขนาดเครือข่ายจริง ไม่ใช่เลือกสูงสุดไว้ก่อนเสมอไป</p>
   </section>
 
   <!-- ============ 9. Warning ============ -->
@@ -374,8 +387,8 @@
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
       <li><span class="amber-text">SRv6</span> เอาที่อยู่ IPv6 มาเป็นจุดแวะโดยตรง ไม่มี MPLS label ปนบนสายเลย</li>
-      <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้ถึง 8 จุดในที่อยู่เดียว แก้ปัญหา overhead</li>
-      <li>16 บิตนั้นแบ่งเป็น <strong>GIB</strong> (ระบุเราเตอร์) กับ <strong>LIB</strong> (ระบุ function ในเราเตอร์นั้น) ด้วยตัวเลขตัวเดียว</li>
+      <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้หลายจุดในที่อยู่เดียว (จำนวนขึ้นกับ SID block length เช่น block 48 บิต ใส่ได้ 5 จุด) แก้ปัญหา overhead</li>
+      <li>ทุกช่อง 16 บิตเป็นได้ทั้ง <strong>GIB</strong> (ระบุเราเตอร์) หรือ <strong>LIB</strong> (ระบุ function) — แยกกันด้วยช่วงตัวเลข ไม่ใช่แบ่งบิตภายในช่องเดียว</li>
       <li>ค่าเราเตอร์ (<span class="mono">un</span>) ต้องเลือกเองให้อยู่ในโซน GIB เสมอ — CLI ยอมรับตัวเลขกว้างกว่านั้นมาก และไม่เตือนถ้าเผลอหลุดไปโซน LIB</li>
       <li>label ที่เห็นในคอนฟิกเป็นแค่กลไก lookup ภายในฮาร์ดแวร์บางรุ่น ไม่เคยออกไปบนสายจริง</li>
       <li><strong>GIB ไม่ต้องมีคลัง label</strong> เพราะแค่จับคู่กับ prefix เดียวของตัวเองผ่าน IGP ตามปกติ แต่ <strong>LIB ต้องมี</strong> เพราะแต่ละค่าคืองานคนละอย่างที่ต้องแยกแยะแบบ index ต่อค่า</li>
@@ -577,7 +590,7 @@
     ctx.fillText(maxSeg+' จุดแวะ', barX+barMaxW, barY+barH+22);
   }, 4);
 
-  /* ---------------- Compression: 128-bit slot, 1 vs 8 ---------------- */
+  /* ---------------- Compression: 128 bits, 1 full SID vs block + 5 uSID slots ---------------- */
   mount(document.getElementById('c-compress'), function(ctx,w,h,t,C){
     ctx.clearRect(0,0,w,h);
     var cycle = 4.5, tt = t % cycle;
@@ -600,12 +613,20 @@
     ctx.font='700 11px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
     ctx.fillText('1 จุดแวะ', leftX+boxW/2, y+boxH/2+4);
 
-    // right: 8 slots filling one by one
-    var slots = 8;
+    // right: 48-bit SID block reserved up front, then 5 x 16-bit uSID slots
+    var inner = boxW-6;
+    var blockW = inner*(48/128);
+    ctx.fillStyle = C.sunk; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.4;
+    ctx.beginPath(); roundRectPath(ctx, rightX+3, y+3, blockW-2, boxH-6, 4); ctx.fill(); ctx.stroke();
+    ctx.font='600 8px "JetBrains Mono", monospace'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+    ctx.fillText('block', rightX+3+blockW/2, y+boxH/2-1);
+    ctx.fillText('48 บิต', rightX+3+blockW/2, y+boxH/2+10);
+
+    var slots = 5;
     var fillCount = Math.floor(clamp01(tt/3.4)*slots + 0.001);
-    var slotW = (boxW-6)/slots;
+    var slotW = (inner-blockW)/slots;
     for (var i=0;i<slots;i++){
-      var sx = rightX+3+i*slotW;
+      var sx = rightX+3+blockW+i*slotW;
       var filled = i < fillCount;
       ctx.fillStyle = filled ? C.amberSoft : C.raised;
       ctx.strokeStyle = filled ? C.amber : C.lineStrong;
@@ -618,7 +639,7 @@
     }
     if (fillCount>=slots){
       ctx.font='700 12px "Inter", sans-serif'; ctx.fillStyle=C.good; ctx.textAlign='center';
-      ctx.fillText('✓ ได้ถึง 8 จุดแวะ ในพื้นที่เดิม', rightX+boxW/2, y-14);
+      ctx.fillText('✓ 80 บิตที่เหลือ = 5 ช่อง', rightX+boxW/2, y-14);
     }
   }, 4.2);
 
@@ -783,23 +804,23 @@
     var nodes = ['CE1','R1','R2','R3','CE2'];
     var un = {R1:1, R2:2, R3:3};
     var hops = {
-      R1:{gib:1, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ ไม่มีคำสั่งพิเศษ'},
-      R2:{gib:2, lib:'0', fn:false, note:'ส่งผ่านเฉย ๆ ไม่มีคำสั่งพิเศษ'},
-      R3:{gib:3, lib:'e012', fn:true, note:'ถอดรหัส ส่งเข้า VPN'}
+      R1:{head:'1', zone:'GIB', fn:false, note:'ตรงกับ un=1 → เลื่อนช่อง ส่งต่อ'},
+      R2:{head:'2', zone:'GIB', fn:false, note:'ตรงกับ un=2 → เลื่อนช่อง ส่งต่อ'},
+      R3:{head:'e012', zone:'LIB', fn:true, note:'เลข function ของ R3 → ถอดรหัสส่งเข้า VPN'}
     };
     var remainingCount = [3,2,1,0,0];
     var remainingLabels = [
-      '3 ช่อง (R1, R2, R3)',
-      '2 ช่อง (R2, R3)',
-      '1 ช่อง (R3)',
-      '0 ช่อง — ประมวลผลที่ R3 แล้ว',
+      '3 ช่อง (un R1, R2, R3) + function',
+      '2 ช่อง (un R2, R3) + function',
+      '1 ช่อง (un R3) + function',
+      '0 ช่อง — กิน function ของ R3 แล้ว',
       '0 ช่อง — ถึงปลายทางแล้ว'
     ];
     var descriptions = [
-      'แพ็กเก็ตเริ่มต้นที่ CE1 พร้อมที่อยู่ปลายทางที่ประกอบไว้แล้ว 3 ช่องเรียงกัน: R1 → R2 → R3',
-      'มาถึง R1 — GIB ตรงกับ un=1 ของตัวเอง (✓) ส่วน LIB=0 แปลว่าไม่มีคำสั่งพิเศษ ส่งต่อไปช่องถัดไปทันที',
-      'มาถึง R2 — GIB ตรงกับ un=2 ของตัวเอง (✓) LIB=0 เหมือนเดิม ส่งต่อไปช่องถัดไปทันที',
-      'มาถึง R3 — GIB ตรงกับ un=3 (✓) แต่ LIB=e012 ไม่ใช่ 0 แปลว่ามีคำสั่งเฉพาะ: ถอดรหัสส่งเข้า VPN ก่อนส่งต่อไปหาปลายทางจริง',
+      'แพ็กเก็ตออกจาก CE1 — R ต้นทางประกอบที่อยู่ปลายทางไว้แล้ว: <block> ตามด้วย un ของ R1, R2, R3 (ค่าโซน GIB ทั้งสามช่อง) แล้วปิดท้ายด้วยเลข function ของบริการที่ R3 (ค่าโซน LIB)',
+      'มาถึง R1 — ช่องหน้าสุดคือ 1 อยู่โซน GIB และตรงกับ un ของ R1 พอดี จึงรู้ว่าถึงคิวตัวเอง เลื่อนช่องนั้นทิ้ง แล้วส่งต่อตาม un ช่องถัดไป',
+      'มาถึง R2 — ช่องหน้าสุดตอนนี้คือ 2 อยู่โซน GIB ตรงกับ un ของ R2 ทำแบบเดียวกัน: เลื่อนช่องทิ้ง แล้วส่งต่อ',
+      'มาถึง R3 — เลื่อน un ของตัวเองทิ้งแล้ว ช่องหน้าสุดที่โผล่มาคือ e012 ซึ่งอยู่โซน LIB ไม่ใช่ un ของเราเตอร์ตัวไหน แปลว่าเป็นเลขงานภายในของ R3 เอง → ถอดรหัสส่งเข้า VPN',
       'ถึงปลายทางที่ CE2 แล้ว — งานของ SRv6 เสร็จสมบูรณ์'
     ];
 
@@ -867,8 +888,8 @@
       var nodeLabel = nodes[step] + (un[nodes[step]] ? ' (un='+un[nodes[step]]+')' : '');
       var gibText, libText;
       if (hop){
-        gibText = 'GIB='+hop.gib+' ✓ ตรงกับ un';
-        libText = 'LIB='+hop.lib+' → '+hop.note;
+        gibText = hop.head + ' (โซน ' + hop.zone + ')';
+        libText = hop.note;
       } else if (step===0){
         gibText = '— ยังไม่ถึงเราเตอร์ใด';
         libText = '—';
