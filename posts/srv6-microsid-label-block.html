@@ -76,6 +76,32 @@
 </head>
 <body>
 
+<div class="progress-bar" id="progress-bar"></div>
+<nav class="toc-widget" id="toc-widget">
+  <button type="button" class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-panel">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    <span class="toc-toggle-label">สารบัญ</span>
+  </button>
+  <div class="toc-panel" id="toc-panel" hidden>
+    <ol>
+      <li><a href="#sr" data-toc="sr">01 · Segment Routing คืออะไร</a></li>
+      <li><a href="#srv6" data-toc="srv6">02 · SRv6 ฝังจุดแวะใน IPv6</a></li>
+      <li><a href="#overhead" data-toc="overhead">03 · ยิ่งเส้นทางซับซ้อน ยิ่งแบกรายการยาว</a></li>
+      <li><a href="#usid" data-toc="usid">04 · Micro-SID บีบจุดแวะเหลือ 16 บิต</a></li>
+      <li><a href="#giblib" data-toc="giblib">05 · GIB หรือ LIB</a></li>
+      <li><a href="#un" data-toc="un">06 · ตัวเลขเราเตอร์ (GIB) ตั้งยังไง</a></li>
+      <li><a href="#forward" data-toc="forward">07 · เดินตามแพ็กเก็ตทีละ hop</a></li>
+      <li><a href="#whylabel" data-toc="whylabel">08 · ทำไมยังเห็นคำว่า label</a></li>
+      <li><a href="#reserve" data-toc="reserve">09 · Reserved Label Block</a></li>
+      <li><a href="#staticfn" data-toc="staticfn">10 · static-function</a></li>
+      <li><a href="#realconfig" data-toc="realconfig">11 · ตัวอย่าง config จริง</a></li>
+      <li><a href="#numbers" data-toc="numbers">12 · ลองคำนวณดูจริง ๆ</a></li>
+      <li><a href="#warning" data-toc="warning">13 · จองน้อยไป ระวังตรงไหน</a></li>
+      <li><a href="#summary" data-toc="summary">14 · สรุป</a></li>
+    </ol>
+  </div>
+</nav>
+
 <nav class="site-nav">
   <div class="wrap">
     <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
@@ -347,8 +373,8 @@
   <!-- ============ 7. Reserved label block sizing ============ -->
   <section id="reserve">
     <span class="kicker"><span class="dot"></span>09 · กลไกที่ 2</span>
-    <h2>Reserved Label Block: ต้องมีขนาดพอดี LIB แต่ไม่ต้องตรงเลข hex</h2>
-    <p class="lede">label ภายในกล่องที่เพิ่งเห็นในข้อที่แล้ว ถูกจับคู่แบบ 1 ต่อ 1 กับทุกค่าใน LIB ระบบเลยต้องมี "คลัง label" (Reserved Label Block) กันไว้ให้ครบพอสำหรับทุกค่าที่ LIB มี — และนี่คือจุดที่คนตั้งค่าใหม่ ๆ มักเข้าใจผิด: <strong>คิดว่าตัวเลขในคลัง label ต้องตรงกับค่า hex ของ LIB ด้วย ซึ่งไม่จำเป็นเลย</strong></p>
+    <h2>Reserved Label Block: ไม่ต้องตรงเลข hex ของ LIB แต่ต้องพอใช้งานจริง</h2>
+    <p class="lede">label ภายในกล่องที่เพิ่งเห็นในข้อที่แล้ว ถูกจับคู่แบบ 1 ต่อ 1 กับทุกค่า LIB ที่ถูกใช้งานจริง ระบบเลยต้องมี "คลัง label" (Reserved Label Block) กันไว้ให้พอ — และนี่คือจุดที่คนตั้งค่าใหม่ ๆ มักเข้าใจผิด: <strong>คิดว่าตัวเลขในคลัง label ต้องตรงกับค่า hex ของ LIB ด้วย ซึ่งไม่จำเป็นเลย</strong></p>
     <div class="stage">
       <div class="stage-label">
         <span class="chip cyan">● LIB (พื้นที่ function จริงในที่อยู่ IPv6)</span>
@@ -360,11 +386,12 @@
     <div class="callout">
       <span class="tag">แล้วทำไม GIB ไม่ต้องมีคลัง label บ้าง</span>
       <p><strong>GIB</strong> บอกแค่ "เราเตอร์ไหน" — งานของเราเตอร์ตอนเช็คส่วนนี้ คือดูว่า GIB ในแพ็กเก็ตตรงกับค่า <span class="mono">un</span> ของตัวเองหรือเปล่า เหมือนเช็คว่าจดหมายส่งถึงบ้านเลขที่ตัวเองไหม ซึ่งเป็นการจับคู่กับ <strong>prefix เดียว</strong> ที่ตัวเองประกาศออกไปทาง IGP ตามปกติอยู่แล้ว (เหมือน route lookup ทั่วไป) ไม่จำเป็นต้องมีตาราง lookup แยกไว้ล่วงหน้าสำหรับทุกค่า GIB ที่เป็นไปได้ในเครือข่าย เพราะเราเตอร์แต่ละตัวสนใจแค่ค่าของตัวเองค่าเดียว — จึงไม่ต้องมีคลัง label มารองรับส่วนนี้เลย</p>
-      <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในเราเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงเราเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) เราเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้ครบทุกค่าที่ LIB มีทางเป็นไปได้ทั้งหมดล่วงหน้า ไม่ใช่แค่ค่าที่ใช้งานจริงตอนนั้น</p>
+      <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในเราเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงเราเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) เราเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้พอกับจำนวน function ที่จะใช้งานจริง (ทั้ง static และ dynamic) ไม่ใช่ค่าที่ใช้อยู่ตอนนี้เท่านั้น</p>
     </div>
     <div class="callout">
-      <span class="tag">กฎที่ต้องจำ</span>
-      <p>สิ่งเดียวที่ต้องตรงคือ <strong>"จำนวน" (count)</strong> — คลัง label ต้องมีจำนวนช่องอย่างน้อยเท่ากับขนาดของ LIB จะเริ่มที่เลขอะไรก็ได้ ขอแค่ไม่ไปชนกับ label range อื่นที่ใช้อยู่ในเครื่องเดียวกัน</p>
+      <span class="tag">กฎที่ต้องจำ — LIB คือ "เพดาน" ไม่ใช่ "พื้น"</span>
+      <p>คู่มือ Nokia เขียนไว้ตรงข้ามกับที่มักเข้าใจกัน: ขนาด LIB (2^16 − global-sid-entries × 1024) คือ<strong>เพดานสูงสุดตามทฤษฎี ไม่ใช่ขนาดที่ต้อง reserve ให้ครบเสมอไป</strong> — "a label-block should not need exceed that value" (จองเกินกว่านั้นก็แค่เปลือง label เปล่า ๆ) ขนาดที่ถูกต้องจริง ๆ มี 3 ชั้น: <strong>(1) พื้นแข็ง</strong> ต้อง ≥ <span class="mono">static-function max-entries</span> เสมอ (CLI reject ทันทีถ้าไม่ถึง), <strong>(2) พื้นใช้งานจริง</strong> ควร ≥ max-entries บวกจำนวน dynamic function ที่คาดว่าจะเกิดขึ้นจริง (ไม่มี CLI เช็คให้ — พลาดแล้วเงียบตามที่คุยในข้อ 13), <strong>(3) เพดาน</strong> ไม่ควรเกินขนาด LIB เต็ม เพราะเกินไปก็แค่เสีย label เปล่า ๆ ไม่ได้ผิดกฎอะไร</p>
+      <p>ตัวเลขที่ต้อง<strong>ตรงกันแน่ ๆ</strong> มีแค่อย่างเดียวคือ "จำนวน" (count) ระหว่างคลัง label กับจำนวน function ที่ใช้จริง — เริ่มที่เลขอะไรก็ได้ ขอแค่ไม่ไปชนกับ label range อื่นที่ใช้อยู่ในเครื่องเดียวกัน</p>
     </div>
   </section>
 
@@ -388,12 +415,8 @@
       <p class="mono" style="font-weight:600;">Oper Func = (global-sid-entries × 1024) + (ค่าที่พิมพ์ − 1)</p>
       <p>สังเกตว่ามี <strong>−1</strong> อยู่ด้วย — <span class="mono">ua 1</span> ให้ค่าจริงเท่ากับ<strong>จุดเริ่มต้นของ LIB พอดี</strong> ไม่ใช่จุดเริ่ม+1 ทดสอบบน 7750 SR-1 จริง: ตั้ง <span class="mono">global-sid-entries 16</span> (LIB เริ่ม 0x4000) แล้วสั่ง <span class="mono">ua 1 / ua 2 / ua 3</span> ได้ SID ลงท้าย <span class="mono">4000:: / 4001:: / 4002::</span> (Oper Func = 16384 / 16385 / 16386)</p>
       <p>จากนั้นเปลี่ยนแค่ <span class="mono">global-sid-entries</span> เป็น <span class="mono">56</span> (LIB เริ่ม 0xE000) โดย<strong>ไม่แตะคอนฟิก uA เลยสักบรรทัด</strong> — ค่าทั้งชุดขยับตามทันทีเป็น <span class="mono">e000:: / e001:: / e002::</span> (57344 / 57345 / 57346) ยืนยันว่าเลขที่พิมพ์เป็น index ที่ผูกกับตำแหน่งเริ่มของ LIB จริง ไม่ใช่ค่าตายตัว</p>
-      <p><strong>ข้อควรระวัง:</strong> ตัวเลขชุดนี้วัดจาก <span class="mono">uA</span> โดยตรง ส่วนตัวอย่างในเอกสาร Nokia 24.7.2 ที่แสดง <span class="mono">udx2 5</span> → ลงท้าย <span class="mono">4005::</span> ยังไม่ตรงกับสูตรนี้ (ถ้าใช้สูตรเดียวกันควรได้ <span class="mono">4004::</span>) — กรณี service micro-SID แบบ static ยังไม่ได้วัดจริงในแล็บ อย่าเพิ่งเหมารวมว่าใช้สูตรเดียวกันจนกว่าจะยืนยัน</p>
-    </div>
-    <div class="callout">
-      <span class="tag">ดูค่าจริงที่ไหน ไม่ให้สับสนสองคอลัมน์</span>
-      <p>คำสั่งที่เห็นทั้ง index และค่าจริงพร้อมกันคือ <span class="mono">show router segment-routing-v6 base-routing-instance micro</span> — มีคอลัมน์ <strong>Function</strong> (index ที่พิมพ์ในคอนฟิก) คู่กับ <strong>Oper Func</strong> (ค่า LIB จริง) ให้เทียบกันตรง ๆ พร้อมชื่อ interface</p>
-      <p>ส่วน <span class="mono">show router segment-routing-v6 micro-segment-local-sid</span> โชว์แค่ค่าจริง ภายใต้คอลัมน์ที่ก็ชื่อ "Function" เหมือนกัน — และนี่คือต้นตอความสับสน เพราะในตารางเดียวกันนั้น <span class="mono">uN 1</span> เป็นค่า <strong>GIB</strong> แท้ ๆ ส่วน <span class="mono">uA 16384</span> เป็นค่า <strong>LIB</strong> คนละชนิดของเลขกันเลย แต่พิมพ์รวมอยู่คอลัมน์เดียว</p>
+      <p><strong>ยืนยันด้วย service SID ทุกชนิด ไม่ใช่แค่ uA:</strong> ทดสอบ <span class="mono">udt46 value 5</span>, <span class="mono">udx2 value 6</span>, <span class="mono">udt4 value 7</span>, <span class="mono">udt6 value 8</span>, <span class="mono">udt2u value 9</span>, <span class="mono">udt2m value 10</span> บนบล็อกเดียวกัน (LIB เริ่ม 0x4000) ได้ SID ลงท้าย <span class="mono">4004:: / 4005:: / 4006:: / 4007:: / 4008:: / 4009::</span> ตามลำดับ — สูตรเดียวกันเป๊ะ ไม่มี offset แยกตามชนิด function และ Nokia เอง ก็มีตัวอย่างในคู่มือ Advanced Configuration Guide ที่ใช้ <span class="mono">udx2 value 5</span> แล้วได้ <span class="mono">4004::</span> (16388) ตรงกับสูตรนี้พอดี — ไม่ใช่ข้อขัดแย้งอย่างที่เข้าใจผิดไปก่อนหน้านี้</p>
+      <p><strong>ข้อควรรู้เพิ่ม:</strong> index ที่พิมพ์ (เช่น <span class="mono">value 5</span>) ใช้ "พูลเดียวกันทั้ง block" — ชนกันได้ข้ามชนิด function, ข้าม uA, และข้าม<strong>ทุก locator ที่ใช้ block เดียวกัน</strong> แม้ SID สุดท้ายจะไม่ชนกันบนสาย (คนละ un) ระบบก็ยัง reject ให้ เพราะเช็คที่ระดับ block ไม่ใช่ระดับ locator — ต้องวางแผน index ให้ไม่ชนกันทั้งเครือข่ายที่แชร์ block เดียวกัน</p>
     </div>
     <div class="callout">
       <span class="tag">binding-SID (uB6) ใส่แค่ค่าเดียวลอย ๆ ไม่ได้</span>
@@ -410,6 +433,37 @@
     <span class="kicker"><span class="dot"></span>11 · ทดสอบจริง</span>
     <h2>ตัวอย่าง config เต็มรูปแบบ ทดสอบจริงบน SR-SIM 26.3.R1</h2>
     <p class="lede">รวมทุกกลไกที่คุยกันมาทั้งหมด (reserved-label-block, micro-segment, un, static-function, uA ต่ออินเทอร์เฟซ, VPRN บน Micro-SID) เข้าเป็น config ชุดเดียวที่รันจริงบน 2 โหนด PE1/PE2 (7750 SR-1, SR-SIM 26.3.R1) — ค่าทั้งหมดในโพสต์นี้ (block <span class="mono">2001:bbbb::/32</span>, global-sid-entries 16, ฯลฯ) มาจาก config ชุดนี้เท่านั้น</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">0. FPE (Forwarding Path Extension) — ต้องมีก่อนเสมอ</h3>
+    <p>SRv6 บน FP-based platform ต้องมี FPE ทำหน้าที่ origination/termination เสมอ (คือที่มาของ <span class="mono">origination-fpe [1]</span> / <span class="mono">termination-fpe [2]</span> ที่อ้างถึงในข้อ 1 ด้านล่าง) — FPE ต้องผูกกับพอร์ตผ่าน <span class="mono">port-xc (pxc)</span> แต่ไม่จำเป็นต้องเสียพอร์ตหน้าเครื่องจริงเลย ใช้ MAC loopback ภายในการ์ดแทนได้:</p>
+    <div class="code-block"><pre>configure card 1 mda 1 xconnect mac 1
+    loopback 1 { }
+
+configure port 1/1/m1/1
+    admin-state enable
+
+configure port-xc
+    pxc 1
+        admin-state enable
+        port-id 1/1/m1/1
+    pxc 2
+        admin-state enable
+        port-id 1/1/m1/1
+
+configure router "Base" fwd-path-ext
+    fpe 1
+        path
+            pxc 1
+        application
+            srv6
+                type origination
+    fpe 2
+        path
+            pxc 2
+        application
+            srv6
+                type termination</pre></div>
+    <p class="caption"><span class="mono">pxc 1</span> กับ <span class="mono">pxc 2</span> ชี้พอร์ต loopback เดียวกันได้ ไม่ต้องแยกพอร์ตจริง — ต้องเปิด <span class="mono">admin-state enable</span> ที่ <span class="mono">port pxc-1.a / pxc-1.b / pxc-2.a / pxc-2.b</span> ด้วย ระบบจะสร้าง interface <span class="mono">_tmnx_fpe_1.a/.b</span> และ <span class="mono">_tmnx_fpe_2.a/.b</span> ให้เองหลังจากนั้น</p>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">1. คลัง label + locator + un (PE1, un=1)</h3>
     <div class="code-block"><pre>configure router "Base" mpls-labels
@@ -447,7 +501,8 @@ configure router "Base" segment-routing segment-routing-v6
     <p class="caption">PE2 ตั้งเหมือนกันทุกบรรทัด ยกเว้น <span class="mono">source-address 2001:db8::2</span> และ <span class="mono">un value 2</span> — block, global-sid-entries, static-function ต้องเท่ากันทั้งโดเมนเสมอ</p>
     <div class="callout">
       <span class="tag">จุดที่เคยผิดในร่างแรก — ตัวอย่างจริงของ "จองไม่พอ"</span>
-      <p>ร่างแรกของ config นี้เคยตั้ง <span class="mono">end-label 38191</span> (จองแค่ 8,192 ช่อง) ทั้งที่ <span class="mono">global-sid-entries 16</span> ต้องการ LIB เต็ม ๆ ถึง <strong>49,152 ช่อง</strong> ตามกฎในข้อ 09 — สาเหตุคือลอกเลขจากตัวอย่างในเอกสารเล่มหนึ่งที่ตั้ง global-sid-entries คนละค่ามาใช้ตรง ๆ โดยไม่คำนวณใหม่ ของแบบนี้ <strong>lab ยังรันผ่านและ ping ได้ปกติ</strong> เพราะตอนนั้นมีแค่ 4 function จริง (3 uA + 1 uDT46) ซึ่งยังอยู่ใน 8,192 ช่องแรกพอดี — เป็นตัวอย่างสดของ "จองน้อยไปแต่ยังไม่ชนขอบ เลยดูเหมือนไม่มีปัญหา" ตามที่เตือนไว้ในข้อ 13 เป๊ะ ค่าที่แก้แล้ว (<span class="mono">end-label 79151</span> = 49,152 ช่อง) คือขนาดที่ถูกต้องสำหรับ config ชุดนี้</p>
+      <p>ร่างแรกของ config นี้เคยตั้ง <span class="mono">end-label 38191</span> (จองแค่ 8,192 ช่อง) — ปัญหาไม่ใช่ว่ามันเล็กกว่า LIB (LIB คือเพดานตามที่คุยในข้อ 09 ไม่จำเป็นต้องจองให้เต็ม) แต่ปัญหาคือตัวเลขนี้<strong>ลอกมาจากตัวอย่างในเอกสารเล่มหนึ่งที่ตั้ง global-sid-entries คนละค่า</strong> โดยไม่ได้คำนวณใหม่ให้เหมาะกับจำนวน function ที่จะใช้จริงของ config ชุดนี้เลย ของแบบนี้ lab ยัง commit ผ่านปกติเพราะตอนนั้นมีแค่ 4 function จริง (3 uA + 1 uDT46) ซึ่งยังอยู่ใน 8,192 ช่องแรกพอดี — เป็นตัวอย่างสดของ "จองแบบไม่มีเหตุผลรองรับ" ที่เสี่ยงชนขอบทันทีที่มี service เพิ่มเกินคาด</p>
+      <p>ค่าที่แก้แล้ว (<span class="mono">end-label 79151</span> = 49,152 ช่อง เท่ากับเพดาน LIB เต็ม) เป็นตัวเลือกที่ปลอดภัยสำหรับแล็บขนาดเล็กนี้ แต่ <strong>ไม่ใช่ตัวเลขที่ต้อง copy ไปใช้เสมอ</strong> — ถ้ามีหลาย locator หรือหลาย Flex-Algorithm ที่ต้อง reserve block แยกกัน การจองเต็มเพดานทุกก้อนจะกินพื้นที่ label ของทั้งเครื่องอย่างรวดเร็ว (49,152 ช่องต่อ 1 algorithm ที่ global-sid-entries 16 คือ ~9.4% ของ label space ทั้งเครื่อง 524,288 ช่อง) ในทางปฏิบัติควรจองตามจำนวน function ที่วางแผนใช้จริงบวก headroom แล้วไม่เกินเพดาน ไม่ใช่จองเต็มเพดานเป็นค่าเริ่มต้นเสมอไป</p>
     </div>
 
     <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">2. static uA ต่ออินเทอร์เฟซแต่ละเส้น (PE1)</h3>
@@ -531,6 +586,10 @@ uSID-Alg0-Loc
  uA            3         2001:bbbb:1:4002::                      ok
   PSP          16386     to-pe2-3                                Unprotected</pre></div>
     <p class="caption">คำสั่งนี้แหละที่โชว์ทั้ง <strong>Function</strong> (index ที่พิมพ์ในคอนฟิก) กับ <strong>Oper Func</strong> (ค่า LIB จริง) คู่กัน พร้อมชื่อ interface ที่ผูกไว้ — ใช้เช็คว่า uA ตัวไหนแมปกับลิงก์ไหนได้ตรง ๆ</p>
+    <div class="callout">
+      <span class="tag">ดูค่าจริงที่ไหน ไม่ให้สับสนสองคอลัมน์</span>
+      <p>คำสั่งด้านบน (<span class="mono">base-routing-instance micro</span>) เห็นทั้ง index และค่าจริงพร้อมกันในคอลัมน์ <strong>Function</strong> กับ <strong>Oper Func</strong> ส่วนคำสั่ง <span class="mono">show router segment-routing-v6 micro-segment-local-sid</span> ที่แสดงไปก่อนหน้านี้ (ข้อ 4) โชว์แค่ค่าจริงเท่านั้น ภายใต้คอลัมน์ที่ก็ชื่อ "Function" เหมือนกัน — และนี่คือต้นตอความสับสน เพราะในตารางนั้น <span class="mono">uN 1</span> เป็นค่า <strong>GIB</strong> แท้ ๆ ส่วน <span class="mono">uA 16384</span> เป็นค่า <strong>LIB</strong> คนละชนิดของเลขกันเลย แต่พิมพ์รวมอยู่คอลัมน์เดียว</p>
+    </div>
     <div class="code-block"><pre>A:admin@pe1# show router mpls-labels label-range
 
 Reserved Label Blocks
@@ -541,14 +600,12 @@ Block Name                                   Label       Label
 SRv6-uSID-Alg0                               30000       79151       49152
 -------------------------------------------------------------------------------
 
-A:admin@pe1# ping 172.16.1.2 router-instance "VPRN-100" source-address 172.16.1.1 count 3
-PING 172.16.1.2 56 data bytes
-64 bytes from 172.16.1.2: icmp_seq=1 ttl=64 time=6.94ms.
-64 bytes from 172.16.1.2: icmp_seq=2 ttl=64 time=6.76ms.
-64 bytes from 172.16.1.2: icmp_seq=3 ttl=64 time=9.28ms.
----- 172.16.1.2 PING Statistics ----
-3 packets transmitted, 3 packets received, 0.00% packet loss</pre></div>
-    <p class="caption">ping ผ่าน VPRN จริงทั้ง IPv4 และ IPv6 (ไม่ได้แสดงในนี้) ยืนยันว่า data plane ทำงานจบครบวงจร ไม่ใช่แค่ config ขึ้น Up เฉย ๆ</p>
+A:admin@pe1# show router 100 route-table
+172.16.1.1/32                                 Local   Local     00h21m51s  0
+       loopback-100                                                 0
+172.16.1.2/32                                 Remote  BGP VPN   00h00m34s  170
+       2001:bbbb:2:4013:: (tunneled:SRV6)                           11</pre></div>
+    <p class="caption">route-table ยืนยันว่า control plane ครบวงจรจริง — BGP แจก SRv6 L3 Service TLV มาให้ (Full Sid, Behavior: End.uDT46), route ถูกโปรแกรมเป็น tunneled:SRV6 ชี้ไปที่ SID ของอีกฝั่งถูกต้อง <strong>ข้อจำกัดที่ต้องบอกตรง ๆ:</strong> SR-SIM (ตัวจำลอง SR OS ที่ใช้ทดสอบ) ไม่ forward SRv6 VPN dataplane จริง — ping ข้าม VPRN บน SR-SIM จะ timeout เสมอแม้ config/control-plane ถูกทุกจุด ดังนั้นสิ่งที่ยืนยันได้จากแล็บนี้คือ CLI syntax, validation ตอน commit, ค่า SID/label ที่คำนวณจริง, และ BGP advertisement — ไม่ใช่การ forward แพ็กเก็ตจริงบนฮาร์ดแวร์</p>
   </section>
 
   <!-- ============ 8. Worked numbers ============ -->
@@ -600,8 +657,14 @@ PING 172.16.1.2 56 data bytes
       <p class="mono" style="font-size:.85rem">MINOR: SVCMGR #2135 Base "Allocation of function failed for vprn 200 srv6-instance 1 micro-segment-locator uSID-Alg0-Loc function udt46 value 0."</p>
     </div>
     <div class="callout">
+      <span class="tag">อีกจุดที่อันตราย: แก้ max-entries หรือขนาด label-block ทีหลัง = dynamic SID เลื่อนเงียบ ๆ</span>
+      <p>ทดสอบจริง: service ที่ใช้ function แบบ <strong>dynamic</strong> (ไม่ระบุ value เอง) ได้ SID <span class="mono">2001:bbbb:1:4010::</span> (16400) อยู่ดี ๆ — พอแก้ <span class="mono">max-entries</span> จาก 16 เป็น 20 (มี service รันอยู่แล้ว) แล้ว commit: SID ของ service เดิม<strong>ขยับเป็น <span class="mono">4014::</span> (16404) ทันที</strong> โดยไม่มี error, ไม่มี service flap แจ้งเตือน มีแค่ log ทั่วไป "Commit ... succeeded" เท่านั้น — ทำแบบเดียวกันกับการย่อ/ขยาย <span class="mono">reserved-label-block</span> ก็เจอ SID เลื่อนซ้ำอีกทุกครั้งที่แตะ</p>
+      <p><strong>ของที่ตั้ง static value เองไว้ (เช่น <span class="mono">udt46 value 5</span>) ไม่เคยขยับเลยแม้แต่ครั้งเดียว</strong> ต่อให้แก้ max-entries หรือ resize label-block กี่รอบก็ตาม — เพราะ CLI ไม่มีทาง reallocate ค่าที่ operator กำหนดเองตายตัวอยู่แล้ว มีแต่ dynamic เท่านั้นที่ระบบไปแตะได้</p>
+      <p class="caption" style="margin:0">ผลกระทบจริง: BGP re-advertise SID ใหม่ให้ทันที และ route ในตาราง VRF ของอีกฝั่งชี้ไปที่ SID ใหม่ — แปลว่า<strong>การแก้ max-entries หรือขนาด label-block บนเครื่องที่มี service ใช้งานอยู่ คือ service-affecting change แม้ CLI จะ commit ผ่านแบบเงียบ ๆ ก็ตาม</strong> ต้องขอ maintenance window เหมือนงานที่กระทบ service จริง ไม่ใช่แค่ config เปลี่ยนเฉย ๆ (ทดสอบบน SR-SIM 26.3.R1 — พฤติกรรมนี้เป็น logic ฝั่ง control plane จึงน่าจะตรงกับฮาร์ดแวร์จริง แต่ยังไม่ได้ยืนยันบนเครื่องจริง)</p>
+    </div>
+    <div class="callout">
       <span class="tag">บทเรียน</span>
-      <p><span class="mono">show router mpls-labels label-range</span> ไม่มีคอลัมน์ used/available สำหรับ reserved-label-block เลย (มีแค่ Name/Start/End/Total) จึงไม่มีทางรู้ล่วงหน้าว่าใกล้เต็มหรือยังจากคำสั่ง show ปกติ — วิธีเดียวที่จะจับกรณีนี้ได้บน production คือ<strong>ตั้ง monitor บน log event SVCMGR #2135</strong> ไว้เตือนล่วงหน้า ควบคู่กับการคำนวณขนาด LIB ให้ครบตั้งแต่ต้นตามที่คุยกันมาตลอดบทความนี้</p>
+      <p><span class="mono">show router mpls-labels label-range</span> ไม่มีคอลัมน์ used/available สำหรับ reserved-label-block เลย (มีแค่ Name/Start/End/Total) จึงไม่มีทางรู้ล่วงหน้าว่าใกล้เต็มหรือยังจากคำสั่ง show ปกติ — วิธีเดียวที่จะจับกรณีนี้ได้บน production คือ<strong>ตั้ง monitor บน log event SVCMGR #2135</strong> ไว้เตือนล่วงหน้า ควบคู่กับ (1) กำหนด <span class="mono">value</span> แบบ static ให้ service ที่แคร์ความนิ่งของ SID เสมอ และ (2) วางแผนขนาด max-entries/label-block ให้ครบตั้งแต่วันแรก เพราะการมาขยายทีหลังจะทำให้ dynamic SID ทุกตัวเลื่อนตาม</p>
     </div>
   </section>
 
@@ -1033,7 +1096,7 @@ PING 172.16.1.2 56 data bytes
     var hops = {
       R1:{head:'1', zone:'GIB', fn:false, note:'ตรงกับ un=1 → เลื่อนช่อง ส่งต่อ'},
       R2:{head:'2', zone:'GIB', fn:false, note:'ตรงกับ un=2 → เลื่อนช่อง ส่งต่อ'},
-      R3:{head:'e012', zone:'LIB', fn:true, note:'เลข function ของ R3 → ถอดรหัสส่งเข้า VPN'}
+      R3:{head:'4004', zone:'LIB', fn:true, note:'udt46 value 5 → ถอดรหัสส่งเข้า VPN'}
     };
     var remainingCount = [3,2,1,0,0];
     var remainingLabels = [
@@ -1047,7 +1110,7 @@ PING 172.16.1.2 56 data bytes
       'แพ็กเก็ตออกจาก CE1 — R ต้นทางประกอบที่อยู่ปลายทางไว้แล้ว: <block> ตามด้วย un ของ R1, R2, R3 (ค่าโซน GIB ทั้งสามช่อง) แล้วปิดท้ายด้วยเลข function ของบริการที่ R3 (ค่าโซน LIB)',
       'มาถึง R1 — ช่องหน้าสุดคือ 1 อยู่โซน GIB และตรงกับ un ของ R1 พอดี จึงรู้ว่าถึงคิวตัวเอง เลื่อนช่องนั้นทิ้ง แล้วส่งต่อตาม un ช่องถัดไป',
       'มาถึง R2 — ช่องหน้าสุดตอนนี้คือ 2 อยู่โซน GIB ตรงกับ un ของ R2 ทำแบบเดียวกัน: เลื่อนช่องทิ้ง แล้วส่งต่อ',
-      'มาถึง R3 — เลื่อน un ของตัวเองทิ้งแล้ว ช่องหน้าสุดที่โผล่มาคือ e012 ซึ่งอยู่โซน LIB ไม่ใช่ un ของเราเตอร์ตัวไหน แปลว่าเป็นเลขงานภายในของ R3 เอง → ถอดรหัสส่งเข้า VPN',
+      'มาถึง R3 — เลื่อน un ของตัวเองทิ้งแล้ว ช่องหน้าสุดที่โผล่มาคือ 4004 (16388) ซึ่งอยู่โซน LIB ไม่ใช่ un ของเราเตอร์ตัวไหน แปลว่าเป็นเลขงานภายในของ R3 เอง — ค่าจริงจาก config udt46 value 5 ทดสอบบน SR-SIM 26.3.R1 → ถอดรหัสส่งเข้า VPN',
       'ถึงปลายทางที่ CE2 แล้ว — งานของ SRv6 เสร็จสมบูรณ์'
     ];
 
@@ -1257,6 +1320,63 @@ PING 172.16.1.2 56 data bytes
     ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='left';
     ctx.fillText('✗ ตำแหน่ง/ค่าตัวเลข ไม่จำเป็นต้องตรงกัน', x1, y1-12);
   }, 2);
+
+  /* ---------------- Reading progress bar + floating TOC ---------------- */
+  (function(){
+    var bar = document.getElementById('progress-bar');
+    var toggle = document.getElementById('toc-toggle');
+    var panel = document.getElementById('toc-panel');
+    if (!bar) return;
+    var links = panel ? Array.prototype.slice.call(panel.querySelectorAll('a[data-toc]')) : [];
+
+    function clamp01(x){ return x<0?0:x>1?1:x; }
+    function updateBar(){
+      var doc = document.documentElement;
+      var scrollTop = window.scrollY || doc.scrollTop;
+      var height = doc.scrollHeight - doc.clientHeight;
+      var pct = height>0 ? clamp01(scrollTop/height)*100 : 0;
+      bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', updateBar, {passive:true});
+    window.addEventListener('resize', updateBar);
+    updateBar();
+
+    if (toggle && panel){
+      toggle.addEventListener('click', function(){
+        var willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+      });
+      document.addEventListener('click', function(e){
+        if (!panel.hidden && !panel.contains(e.target) && e.target!==toggle && !toggle.contains(e.target)){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+      links.forEach(function(a){
+        a.addEventListener('click', function(){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    if (sections.length && links.length){
+      var byId = {};
+      links.forEach(function(a){ byId[a.getAttribute('data-toc')] = a; });
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){
+            links.forEach(function(a){ a.classList.remove('active'); });
+            var a = byId[e.target.id];
+            if (a) a.classList.add('active');
+          }
+        });
+      }, {rootMargin:'-40% 0px -55% 0px', threshold:0});
+      sections.forEach(function(s){ io.observe(s); });
+    }
+  })();
 
 })();
 </script>
