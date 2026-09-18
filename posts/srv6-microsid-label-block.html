@@ -376,12 +376,25 @@
     <ul class="points">
       <li>สิ่งที่ต้องเป็น static เสมอ เพราะมีคนอื่นอ้างอิงค่าตรง ๆ จึงต้องคาดเดาได้แน่นอน: <strong>uA</strong> (adjacency ที่กำหนดเอง), <strong>service micro-SID</strong> (uDT4/uDT6/uDT46/uDX2/uDX6 ที่ระบุ function value เอง), และ <strong>binding-SID (uB6)</strong> ของ SRv6 policy — ทั้งสามชนิดแย่งที่กันในโซน static เดียวกัน ไม่ใช่คนละโควตาแยกกัน</li>
       <li><span class="mono">un</span> (GIB) ไม่เกี่ยวข้องกับโซนนี้เลย เพราะอยู่คนละ pool ตั้งแต่ต้น ไม่กินโควตา static-function แม้แต่ช่องเดียว</li>
+      <li>โซน dynamic เริ่มที่ <strong>LIB start + max-entries พอดี</strong> (ไม่ใช่ +max-entries+1) — วัดจากแล็บ: ตั้ง <span class="mono">max-entries 16</span> แล้ว uDT46 ตัวแรกที่ระบบจัดให้เองได้ <span class="mono">0x4010</span> (16400) แปลว่าโซน static คือ index 1–16 = <span class="mono">0x4000–0x400F</span> เป๊ะ</li>
     </ul>
     <div class="code-block"><pre>configure router "Base" segment-routing segment-routing-v6
     base-routing-instance micro-segment-locator "aa"
         function
             ua 1 interface-name "to_xxx"</pre></div>
-    <p class="caption">เลข <span class="mono">1</span> ท้ายคำสั่ง <span class="mono">ua</span> ไม่ใช่ค่า hex ของ LIB ตรง ๆ แต่เป็นแค่ <strong>ลำดับที่ (index) ภายในโซน static</strong> — ระบบเอา index ไปบวกกับจุดเริ่มของ LIB ให้เองเสมอ ตัวอย่างจากเอกสาร Nokia (24.7.2): <span class="mono">global-sid-entries 16</span> (LIB เริ่มที่ 0x4000) แล้วสั่ง <span class="mono">ua 1</span> ได้ SID จริงลงท้าย <span class="mono">4001::</span>, <span class="mono">udx2 5</span> ได้ <span class="mono">4005::</span> — ตรงสูตร <strong>LIB start + index</strong> พอดี (ข้อสังเกตนี้อนุมานจากตัวอย่างในเอกสาร ยังไม่มีประโยคยืนยันสูตรตรง ๆ)</p>
+    <p class="caption">เลข <span class="mono">1</span> ท้ายคำสั่ง <span class="mono">ua</span> ไม่ใช่ค่า hex ของ LIB ตรง ๆ แต่เป็นแค่ <strong>ลำดับที่ (index) ภายในโซน static</strong> — ระบบเอา index ไปเทียบกับจุดเริ่มของ LIB ให้เองเสมอ</p>
+    <div class="callout">
+      <span class="tag">สูตรจริง วัดจากแล็บ SR-SIM 26.3.R1</span>
+      <p class="mono" style="font-weight:600;">Oper Func = (global-sid-entries × 1024) + (ค่าที่พิมพ์ − 1)</p>
+      <p>สังเกตว่ามี <strong>−1</strong> อยู่ด้วย — <span class="mono">ua 1</span> ให้ค่าจริงเท่ากับ<strong>จุดเริ่มต้นของ LIB พอดี</strong> ไม่ใช่จุดเริ่ม+1 ทดสอบบน 7750 SR-1 จริง: ตั้ง <span class="mono">global-sid-entries 16</span> (LIB เริ่ม 0x4000) แล้วสั่ง <span class="mono">ua 1 / ua 2 / ua 3</span> ได้ SID ลงท้าย <span class="mono">4000:: / 4001:: / 4002::</span> (Oper Func = 16384 / 16385 / 16386)</p>
+      <p>จากนั้นเปลี่ยนแค่ <span class="mono">global-sid-entries</span> เป็น <span class="mono">56</span> (LIB เริ่ม 0xE000) โดย<strong>ไม่แตะคอนฟิก uA เลยสักบรรทัด</strong> — ค่าทั้งชุดขยับตามทันทีเป็น <span class="mono">e000:: / e001:: / e002::</span> (57344 / 57345 / 57346) ยืนยันว่าเลขที่พิมพ์เป็น index ที่ผูกกับตำแหน่งเริ่มของ LIB จริง ไม่ใช่ค่าตายตัว</p>
+      <p><strong>ข้อควรระวัง:</strong> ตัวเลขชุดนี้วัดจาก <span class="mono">uA</span> โดยตรง ส่วนตัวอย่างในเอกสาร Nokia 24.7.2 ที่แสดง <span class="mono">udx2 5</span> → ลงท้าย <span class="mono">4005::</span> ยังไม่ตรงกับสูตรนี้ (ถ้าใช้สูตรเดียวกันควรได้ <span class="mono">4004::</span>) — กรณี service micro-SID แบบ static ยังไม่ได้วัดจริงในแล็บ อย่าเพิ่งเหมารวมว่าใช้สูตรเดียวกันจนกว่าจะยืนยัน</p>
+    </div>
+    <div class="callout">
+      <span class="tag">ดูค่าจริงที่ไหน ไม่ให้สับสนสองคอลัมน์</span>
+      <p>คำสั่งที่เห็นทั้ง index และค่าจริงพร้อมกันคือ <span class="mono">show router segment-routing-v6 base-routing-instance micro</span> — มีคอลัมน์ <strong>Function</strong> (index ที่พิมพ์ในคอนฟิก) คู่กับ <strong>Oper Func</strong> (ค่า LIB จริง) ให้เทียบกันตรง ๆ พร้อมชื่อ interface</p>
+      <p>ส่วน <span class="mono">show router segment-routing-v6 micro-segment-local-sid</span> โชว์แค่ค่าจริง ภายใต้คอลัมน์ที่ก็ชื่อ "Function" เหมือนกัน — และนี่คือต้นตอความสับสน เพราะในตารางเดียวกันนั้น <span class="mono">uN 1</span> เป็นค่า <strong>GIB</strong> แท้ ๆ ส่วน <span class="mono">uA 16384</span> เป็นค่า <strong>LIB</strong> คนละชนิดของเลขกันเลย แต่พิมพ์รวมอยู่คอลัมน์เดียว</p>
+    </div>
     <div class="callout">
       <span class="tag">binding-SID (uB6) ใส่แค่ค่าเดียวลอย ๆ ไม่ได้</span>
       <p>SRv6 policy binding-SID ที่ head-end รับ ต้องมาในรูปเต็ม <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เท่านั้น — ต้องมี <span class="mono">uN</span> ของเราเตอร์เจ้าของนำหน้าเสมอ จะส่งแค่ค่า <span class="mono">uB6</span> ช่องเดียวแบบลอย ๆ ไม่ได้ ตรงกับกลไก 2 FIB entry ในข้อ 05 (entry สั้นที่ไม่มี uN ใช้ได้แค่ตอนแพ็กเก็ตเลื่อนมาถึงตำแหน่งนั้นแล้วเท่านั้น ไม่ใช่ที่อยู่ที่ route ได้จากภายนอกโดยตรง)</p>
