@@ -123,9 +123,77 @@
     </ul>
   </section>
 
-  <!-- ============ 6. Why still "label" ============ -->
+  <!-- ============ 6. un = router's own GIB value ============ -->
+  <section id="un">
+    <span class="kicker"><span class="dot"></span>06 · ลงลึกอีกนิด</span>
+    <h2>ตัวเลขราวเตอร์ (GIB) ตั้งยังไง แล้วพลาดได้ตรงไหน</h2>
+    <p class="lede">ค่า "รหัสพื้นที่" ของราวเตอร์แต่ละตัวถูกตั้งด้วยคำสั่งที่ชื่อ <span class="mono">un</span> (ย่อจาก uSID Node) — ตัวอย่างจริงจากเอกสาร: ราวเตอร์หนึ่งตั้ง <span class="mono">un value 1</span> อีกตัวตั้ง <span class="mono">un value 1281</span> ทั้งสองค่าต้องอยู่ในโซน GIB เท่านั้น (ห้ามหลุดไปโซน LIB) และห้ามซ้ำกับราวเตอร์ตัวอื่นในเครือข่ายเดียวกันเด็ดขาด</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip good">● ตั้งถูก — ตกอยู่ในโซน GIB</span>
+        <span class="chip amber">● ตั้งพลาด — หลุดไปโซน LIB</span>
+      </div>
+      <canvas id="c-un" role="img" aria-label="แอนิเมชันแท่ง GIB/LIB พร้อมหมุดปักตำแหน่งค่า un สองตัวอย่าง ตัวอย่างแรกตกในโซน GIB ขึ้นเครื่องหมายถูกสีเขียว ตัวอย่างที่สองหลุดไปโซน LIB แต่ระบบยังคงยอมรับค่าโดยไม่มีคำเตือน"></canvas>
+    </div>
+    <p class="caption">ช่วงตัวเลขที่ระบบยอมให้พิมพ์ในคำสั่ง <span class="mono">un value</span> คือ 1 ถึง 1,048,575 เสมอ — ไม่ว่าจะตั้ง GIB ไว้ใหญ่แค่ไหนก็ตาม ระบบไม่เช็คให้ว่าเลขที่พิมพ์ไปนั้นยังอยู่ในโซน GIB จริงหรือเปล่า</p>
+    <div class="callout">
+      <span class="tag">จุดพลาดจริงที่เกิดได้</span>
+      <p>สมมติตั้ง GIB ไว้แค่ 1–16,383 (ค่าเริ่มต้น) แต่ดันพิมพ์ <span class="mono">un value 20000</span> ไป — ระบบจะ<strong>รับค่านั้นทันที ไม่มี error ไม่มี warning</strong> ทั้งที่ 20,000 มันไปตกอยู่ในโซน LIB แทน ซึ่งเป็นพื้นที่ที่กันไว้ให้ service function ของราวเตอร์ตัวอื่นใช้ กลายเป็นเลขไปชนกับพื้นที่ที่ไม่ควรชนโดยไม่มีใครรู้ตัว</p>
+    </div>
+    <ul class="points">
+      <li>กฎที่ต้องเช็คเองทุกครั้ง: <span class="mono">un value</span> ต้อง<strong>น้อยกว่า global-sid-entries × 1024</strong> เสมอ</li>
+      <li>ไม่มีเครื่องมือใน CLI ที่คอยเตือนเรื่องนี้ให้ — เป็นการบ้านที่ต้องคำนวณเองล้วน ๆ</li>
+    </ul>
+    <p>ลองดูตัวอย่างหลาย ๆ แบบเทียบกัน จะเห็นภาพชัดขึ้นว่าเส้นแบ่งอยู่ตรงไหนกันแน่:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>global-sid-entries</th><th>ขอบเขต GIB</th><th>ตั้ง un value เป็น</th><th>ผลลัพธ์</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">16 (ค่าเริ่มต้น)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 16,383</td>
+            <td class="mono" data-label="ตั้ง un value">6</td>
+            <td data-label="ผลลัพธ์">✓ ปลอดภัย — เลขเล็ก อยู่ในโซน GIB ชัดเจน</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">16 (ค่าเริ่มต้น)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 16,383</td>
+            <td class="mono" data-label="ตั้ง un value">16,383</td>
+            <td data-label="ผลลัพธ์">✓ ปลอดภัย — ชนขอบพอดี ยังอยู่ใน GIB</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">16 (ค่าเริ่มต้น)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 16,383</td>
+            <td class="mono" data-label="ตั้ง un value">16,384</td>
+            <td data-label="ผลลัพธ์">✗ หลุดไปโซน LIB — เกินมาแค่ 1 ก็พังแล้ว</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">16 (ค่าเริ่มต้น)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 16,383</td>
+            <td class="mono" data-label="ตั้ง un value">20,000</td>
+            <td data-label="ผลลัพธ์">✗ หลุดไปโซน LIB ไปไกลเลย</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">56 (ตัวอย่างจากเอกสาร)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 57,343</td>
+            <td class="mono" data-label="ตั้ง un value">1,281</td>
+            <td data-label="ผลลัพธ์">✓ ปลอดภัย — ค่าจริงที่ใช้ในตัวอย่างของเอกสาร</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="global-sid-entries">56 (ตัวอย่างจากเอกสาร)</td>
+            <td class="mono" data-label="ขอบเขต GIB">1 – 57,343</td>
+            <td class="mono" data-label="ตั้ง un value">60,000</td>
+            <td data-label="ผลลัพธ์">✗ หลุดไปโซน LIB — แม้ GIB จะกว้างกว่ากรณีแรกแล้วก็ตาม</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">สังเกตว่าตัวเลข "ปลอดภัย" ไม่ใช่ค่าตายตัว — ขึ้นอยู่กับ <span class="mono">global-sid-entries</span> ที่เลือกไว้ในแต่ละเครือข่ายเสมอ ค่าที่ปลอดภัยในเครือข่ายหนึ่งอาจหลุดไปโซน LIB ทันทีถ้าย้ายไปใช้กับเครือข่ายที่ตั้ง global-sid-entries ไว้ต่ำกว่า</p>
+  </section>
+
+  <!-- ============ 7. Why still "label" ============ -->
   <section id="whylabel">
-    <span class="kicker"><span class="dot"></span>06 · จุดที่มักงง</span>
+    <span class="kicker"><span class="dot"></span>07 · จุดที่มักงง</span>
     <h2>ก็บอกไม่มี MPLS แล้ว ทำไมยังเห็นคำว่า label</h2>
     <p class="lede">คำตอบสั้น ๆ: <strong>บนสายสัญญาณจริง ไม่มี MPLS label ปนอยู่เลยแม้แต่นิดเดียว</strong> แพ็กเก็ตที่วิ่งระหว่างราวเตอร์เป็น IPv6 + SRH ล้วน ๆ ตลอดเส้นทาง — แต่ <strong>ภายในตัวราวเตอร์บางรุ่น</strong> (ที่ใช้ชิปประมวลผลรุ่นที่มีอยู่แล้วสำหรับ MPLS) ระบบเลือกใช้กลไก lookup table แบบเดียวกับที่ MPLS ใช้อยู่แล้ว มาช่วยค้นหาว่า "เลข LIB นี้ต้องทำอะไร" ให้เร็วขึ้น ซึ่งกลไกนั้นต้องการ "เลข label" เป็นดัชนีค้นหาภายในตัวมันเอง</p>
     <div class="stage">
@@ -144,7 +212,7 @@
 
   <!-- ============ 7. Reserved label block sizing ============ -->
   <section id="reserve">
-    <span class="kicker"><span class="dot"></span>07 · กลไกที่ 2</span>
+    <span class="kicker"><span class="dot"></span>08 · กลไกที่ 2</span>
     <h2>Reserved Label Block: ต้องมีขนาดพอดี LIB แต่ไม่ต้องตรงเลข hex</h2>
     <p class="lede">เพราะ label ในข้อ 6 ถูกจับคู่แบบ 1 ต่อ 1 กับทุกค่าใน LIB ระบบเลยต้องมี "คลัง label" (Reserved Label Block) กันไว้ให้ครบพอสำหรับทุกค่าที่ LIB มี — และนี่คือจุดที่คนตั้งค่าใหม่ ๆ มักเข้าใจผิด: <strong>คิดว่าตัวเลขในคลัง label ต้องตรงกับค่า hex ของ LIB ด้วย ซึ่งไม่จำเป็นเลย</strong></p>
     <div class="stage">
@@ -163,7 +231,7 @@
 
   <!-- ============ 8. Worked numbers ============ -->
   <section id="numbers">
-    <span class="kicker"><span class="dot"></span>08 · ตัวอย่างตัวเลขจริง</span>
+    <span class="kicker"><span class="dot"></span>09 · ตัวอย่างตัวเลขจริง</span>
     <h2>ลองคำนวณดูจริง ๆ</h2>
     <p class="lede">มีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับราวเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
     <div class="table-wrap">
@@ -196,7 +264,7 @@
 
   <!-- ============ 9. Warning ============ -->
   <section id="warning">
-    <span class="kicker"><span class="dot"></span>09 · ข้อควรระวัง</span>
+    <span class="kicker"><span class="dot"></span>10 · ข้อควรระวัง</span>
     <h2>จองน้อยไป ระบบไม่เตือนสักคำ</h2>
     <p class="lede">ถ้าคลัง label ที่จองไว้เล็กกว่าขนาด LIB จริง <strong>คำสั่งตั้งค่าจะผ่านปกติ ไม่มี error ไม่มี warning เลยแม้แต่บรรทัดเดียว</strong> — แต่พอมี function ที่ดันไปตกอยู่ในโซนที่ label หมดพอดี prefix ของ function นั้นจะเงียบหายไปเองโดยไม่มีการแจ้งเตือนใด ๆ ต้องมานั่งไล่หาทีหลังว่าทำไม service บางตัวไม่ขึ้น</p>
     <div class="callout">
@@ -207,13 +275,14 @@
 
   <!-- ============ 10. Summary ============ -->
   <section id="summary">
-    <span class="kicker"><span class="dot"></span>10 · สรุป</span>
+    <span class="kicker"><span class="dot"></span>11 · สรุป</span>
     <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
       <li><span class="amber-text">SRv6</span> เอาที่อยู่ IPv6 มาเป็นจุดแวะโดยตรง ไม่มี MPLS label ปนบนสายเลย</li>
       <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้ถึง 8 จุดในที่อยู่เดียว แก้ปัญหา overhead</li>
       <li>16 บิตนั้นแบ่งเป็น <strong>GIB</strong> (ระบุราวเตอร์) กับ <strong>LIB</strong> (ระบุ function ในราวเตอร์นั้น) ด้วยตัวเลขตัวเดียว</li>
+      <li>ค่าราวเตอร์ (<span class="mono">un</span>) ต้องเลือกเองให้อยู่ในโซน GIB เสมอ — CLI ยอมรับตัวเลขกว้างกว่านั้นมาก และไม่เตือนถ้าเผลอหลุดไปโซน LIB</li>
       <li>label ที่เห็นในคอนฟิกเป็นแค่กลไก lookup ภายในฮาร์ดแวร์บางรุ่น ไม่เคยออกไปบนสายจริง</li>
       <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — จองผิดขนาดแล้วไม่มี warning ให้เห็นด้วย ต้องคำนวณเองให้ครบตั้งแต่แรก</li>
     </ul>
@@ -498,6 +567,69 @@
     var libSize = Math.round(65536*(1-frac));
     ctx.fillText('LIB ≈ ' + libSize.toLocaleString() + ' ช่อง', barX+barW, barY-16);
   }, 4);
+
+  /* ---------------- un value: safe pin vs pin that leaks into LIB ---------------- */
+  mount(document.getElementById('c-un'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var entries = 16; // fixed example matching the callout text (default value)
+    var boundaryVal = entries*1024; // 16384
+    var maxVal = 65536;
+    var frac = boundaryVal/maxVal; // 0.25
+
+    var barX = w*0.08, barW = w*0.84, barY = h*0.42, barH = 40;
+    var boundary = barX + barW*frac;
+
+    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.6;
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barW, barH, 8); ctx.stroke();
+    ctx.save();
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barW, barH, 8); ctx.clip();
+    ctx.fillStyle = C.amberSoft; ctx.fillRect(barX, barY, boundary-barX, barH);
+    ctx.fillStyle = C.cyanSoft; ctx.fillRect(boundary, barY, barX+barW-boundary, barH);
+    ctx.restore();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(boundary, barY-6); ctx.lineTo(boundary, barY+barH+6); ctx.stroke();
+
+    ctx.font='700 11px "JetBrains Mono", monospace'; ctx.textAlign='center';
+    ctx.fillStyle = C.amberInk || C.ink;
+    ctx.fillText('GIB (1 – 16,383)', barX + (boundary-barX)/2, barY+barH/2+4);
+    ctx.fillStyle = C.cyanInk || C.ink;
+    ctx.fillText('LIB (16,384 – 65,535)', boundary + (barX+barW-boundary)/2, barY+barH/2+4);
+
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='left';
+    ctx.fillText('global-sid-entries 16 (ค่าเริ่มต้น)', barX, barY-14);
+
+    // pin cycling between a safe value (6) and an unsafe one (20000)
+    var cycle = 6, tt = t % cycle;
+    var safeFrac = 6/maxVal;
+    var unsafeFrac = 20000/maxVal;
+    var showSafe = tt < 2.6;
+    var settle = tt < 1 ? 0 : (tt<2.6 ? ease((tt-1)/1.6) : (tt<3.6?1:(tt<4.6?ease((tt-3.6)/1)+0:1)));
+    var pf = showSafe ? safeFrac : unsafeFrac;
+    var px = barX + barW*pf;
+    var py = barY - 46;
+
+    var visible = (tt<2.6) || (tt>=3.6);
+    if (visible){
+      var ok = showSafe;
+      ctx.strokeStyle = ok ? C.good : '#e0526a';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(px, py+14); ctx.lineTo(px, barY-2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2);
+      ctx.fillStyle = ok ? C.good : '#e0526a'; ctx.fill();
+      ctx.font='700 12px "Inter", sans-serif'; ctx.fillStyle = ok ? C.good : '#e0526a'; ctx.textAlign='center';
+      ctx.fillText(ok ? '✓' : '✗', px, py+4);
+
+      ctx.font='600 10px "JetBrains Mono", monospace'; ctx.fillStyle = C.ink;
+      var label = ok ? 'un value 6 — อยู่ใน GIB' : 'un value 20000 — หลุดไปโซน LIB!';
+      ctx.textAlign = pf > 0.75 ? 'right' : (pf < 0.1 ? 'left' : 'center');
+      var lx = pf > 0.75 ? Math.min(px+2, barX+barW) : (pf < 0.1 ? Math.max(px-2, barX) : px);
+      ctx.fillText(label, lx, py-14);
+      if (!ok){
+        ctx.font='500 9px "Inter", sans-serif'; ctx.fillStyle=C.muted;
+        ctx.fillText('CLI ยอมรับค่านี้ ไม่มีคำเตือนใด ๆ', lx, py-28);
+      }
+    }
+  }, 1);
 
   /* ---------------- Wire vs internal label ---------------- */
   mount(document.getElementById('c-wire'), function(ctx,w,h,t,C){
