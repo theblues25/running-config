@@ -49,6 +49,29 @@
   .step-btn:disabled{ opacity:.4; cursor:not-allowed; }
   .step-value{ font-size:.92rem; font-weight:600; color:var(--amber-ink); white-space:nowrap; }
   .step-desc{ font-family:"Sarabun",sans-serif; font-size:.88rem; color:var(--ink-soft); margin:.2rem 0 .9rem; min-height:2.6em; }
+
+  /* Post-only: MD-CLI config blocks (section 10 onward) */
+  .code-block{
+    background:var(--bg-sunk); border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:1rem 1.2rem; margin:1.3rem 0; overflow-x:auto; box-shadow:var(--shadow);
+  }
+  .code-block pre{
+    margin:0; font-family:"JetBrains Mono",monospace; font-size:.86rem; line-height:1.65;
+    color:var(--ink); white-space:pre;
+  }
+
+  /* Post-only: compact color-coded uSID address example (section 05) */
+  .usid-example{
+    display:flex; flex-wrap:wrap; align-items:center; gap:.15rem;
+    font-family:"JetBrains Mono",monospace; font-size:clamp(1.05rem,3vw,1.35rem); font-weight:700;
+    margin:1.2rem 0 .9rem;
+  }
+  .usid-seg{ padding:.35rem .55rem; border-radius:8px; }
+  .usid-seg.block{ background:var(--bg-sunk); color:var(--muted); border:1px dashed var(--line-strong); }
+  .usid-seg.gib{ background:var(--amber-soft); color:var(--amber-ink); border:1px solid var(--amber); }
+  .usid-seg.lib{ background:var(--cyan-soft); color:var(--cyan-ink); border:1px solid var(--cyan); }
+  .usid-seg.plain{ color:var(--muted); background:transparent; padding:.35rem 0; }
+  .usid-legend{ display:flex; flex-wrap:wrap; gap:.5rem; margin:0 0 1rem; }
 </style>
 </head>
 <body>
@@ -181,7 +204,16 @@
     </ul>
     <div class="callout">
       <span class="tag">อย่าเข้าใจผิด: GIB กับ LIB ไม่ได้ซ้อนอยู่ในช่อง 16 บิตเดียวกัน</span>
-      <p>คู่มือ Nokia (Segment Routing and PCE User Guide) ยกตัวอย่างที่อยู่ไว้ตรง ๆ: <span class="mono">2001:db8:00d1:d547::</span> — <span class="mono">2001:db8</span> คือ SID block (ใช้ร่วมกันทั้งเครือข่าย), <span class="mono">00d1</span> คือเลขประจำเราเตอร์ตัวนั้น (GIB) และ <span class="mono">d547</span> คือเลขงานภายในเราเตอร์ตัวเดียวกัน (LIB) — <strong>ทั้งสามคือคนละช่อง 16 บิตกันเลย เรียงต่อกันในที่อยู่เดียวกัน ไม่ได้ซ้อนกันอยู่ในช่องเดียว</strong> จาก show command จริงบนเราเตอร์ก็เห็นแบบเดียวกัน: <span class="mono">2001:bbbb:6::</span> (un=6, ช่องที่ 3) กับ <span class="mono">2001:bbbb:6:4004::</span> (function=16388, ช่องที่ 4 ถัดไปทันที) — ค่า 6 กับ 16388 ใช้หน่วยตัวเลขเดียวกัน (6 อยู่โซน GIB, 16388 อยู่โซน LIB) แต่อยู่กันคนละช่อง</p>
+      <p>ตัวอย่างจริงจาก show command บนเราเตอร์ — <span class="mono">un</span> กับ <span class="mono">function</span> คนละช่อง 16 บิตกันเลย เรียงต่อกันในที่อยู่เดียวกัน ไม่ได้ซ้อนอยู่ในช่องเดียว:</p>
+      <div class="usid-example">
+        <span class="usid-seg block">2001:bbbb</span><span class="usid-seg gib">0006</span><span class="usid-seg lib">4004</span><span class="usid-seg plain">::</span>
+      </div>
+      <div class="usid-legend">
+        <span class="chip" style="color:var(--muted);border-color:var(--line-strong)">● block — ใช้ร่วมกันทั้งเครือข่าย</span>
+        <span class="chip amber">● un = 6 (GIB) — เลขประจำเราเตอร์นี้</span>
+        <span class="chip cyan">● function = 16388 (LIB) — เลขงานที่ทำ</span>
+      </div>
+      <p class="caption" style="margin:0">ค่า 6 กับ 16388 ใช้หน่วยตัวเลขเดียวกัน (6 อยู่โซน GIB, 16388 อยู่โซน LIB) แต่คนละช่องคนละตำแหน่ง — ที่มา: Nokia Segment Routing and PCE User Guide (ตัวอย่าง <span class="mono">2001:db8:00d1:d547::</span>) และ show command จริงบนแล็บ</p>
     </div>
     <div class="callout">
       <span class="tag">แล้วทำไมสองโซนนี้ห้ามทับกันเด็ดขาด</span>
@@ -331,32 +363,38 @@
       <p><strong>LIB</strong> ต่างออกไปโดยสิ้นเชิง — ค่า LIB แต่ละค่า "ภายในเราเตอร์ตัวเดียวกัน" หมายถึงงานคนละอย่างกัน (คนละ service, คนละปลายทาง, คนละ policy) เมื่อแพ็กเก็ตมาถึงเราเตอร์ที่ถูกต้องแล้ว (GIB ตรงแล้ว) เราเตอร์ต้องแยกแยะต่อว่า LIB ค่านี้หมายถึงงานไหนในบรรดาหลายสิบหลายพันงานที่มีอยู่ ระบบจึงต้องกันที่ในคลัง label ไว้ให้ครบทุกค่าที่ LIB มีทางเป็นไปได้ทั้งหมดล่วงหน้า ไม่ใช่แค่ค่าที่ใช้งานจริงตอนนั้น</p>
     </div>
     <div class="callout">
-      <span class="tag">static-function: ผ่า LIB อีกชั้นเป็นโซน static กับ dynamic</span>
-      <p>ภายใน LIB เดียวกัน (ที่คลัง label ก้อนเดียวครอบคลุมอยู่แล้ว) ยังถูกผ่าอีกชั้นด้วยค่า <span class="mono">static-function max-entries</span>: ตั้งแต่ต้น LIB ไปจนถึง max-entries คือโซน <strong>static</strong> — operator พิมพ์ค่าฟังก์ชันเองตรง ๆ ได้ค่าเดิมทุกครั้งแม้ reboot ส่วนที่เหลือทั้งหมดคือโซน <strong>dynamic</strong> — ระบบเลือกช่องว่างให้เองอัตโนมัติ ไม่การันตีว่าจะได้เลขเดิมทุกครั้ง</p>
-      <p>สิ่งที่ต้องเป็น static เสมอ เพราะมีคนอื่นอ้างอิงค่าตรง ๆ จึงต้องคาดเดาได้แน่นอน: <strong>uA</strong> ที่กำหนด adjacency เอง, <strong>service micro-SID</strong> ที่ระบุ function value เอง (uDT4/uDT6/uDT46/uDX2/uDX6), และ <strong>binding-SID (uB6)</strong> ของ SRv6 policy — ทั้งสามชนิดแย่งที่กันในโซน static เดียวกัน ไม่ใช่คนละโควตาแยกกัน ส่วน <span class="mono">un</span> (GIB) ไม่เกี่ยวข้องกับโซนนี้เลย เพราะอยู่คนละ pool ตั้งแต่ต้น ไม่กินโควตา static-function แม้แต่ช่องเดียว</p>
-    </div>
-    <div class="callout">
-      <span class="tag">ตัวเลขที่พิมพ์ใน CLI ไม่ใช่ค่า hex ของ LIB โดยตรง</span>
-      <p>ตอน config static function อย่าง <span class="mono">ua 1</span> หรือ <span class="mono">udx2 5</span> ตัวเลขที่พิมพ์ไม่ใช่ค่า hex ใน LIB ตรง ๆ แต่เป็นแค่ <strong>ลำดับที่ (index) ภายในโซน static</strong> — ระบบจะเอา index ไปบวกกับจุดเริ่มของ LIB ให้เองเสมอ ตัวอย่างจากเอกสาร Nokia (24.7.2): ตั้ง <span class="mono">global-sid-entries 16</span> (LIB เริ่มที่ 0x4000) แล้วสั่ง <span class="mono">ua 1</span> จะได้ SID จริงลงท้ายด้วย <span class="mono">4001::</span> และ <span class="mono">udx2 5</span> จะได้ <span class="mono">4005::</span> — ตรงกับสูตร <strong>LIB start + index</strong> พอดี ตัวอย่าง command จริง: <span class="mono">configure router "Base" segment-routing segment-routing-v6 base-routing-instance micro-segment-locator "aa" function ua 1 interface-name "to_xxx"</span> — เลข <span class="mono">1</span> ท้ายคำสั่ง <span class="mono">ua</span> นี่แหละคือ index ที่ว่า ไม่ใช่ค่า SID สุดท้าย</p>
-      <p class="caption" style="margin:0">ข้อสังเกตนี้อนุมานจากตัวอย่างในเอกสาร ไม่มีประโยคที่เขียนสูตรนี้ไว้ตรง ๆ — ถ้าจะพิสูจน์ให้ชัวร์ ต้องลองเปลี่ยน <span class="mono">global-sid-entries</span> แล้วดูว่าค่าที่ได้ขยับตาม LIB start ใหม่หรือเปล่า</p>
-    </div>
-    <div class="callout">
-      <span class="tag">binding-SID (uB6) ใส่แค่ค่าเดียวลอย ๆ ไม่ได้</span>
-      <p>SRv6 policy binding-SID ที่ head-end รับ ต้องมาในรูปเต็ม <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เท่านั้น — ต้องมี <span class="mono">uN</span> ของเราเตอร์เจ้าของนำหน้าเสมอ จะส่งแค่ค่า <span class="mono">uB6</span> ช่องเดียวแบบลอย ๆ ไม่ได้ ตรงกับกลไก 2 FIB entry ที่คุยกันไปก่อนหน้านี้ (entry สั้นที่ไม่มี uN ใช้ได้แค่ตอนแพ็กเก็ตเลื่อนมาถึงตำแหน่งนั้นแล้วเท่านั้น ไม่ใช่ที่อยู่ที่ route ได้จากภายนอกโดยตรง)</p>
-    </div>
-    <div class="callout">
-      <span class="tag">ข้อควรระวังจริง: แก้ max-entries ทีหลัง = service สะดุดทั้ง block</span>
-      <p>ค่าเริ่มต้นของ <span class="mono">max-entries</span> คือ <strong>1</strong> — ถ้าจะใช้ static function มากกว่า 1 ตัว ต้องปรับเพิ่มเอง และที่สำคัญกว่านั้น: <strong>การแก้ค่า max-entries ทีหลังจะสลับ admin-state ของ block ทั้งก้อนโดยอัตโนมัติ</strong> ตาม CLI warning ของจริง แปลว่า service ทุกตัวที่ผูกกับ block นั้นจะสะดุดชั่วขณะทันที — ต้องวางแผนจำนวน static function ที่ต้องใช้ให้ครบตั้งแต่วันแรก ไม่ใช่ค่อยขยายทีหลัง</p>
-    </div>
-    <div class="callout">
       <span class="tag">กฎที่ต้องจำ</span>
       <p>สิ่งเดียวที่ต้องตรงคือ <strong>"จำนวน" (count)</strong> — คลัง label ต้องมีจำนวนช่องอย่างน้อยเท่ากับขนาดของ LIB จะเริ่มที่เลขอะไรก็ได้ ขอแค่ไม่ไปชนกับ label range อื่นที่ใช้อยู่ในเครื่องเดียวกัน</p>
     </div>
   </section>
 
+  <!-- ============ 9b. Static function ============ -->
+  <section id="staticfn">
+    <span class="kicker"><span class="dot"></span>10 · กลไกที่ 3</span>
+    <h2>static-function: ผ่า LIB อีกชั้นเป็นโซน static กับ dynamic</h2>
+    <p class="lede">ภายใน LIB เดียวกัน (ที่คลัง label ก้อนเดียวครอบคลุมอยู่แล้วตามข้อที่แล้ว) ยังถูกผ่าอีกชั้นด้วยค่า <span class="mono">static-function max-entries</span>: ตั้งแต่ต้น LIB ไปจนถึง max-entries คือโซน <strong>static</strong> — operator พิมพ์ค่าฟังก์ชันเองตรง ๆ ได้ค่าเดิมทุกครั้งแม้ reboot ส่วนที่เหลือทั้งหมดคือโซน <strong>dynamic</strong> — ระบบเลือกช่องว่างให้เองอัตโนมัติ ไม่การันตีว่าจะได้เลขเดิมทุกครั้ง</p>
+    <ul class="points">
+      <li>สิ่งที่ต้องเป็น static เสมอ เพราะมีคนอื่นอ้างอิงค่าตรง ๆ จึงต้องคาดเดาได้แน่นอน: <strong>uA</strong> (adjacency ที่กำหนดเอง), <strong>service micro-SID</strong> (uDT4/uDT6/uDT46/uDX2/uDX6 ที่ระบุ function value เอง), และ <strong>binding-SID (uB6)</strong> ของ SRv6 policy — ทั้งสามชนิดแย่งที่กันในโซน static เดียวกัน ไม่ใช่คนละโควตาแยกกัน</li>
+      <li><span class="mono">un</span> (GIB) ไม่เกี่ยวข้องกับโซนนี้เลย เพราะอยู่คนละ pool ตั้งแต่ต้น ไม่กินโควตา static-function แม้แต่ช่องเดียว</li>
+    </ul>
+    <div class="code-block"><pre>configure router "Base" segment-routing segment-routing-v6
+    base-routing-instance micro-segment-locator "aa"
+        function
+            ua 1 interface-name "to_xxx"</pre></div>
+    <p class="caption">เลข <span class="mono">1</span> ท้ายคำสั่ง <span class="mono">ua</span> ไม่ใช่ค่า hex ของ LIB ตรง ๆ แต่เป็นแค่ <strong>ลำดับที่ (index) ภายในโซน static</strong> — ระบบเอา index ไปบวกกับจุดเริ่มของ LIB ให้เองเสมอ ตัวอย่างจากเอกสาร Nokia (24.7.2): <span class="mono">global-sid-entries 16</span> (LIB เริ่มที่ 0x4000) แล้วสั่ง <span class="mono">ua 1</span> ได้ SID จริงลงท้าย <span class="mono">4001::</span>, <span class="mono">udx2 5</span> ได้ <span class="mono">4005::</span> — ตรงสูตร <strong>LIB start + index</strong> พอดี (ข้อสังเกตนี้อนุมานจากตัวอย่างในเอกสาร ยังไม่มีประโยคยืนยันสูตรตรง ๆ)</p>
+    <div class="callout">
+      <span class="tag">binding-SID (uB6) ใส่แค่ค่าเดียวลอย ๆ ไม่ได้</span>
+      <p>SRv6 policy binding-SID ที่ head-end รับ ต้องมาในรูปเต็ม <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เท่านั้น — ต้องมี <span class="mono">uN</span> ของเราเตอร์เจ้าของนำหน้าเสมอ จะส่งแค่ค่า <span class="mono">uB6</span> ช่องเดียวแบบลอย ๆ ไม่ได้ ตรงกับกลไก 2 FIB entry ในข้อ 05 (entry สั้นที่ไม่มี uN ใช้ได้แค่ตอนแพ็กเก็ตเลื่อนมาถึงตำแหน่งนั้นแล้วเท่านั้น ไม่ใช่ที่อยู่ที่ route ได้จากภายนอกโดยตรง)</p>
+    </div>
+    <div class="callout">
+      <span class="tag">ข้อควรระวังจริง: แก้ max-entries ทีหลัง = service สะดุดทั้ง block</span>
+      <p>ค่าเริ่มต้นของ <span class="mono">max-entries</span> คือ <strong>1</strong> — ถ้าจะใช้ static function มากกว่า 1 ตัว ต้องปรับเพิ่มเอง และที่สำคัญกว่านั้น: <strong>การแก้ค่า max-entries ทีหลังจะสลับ admin-state ของ block ทั้งก้อนโดยอัตโนมัติ</strong> ตาม CLI warning ของจริง แปลว่า service ทุกตัวที่ผูกกับ block นั้นจะสะดุดชั่วขณะทันที — ต้องวางแผนจำนวน static function ที่ต้องใช้ให้ครบตั้งแต่วันแรก ไม่ใช่ค่อยขยายทีหลัง</p>
+    </div>
+  </section>
+
   <!-- ============ 8. Worked numbers ============ -->
   <section id="numbers">
-    <span class="kicker"><span class="dot"></span>10 · ตัวอย่างตัวเลขจริง</span>
+    <span class="kicker"><span class="dot"></span>11 · ตัวอย่างตัวเลขจริง</span>
     <h2>ลองคำนวณดูจริง ๆ</h2>
     <p class="lede">รวมทุกกลไกที่ผ่านมาเข้าด้วยกัน จะเห็นว่ามีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับเราเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
     <div class="table-wrap">
@@ -389,7 +427,7 @@
 
   <!-- ============ 9. Warning ============ -->
   <section id="warning">
-    <span class="kicker"><span class="dot"></span>11 · ข้อควรระวัง</span>
+    <span class="kicker"><span class="dot"></span>12 · ข้อควรระวัง</span>
     <h2>จองน้อยไป ระบบไม่เตือนสักคำ</h2>
     <p class="lede">เห็น trade-off ของการเลือกตัวเลขไปแล้วในข้อที่แล้ว คราวนี้มาดูว่าถ้าคำนวณคลัง label ผิดจะเกิดอะไรขึ้น — ถ้าคลัง label ที่จองไว้เล็กกว่าขนาด LIB จริง <strong>คำสั่งตั้งค่าจะผ่านปกติ ไม่มี error ไม่มี warning เลยแม้แต่บรรทัดเดียว</strong> — แต่พอมี function ที่ดันไปตกอยู่ในโซนที่ label หมดพอดี prefix ของ function นั้นจะเงียบหายไปเองโดยไม่มีการแจ้งเตือนใด ๆ ต้องมานั่งไล่หาทีหลังว่าทำไม service บางตัวไม่ขึ้น</p>
     <div class="callout">
@@ -400,7 +438,7 @@
 
   <!-- ============ 10. Summary ============ -->
   <section id="summary">
-    <span class="kicker"><span class="dot"></span>12 · สรุป</span>
+    <span class="kicker"><span class="dot"></span>13 · สรุป</span>
     <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
@@ -556,13 +594,13 @@
       ctx.fillText('R'+(i+1), xs[i], y+4);
     }
 
-    // traveling packet
+    // traveling packet — pill shows the real protocol field name, SL (Segments Left)
     var px = lerp(xs[hopIndex], xs[hopIndex+1], p);
-    var pillW = 46, pillH = 22, py = y - boxH/2 - 34;
+    var pillW = 66, pillH = 22, py = y - boxH/2 - 34;
     ctx.fillStyle = C.raised; ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
     ctx.beginPath(); roundRectPath(ctx, px-pillW/2, py-pillH/2, pillW, pillH, 11); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = C.ink; ctx.font='600 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
-    ctx.fillText('IPv6', px, py+3);
+    ctx.fillStyle = C.ink; ctx.font='700 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
+    ctx.fillText('IPv6 SL=' + segsRemaining, px, py+3);
 
     // checklist squares above the packet
     var sq = 12, gap = 4;
@@ -577,7 +615,7 @@
     }
 
     ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
-    ctx.fillText('เหลือจุดแวะอีก ' + segsRemaining + ' จุด', w/2, py - pillH/2 - 28);
+    ctx.fillText('Segments Left = ' + segsRemaining + ' — เหลือจุดแวะอีก ' + segsRemaining + ' จุด', w/2, py - pillH/2 - 28);
   }, 2.0);
 
   /* ---------------- Overhead bar growth ---------------- */
