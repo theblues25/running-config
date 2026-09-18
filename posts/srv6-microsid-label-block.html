@@ -405,9 +405,151 @@
     </div>
   </section>
 
+  <!-- ============ 10b. Real config walkthrough ============ -->
+  <section id="realconfig">
+    <span class="kicker"><span class="dot"></span>11 · ทดสอบจริง</span>
+    <h2>ตัวอย่าง config เต็มรูปแบบ ทดสอบจริงบน SR-SIM 26.3.R1</h2>
+    <p class="lede">รวมทุกกลไกที่คุยกันมาทั้งหมด (reserved-label-block, micro-segment, un, static-function, uA ต่ออินเทอร์เฟซ, VPRN บน Micro-SID) เข้าเป็น config ชุดเดียวที่รันจริงบน 2 โหนด PE1/PE2 (7750 SR-1, SR-SIM 26.3.R1) — ค่าทั้งหมดในโพสต์นี้ (block <span class="mono">2001:bbbb::/32</span>, global-sid-entries 16, ฯลฯ) มาจาก config ชุดนี้เท่านั้น</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">1. คลัง label + locator + un (PE1, un=1)</h3>
+    <div class="code-block"><pre>configure router "Base" mpls-labels
+    reserved-label-block "SRv6-uSID-Alg0"
+        start-label 30000
+        end-label 38191
+
+configure router "Base" isis 0 segment-routing-v6
+    admin-state enable
+    micro-segment-locator "uSID-Alg0-Loc"
+        level-capability 2
+        level 2 metric 1
+
+configure router "Base" segment-routing segment-routing-v6
+    origination-fpe [1]
+    source-address 2001:db8::1
+    micro-segment
+        block-length 32
+        global-sid-entries 16
+        sid-length 16
+        block "uSID-BLK"
+            admin-state enable
+            termination-fpe [2]
+            label-block "SRv6-uSID-Alg0"
+            prefix
+                ip-prefix 2001:bbbb::/32
+            static-function
+                max-entries 16
+    micro-segment-locator "uSID-Alg0-Loc"
+        admin-state enable
+        block "uSID-BLK"
+        un
+            srh-mode usp
+            value 1</pre></div>
+    <p class="caption">PE2 ตั้งเหมือนกันทุกบรรทัด ยกเว้น <span class="mono">source-address 2001:db8::2</span> และ <span class="mono">un value 2</span> — block, global-sid-entries, static-function ต้องเท่ากันทั้งโดเมนเสมอ</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">2. static uA ต่ออินเทอร์เฟซแต่ละเส้น (PE1)</h3>
+    <div class="code-block"><pre>configure router "Base" segment-routing segment-routing-v6 base-routing-instance
+    micro-segment-locator "uSID-Alg0-Loc"
+        function
+            ua 1
+                srh-mode psp
+                protection unprotected
+                interface-name "to-pe2-1"
+            ua 2
+                srh-mode psp
+                protection unprotected
+                interface-name "to-pe2-2"
+            ua 3
+                srh-mode psp
+                protection unprotected
+                interface-name "to-pe2-3"</pre></div>
+    <p class="caption">index 1/2/3 → Oper Func จริง 0x4000/0x4001/0x4002 ตามสูตร <span class="mono">LIB start + index − 1</span> ที่คุยกันในข้อ 10 — ฝั่ง PE2 ใช้ <span class="mono">ua-auto-allocate psp protection unprotected</span> แทน (dynamic) เพื่อเทียบกัน</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">3. VPRN บน Micro-SID (uDT46)</h3>
+    <div class="code-block"><pre>configure service vprn "VPRN-100"
+    admin-state enable
+    service-id 100
+    customer "1"
+    segment-routing-v6 1
+        micro-segment-locator "uSID-Alg0-Loc"
+            function
+                udt46 { }
+    bgp-ipvpn
+        segment-routing-v6 1
+            admin-state enable
+            route-distinguisher "10.0.0.1:100"
+            source-address 2001:db8::1
+            vrf-target
+                community "target:65000:100"
+            srv6
+                instance 1
+                default-locator "uSID-Alg0-Loc"</pre></div>
+    <p class="caption">ชื่อ function ในโหมด uSID คือ <span class="mono">udt46</span>/<span class="mono">udt4</span>/<span class="mono">udt6</span> (ไม่ใช่ <span class="mono">end-dt46</span> แบบ classic SRv6) และไม่ระบุ index จึงเป็น dynamic — ได้ Oper Func 0x4010 พอดี (= LIB start + max-entries ตามที่คุยไว้ในข้อ 10)</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">4. Verify — คำสั่งจริงที่ใช้ตรวจสอบ</h3>
+    <div class="code-block"><pre>A:admin@pe1# show router segment-routing-v6 micro-segment-local-sid
+
+===============================================================================
+Micro Segment Routing v6 Local SIDs
+===============================================================================
+SID                                               Type           Function
+  Micro Segment Locator
+  Context
+-------------------------------------------------------------------------------
+2001:bbbb:1::                                     uN             1
+  uSID-Alg0-Loc
+  None
+2001:bbbb:1:4000::                                uA             16384
+  uSID-Alg0-Loc
+  Base
+2001:bbbb:1:4001::                                uA             16385
+  uSID-Alg0-Loc
+  Base
+2001:bbbb:1:4002::                                uA             16386
+  uSID-Alg0-Loc
+  Base
+2001:bbbb:1:4010::                                uDT46          16400
+  uSID-Alg0-Loc
+  SvcId: 100 Name: VPRN-100
+-------------------------------------------------------------------------------
+SIDs : 5</pre></div>
+    <p class="caption">คอลัมน์ <span class="mono">Function</span> ของ <span class="mono">uN</span> (=1) คือค่า GIB ส่วนของ uA/uDT46 (0x4000 ขึ้นไป) คือค่า LIB — คนละ number space กันโดยสิ้นเชิง แต่พิมพ์ในคอลัมน์เดียวกัน (จุดที่ทำให้งงบ่อยที่สุด ตามที่คุยในข้อ 10)</p>
+    <div class="code-block"><pre>A:admin@pe1# show router segment-routing-v6 base-routing-instance micro
+
+Micro Segment Locator
+ Type          Function  SID                                     Status/InstId
+  SRH-mode     Oper Func Interface                               Protection
+-------------------------------------------------------------------------------
+uSID-Alg0-Loc
+ uA            1         2001:bbbb:1:4000::                      ok
+  PSP          16384     to-pe2-1                                Unprotected
+ uA            2         2001:bbbb:1:4001::                      ok
+  PSP          16385     to-pe2-2                                Unprotected
+ uA            3         2001:bbbb:1:4002::                      ok
+  PSP          16386     to-pe2-3                                Unprotected</pre></div>
+    <p class="caption">คำสั่งนี้แหละที่โชว์ทั้ง <strong>Function</strong> (index ที่พิมพ์ในคอนฟิก) กับ <strong>Oper Func</strong> (ค่า LIB จริง) คู่กัน พร้อมชื่อ interface ที่ผูกไว้ — ใช้เช็คว่า uA ตัวไหนแมปกับลิงก์ไหนได้ตรง ๆ</p>
+    <div class="code-block"><pre>A:admin@pe1# show router mpls-labels label-range
+
+Reserved Label Blocks
+-------------------------------------------------------------------------------
+Reserved Label                               Start       End         Total
+Block Name                                   Label       Label
+-------------------------------------------------------------------------------
+SRv6-uSID-Alg0                               30000       38191       8192
+-------------------------------------------------------------------------------
+
+A:admin@pe1# ping 172.16.1.2 router-instance "VPRN-100" source-address 172.16.1.1 count 3
+PING 172.16.1.2 56 data bytes
+64 bytes from 172.16.1.2: icmp_seq=1 ttl=64 time=6.94ms.
+64 bytes from 172.16.1.2: icmp_seq=2 ttl=64 time=6.76ms.
+64 bytes from 172.16.1.2: icmp_seq=3 ttl=64 time=9.28ms.
+---- 172.16.1.2 PING Statistics ----
+3 packets transmitted, 3 packets received, 0.00% packet loss</pre></div>
+    <p class="caption">ping ผ่าน VPRN จริงทั้ง IPv4 และ IPv6 (ไม่ได้แสดงในนี้) ยืนยันว่า data plane ทำงานจบครบวงจร ไม่ใช่แค่ config ขึ้น Up เฉย ๆ</p>
+  </section>
+
   <!-- ============ 8. Worked numbers ============ -->
   <section id="numbers">
-    <span class="kicker"><span class="dot"></span>11 · ตัวอย่างตัวเลขจริง</span>
+    <span class="kicker"><span class="dot"></span>12 · ตัวอย่างตัวเลขจริง</span>
     <h2>ลองคำนวณดูจริง ๆ</h2>
     <p class="lede">รวมทุกกลไกที่ผ่านมาเข้าด้วยกัน จะเห็นว่ามีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับเราเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
     <div class="table-wrap">
@@ -440,7 +582,7 @@
 
   <!-- ============ 9. Warning ============ -->
   <section id="warning">
-    <span class="kicker"><span class="dot"></span>12 · ข้อควรระวัง</span>
+    <span class="kicker"><span class="dot"></span>13 · ข้อควรระวัง</span>
     <h2>จองน้อยไป — ส่วนใหญ่ระบบเตือน มีจุดเดียวที่เงียบ</h2>
     <p class="lede">เห็น trade-off ของการเลือกตัวเลขไปแล้วในข้อที่แล้ว ทีนี้มาดูว่าถ้าคำนวณคลัง label ผิดจริง ๆ จะเกิดอะไรขึ้น — <strong>ผลทดสอบจริงบน SR-SIM พลิกความเข้าใจเดิม:</strong> การละเมิดขอบเขต static ถูก <strong>reject ตอน commit ทันที ถึง 3 ใน 4 กรณี</strong> มีแค่กรณีเดียวเท่านั้นที่เงียบจริง</p>
     <ul class="points">
@@ -461,7 +603,7 @@
 
   <!-- ============ 10. Summary ============ -->
   <section id="summary">
-    <span class="kicker"><span class="dot"></span>13 · สรุป</span>
+    <span class="kicker"><span class="dot"></span>14 · สรุป</span>
     <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
