@@ -336,6 +336,15 @@
       <p>สิ่งที่ต้องเป็น static เสมอ เพราะมีคนอื่นอ้างอิงค่าตรง ๆ จึงต้องคาดเดาได้แน่นอน: <strong>uA</strong> ที่กำหนด adjacency เอง, <strong>service micro-SID</strong> ที่ระบุ function value เอง (uDT4/uDT6/uDT46/uDX2/uDX6), และ <strong>binding-SID (uB6)</strong> ของ SRv6 policy — ทั้งสามชนิดแย่งที่กันในโซน static เดียวกัน ไม่ใช่คนละโควตาแยกกัน ส่วน <span class="mono">un</span> (GIB) ไม่เกี่ยวข้องกับโซนนี้เลย เพราะอยู่คนละ pool ตั้งแต่ต้น ไม่กินโควตา static-function แม้แต่ช่องเดียว</p>
     </div>
     <div class="callout">
+      <span class="tag">ตัวเลขที่พิมพ์ใน CLI ไม่ใช่ค่า hex ของ LIB โดยตรง</span>
+      <p>ตอน config static function อย่าง <span class="mono">ua 1</span> หรือ <span class="mono">udx2 5</span> ตัวเลขที่พิมพ์ไม่ใช่ค่า hex ใน LIB ตรง ๆ แต่เป็นแค่ <strong>ลำดับที่ (index) ภายในโซน static</strong> — ระบบจะเอา index ไปบวกกับจุดเริ่มของ LIB ให้เองเสมอ ตัวอย่างจากเอกสาร Nokia (24.7.2): ตั้ง <span class="mono">global-sid-entries 16</span> (LIB เริ่มที่ 0x4000) แล้วสั่ง <span class="mono">ua 1</span> จะได้ SID จริงลงท้ายด้วย <span class="mono">4001::</span> และ <span class="mono">udx2 5</span> จะได้ <span class="mono">4005::</span> — ตรงกับสูตร <strong>LIB start + index</strong> พอดี</p>
+      <p class="caption" style="margin:0">ข้อสังเกตนี้อนุมานจากตัวอย่างในเอกสาร ไม่มีประโยคที่เขียนสูตรนี้ไว้ตรง ๆ — ถ้าจะพิสูจน์ให้ชัวร์ ต้องลองเปลี่ยน <span class="mono">global-sid-entries</span> แล้วดูว่าค่าที่ได้ขยับตาม LIB start ใหม่หรือเปล่า</p>
+    </div>
+    <div class="callout">
+      <span class="tag">binding-SID (uB6) ใส่แค่ค่าเดียวลอย ๆ ไม่ได้</span>
+      <p>SRv6 policy binding-SID ที่ head-end รับ ต้องมาในรูปเต็ม <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เท่านั้น — ต้องมี <span class="mono">uN</span> ของเราเตอร์เจ้าของนำหน้าเสมอ จะส่งแค่ค่า <span class="mono">uB6</span> ช่องเดียวแบบลอย ๆ ไม่ได้ ตรงกับกลไก 2 FIB entry ที่คุยกันไปก่อนหน้านี้ (entry สั้นที่ไม่มี uN ใช้ได้แค่ตอนแพ็กเก็ตเลื่อนมาถึงตำแหน่งนั้นแล้วเท่านั้น ไม่ใช่ที่อยู่ที่ route ได้จากภายนอกโดยตรง)</p>
+    </div>
+    <div class="callout">
       <span class="tag">ข้อควรระวังจริง: แก้ max-entries ทีหลัง = service สะดุดทั้ง block</span>
       <p>ค่าเริ่มต้นของ <span class="mono">max-entries</span> คือ <strong>1</strong> — ถ้าจะใช้ static function มากกว่า 1 ตัว ต้องปรับเพิ่มเอง และที่สำคัญกว่านั้น: <strong>การแก้ค่า max-entries ทีหลังจะสลับ admin-state ของ block ทั้งก้อนโดยอัตโนมัติ</strong> ตาม CLI warning ของจริง แปลว่า service ทุกตัวที่ผูกกับ block นั้นจะสะดุดชั่วขณะทันที — ต้องวางแผนจำนวน static function ที่ต้องใช้ให้ครบตั้งแต่วันแรก ไม่ใช่ค่อยขยายทีหลัง</p>
     </div>
