@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทำไม SRv6 Micro-SID ยังมีคำว่า Label · running config</title>
+<meta name="description" content="อธิบาย SRv6 และ Micro-SID (uSID) ตั้งแต่พื้นฐาน ทำไมคอนฟิกที่บอกว่าไม่มี MPLS ถึงยังมีคำว่า label โผล่มา และเคลียร์ความเข้าใจผิดเรื่อง Reserved Label Block ต้องมีขนาดเท่า LIB แต่ไม่ต้องตรงกับค่า hex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
+    <div class="links">
+      <a class="back" href="../index.html">← กลับหน้าแรก</a>
+      <a class="tool-link" href="../tools/ip-calculator/index.html">Tools</a>
+      <button id="theme-toggle" aria-label="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="c-hero" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <span class="kicker"><span class="dot"></span>SRv6 Micro-SID ฉบับเข้าใจง่าย · 2026-09-18</span>
+    <h1>ทำไม SRv6 (ที่บอกว่า<br>ไม่มี MPLS เลย) ยังมี<span class="amber-text">&nbsp;label</span> โผล่มา</h1>
+    <p class="lede">SRv6 ถูกพูดถึงว่าไม่ต้องพึ่ง MPLS อีกต่อไป — ที่อยู่ปลายทางแบบ IPv6 บอกทุกอย่างที่ต้องรู้ในตัวเองอยู่แล้ว แต่พอไปเปิดคอนฟิกจริงของฟีเจอร์ที่ชื่อ Micro-SID กลับเจอคำว่า <span class="mono">mpls-labels</span>, <span class="mono">reserved-label-block</span> โผล่มาเต็มไปหมด หน้านี้จะพาไปดูว่าทำไมถึงเป็นแบบนั้น พร้อมเคลียร์ความเข้าใจผิดจุดหนึ่งที่คนตั้งค่าใหม่ ๆ มักพลาด — เริ่มจากศูนย์ ไม่ต้องมีพื้นฐาน SRv6 มาก่อน</p>
+    <span class="scroll-cue">เลื่อนลงเพื่อเริ่มเรียนรู้
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6l5 5 5-5"/></svg>
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 1. Segment Routing intro ============ -->
+  <section id="sr">
+    <span class="kicker"><span class="dot"></span>01 · จุดเริ่มต้น</span>
+    <h2>Segment Routing คืออะไร (ไม่ต้องรู้ MPLS มาก่อน)</h2>
+    <p class="lede">เครือข่ายแบบเดิม แต่ละราวเตอร์ต้อง "เดาทาง" เองทีละ hop — เหมือนถามทางที่สี่แยกไปเรื่อย ๆ จนถึงปลายทาง <strong>Segment Routing</strong> เปลี่ยนวิธีคิดใหม่: ให้ราวเตอร์ต้นทางเขียน "รายการจุดแวะ" ทั้งหมดแนบไปกับแพ็กเก็ตตั้งแต่แรก แต่ละราวเตอร์ระหว่างทางแค่เปิดดูจุดแวะถัดไปในรายการแล้วส่งต่อ ไม่ต้องเดาเองเลย</p>
+    <div class="trio">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>ต้นทางตัดสินใจ</h3>
+        <p>ราวเตอร์ต้นทางเลือกเส้นทางทั้งหมดล่วงหน้า ไม่ปล่อยให้แต่ละจุดตัดสินใจเอง</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>รายการฝังไปกับแพ็กเก็ต</h3>
+        <p>"จุดแวะ" (segment) ทุกจุดถูกเขียนแนบไปกับแพ็กเก็ตเอง ไม่ต้องมีใครจำเส้นทางไว้ล่วงหน้า</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>แต่ละจุดทำตามคิวถัดไป</h3>
+        <p>ราวเตอร์ระหว่างทางแค่มองจุดแวะถัดไปในรายการ ทำตามแล้วส่งต่อ ไม่ต้องคิดอะไรเพิ่ม</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. SRv6: address IS the instruction ============ -->
+  <section id="srv6">
+    <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
+    <h2>SRv6 เอา "จุดแวะ" ไปฝังไว้ในที่อยู่ IPv6 เลย</h2>
+    <p class="lede">SRv6 (Segment Routing over IPv6) เลือกวิธีที่ตรงไปตรงมาที่สุด: ให้ <strong>จุดแวะแต่ละจุดคือที่อยู่ IPv6 หนึ่งตัวเลย</strong> ไม่ต้องมีเลข label แยกต่างหากแบบ MPLS รายการจุดแวะทั้งหมดถูกเก็บไว้ใน header พิเศษท้ายแพ็กเก็ตที่เรียกว่า SRH (Segment Routing Header) แต่ละที่อยู่ยังแบ่งเป็น 2 ส่วนในตัวมันเอง: <strong>Locator</strong> (ราวเตอร์ไหน) และ <strong>Function</strong> (ทำอะไรที่นั่น)</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● Locator (ราวเตอร์ไหน)</span>
+        <span class="chip cyan">● Function (ทำอะไร)</span>
+      </div>
+      <canvas id="c-srh" role="img" aria-label="แอนิเมชันแพ็กเก็ตเดินทางผ่านราวเตอร์ 3 ตัว พร้อมรายการจุดแวะที่แนบไปด้วยซึ่งสั้นลงทีละจุดทุกครั้งที่ผ่านราวเตอร์หนึ่งตัว"></canvas>
+    </div>
+    <p class="caption">แพ็กเก็ตพกรายการจุดแวะ (สี่เหลี่ยมเล็ก ๆ ด้านบน) ไปด้วย ทุกครั้งที่ผ่านราวเตอร์หนึ่งตัว จุดแวะที่ทำเสร็จแล้วจะถูกตัดออกจากรายการ — ที่อยู่ปลายทางปัจจุบันก็จะเปลี่ยนเป็นจุดแวะถัดไปโดยอัตโนมัติ</p>
+  </section>
+
+  <!-- ============ 3. Overhead problem ============ -->
+  <section id="overhead">
+    <span class="kicker"><span class="dot"></span>03 · ปัญหาที่ตามมา</span>
+    <h2>ยิ่งเส้นทางซับซ้อน ยิ่งต้องแบกรายการยาว</h2>
+    <p class="lede">ที่อยู่ IPv6 หนึ่งตัวยาว <strong>128 บิต</strong> ถ้าเส้นทางหนึ่งต้องผ่าน 6 จุดแวะ ก็ต้องแนบที่อยู่ 6 ตัวเต็ม ๆ ไปกับทุกแพ็กเก็ต — ยิ่งเครือข่ายใหญ่ ยิ่งทำ traffic engineering ซับซ้อน รายการนี้ก็ยิ่งยาว กินพื้นที่และแรงประมวลผลทุก hop</p>
+    <div class="stage">
+      <div class="stage-label"><span class="chip amber">● ขนาด SRH ที่ต้องแบก</span></div>
+      <canvas id="c-overhead" role="img" aria-label="แอนิเมชันแท่งกราฟที่ยาวขึ้นเรื่อย ๆ เมื่อจำนวนจุดแวะเพิ่มจาก 1 ไปจนถึง 6 จุด แสดงจำนวนบิตที่ต้องแบกไปด้วย"></canvas>
+    </div>
+    <p class="caption">ยิ่งจำนวนจุดแวะเพิ่ม แท่งกราฟ (ขนาด header ที่ต้องแบก) ก็ยิ่งยาวขึ้นเป็นเส้นตรง — 6 จุดแวะ = 6×128 = 768 บิต แค่ส่วนหัวอย่างเดียว</p>
+  </section>
+
+  <!-- ============ 4. Micro-SID compression ============ -->
+  <section id="usid">
+    <span class="kicker"><span class="dot"></span>04 · กลไกที่ 1</span>
+    <h2>Micro-SID: บีบแต่ละจุดแวะให้เหลือแค่ 16 บิต</h2>
+    <p class="lede"><strong>Micro-SID (uSID)</strong> แก้ปัญหาข้อ 3 ด้วยวิธีบีบอัด — แทนที่จะใช้ที่อยู่เต็ม 128 บิตต่อจุดแวะ 1 จุด ก็บีบแต่ละจุดแวะให้เหลือแค่ <strong>16 บิต</strong> เมื่อเล็กขนาดนี้ ก็เอาหลาย ๆ จุดแวะมาต่อกันในที่อยู่ 128 บิตเดียวได้เลย — 128 ÷ 16 = ใส่ได้ถึง <strong>8 จุดแวะ</strong> ในพื้นที่ที่แต่ก่อนใส่ได้แค่ 1 จุด</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip cyan">● แบบเดิม (1 จุดแวะ/128 บิต)</span>
+        <span class="chip amber">● Micro-SID (สูงสุด 8 จุดแวะ/128 บิต)</span>
+      </div>
+      <canvas id="c-compress" role="img" aria-label="แอนิเมชันเปรียบเทียบที่อยู่ 128 บิตสองแบบ แบบซ้ายมีจุดแวะเดียวเต็มพื้นที่ แบบขวาถูกแบ่งเป็น 8 ช่องเล็กแล้วเติมจุดแวะทีละช่องจนเต็ม"></canvas>
+    </div>
+    <p class="caption">ที่อยู่ 128 บิตก้อนเดียวกัน ฝั่งซ้ายเก็บได้แค่ 1 จุดแวะเต็ม ๆ ฝั่งขวา (Micro-SID) แบ่งเป็น 8 ช่องเล็ก เก็บได้ถึง 8 จุดแวะ — overhead ที่เห็นในข้อ 3 หายไปเกือบหมด</p>
+  </section>
+
+  <!-- ============ 5. GIB / LIB ============ -->
+  <section id="giblib">
+    <span class="kicker"><span class="dot"></span>05 · พื้นฐานที่ 2</span>
+    <h2>16 บิตนั้น แบ่งเป็น 2 ส่วน: GIB กับ LIB</h2>
+    <p class="lede">ลองนึกถึง <strong>เบอร์โทรศัพท์</strong>: รหัสพื้นที่ + เลขในสาย — พื้นที่ 16 บิตของ Micro-SID ก็ถูกตัดแบ่งแบบเดียวกัน ด้วยตัวเลขตัวเดียวที่ตั้งครั้งเดียวทั้งเครือข่าย</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● GIB — รหัสพื้นที่ (ราวเตอร์ไหน)</span>
+        <span class="chip cyan">● LIB — เลขในสาย (ทำอะไรในราวเตอร์นั้น)</span>
+      </div>
+      <canvas id="c-giblib" role="img" aria-label="แอนิเมชันแท่งแสดงพื้นที่ 16 บิต แบ่งเป็นสองโซนสี เส้นแบ่งเลื่อนไปมาระหว่างตัวอย่างสองแบบ พร้อมตัวเลขขนาดของแต่ละโซน"></canvas>
+    </div>
+    <p class="caption">เส้นแบ่งระหว่าง GIB กับ LIB เลื่อนไปมาได้ตามค่าที่ตั้งไว้ — ยิ่งเผื่อ GIB ไว้เยอะ (รองรับราวเตอร์ได้เยอะ) ยิ่งเหลือที่ให้ LIB น้อยลง (ทำ service ต่อราวเตอร์ได้น้อยลง)</p>
+    <ul class="points">
+      <li><strong>GIB (Global)</strong> ต้อง unique ทั้งเครือข่าย ห้ามซ้ำข้ามราวเตอร์ — เหมือนรหัสพื้นที่ที่บอกว่าเบอร์นี้อยู่จังหวัดไหน</li>
+      <li><strong>LIB (Local)</strong> unique แค่ภายในราวเตอร์ตัวเดียว ราวเตอร์อื่นใช้เลขซ้ำกันได้สบาย — เหมือนเลขต่อภายในออฟฟิศที่ซ้ำกับออฟฟิศอื่นได้</li>
+      <li>ตัวเลขตัวเดียวที่ตั้งครั้งเดียว (เท่ากันทุกราวเตอร์ในเครือข่าย) กำหนดว่าเส้นแบ่งอยู่ตรงไหน</li>
+    </ul>
+  </section>
+
+  <!-- ============ 6. Why still "label" ============ -->
+  <section id="whylabel">
+    <span class="kicker"><span class="dot"></span>06 · จุดที่มักงง</span>
+    <h2>ก็บอกไม่มี MPLS แล้ว ทำไมยังเห็นคำว่า label</h2>
+    <p class="lede">คำตอบสั้น ๆ: <strong>บนสายสัญญาณจริง ไม่มี MPLS label ปนอยู่เลยแม้แต่นิดเดียว</strong> แพ็กเก็ตที่วิ่งระหว่างราวเตอร์เป็น IPv6 + SRH ล้วน ๆ ตลอดเส้นทาง — แต่ <strong>ภายในตัวราวเตอร์บางรุ่น</strong> (ที่ใช้ชิปประมวลผลรุ่นที่มีอยู่แล้วสำหรับ MPLS) ระบบเลือกใช้กลไก lookup table แบบเดียวกับที่ MPLS ใช้อยู่แล้ว มาช่วยค้นหาว่า "เลข LIB นี้ต้องทำอะไร" ให้เร็วขึ้น ซึ่งกลไกนั้นต้องการ "เลข label" เป็นดัชนีค้นหาภายในตัวมันเอง</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip good">● บนสาย = IPv6 ล้วน ไม่มี label</span>
+        <span class="chip amber">● ภายในกล่อง = แปลงเป็น label ชั่วคราว</span>
+      </div>
+      <canvas id="c-wire" role="img" aria-label="แอนิเมชันแพ็กเก็ต IPv6 ล้วนเดินทางระหว่างราวเตอร์สองตัวโดยไม่มี label ติดไปด้วย เมื่อถึงราวเตอร์จะมีสัญลักษณ์เฟืองหมุนแปลงค่าเป็น label ภายในกล่องชั่วคราว ก่อนแพ็กเก็ตออกไปต่อแบบ IPv6 ล้วนเหมือนเดิม"></canvas>
+    </div>
+    <p class="caption">แพ็กเก็ตที่ออกจากราวเตอร์ยังเป็น IPv6 ล้วนเหมือนเดิมทุกประการ — label เกิดขึ้นแค่ชั่วขณะที่อยู่ในหน่วยประมวลผลภายในกล่องเดียวเท่านั้น ไม่เคยถูกส่งออกไปข้างนอก</p>
+    <div class="callout">
+      <span class="tag">สรุปให้จำง่าย</span>
+      <p>label ที่เห็นในคอนฟิกไม่ใช่ "MPLS แอบแฝงอยู่" แต่เป็นแค่เลขดัชนีภายในฮาร์ดแวร์ ยืมกลไกที่มีอยู่แล้วมาใช้ให้ค้นหาเร็วขึ้นเฉยๆ</p>
+    </div>
+  </section>
+
+  <!-- ============ 7. Reserved label block sizing ============ -->
+  <section id="reserve">
+    <span class="kicker"><span class="dot"></span>07 · กลไกที่ 2</span>
+    <h2>Reserved Label Block: ต้องมีขนาดพอดี LIB แต่ไม่ต้องตรงเลข hex</h2>
+    <p class="lede">เพราะ label ในข้อ 6 ถูกจับคู่แบบ 1 ต่อ 1 กับทุกค่าใน LIB ระบบเลยต้องมี "คลัง label" (Reserved Label Block) กันไว้ให้ครบพอสำหรับทุกค่าที่ LIB มี — และนี่คือจุดที่คนตั้งค่าใหม่ ๆ มักเข้าใจผิด: <strong>คิดว่าตัวเลขในคลัง label ต้องตรงกับค่า hex ของ LIB ด้วย ซึ่งไม่จำเป็นเลย</strong></p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip cyan">● LIB (พื้นที่ function จริงในที่อยู่ IPv6)</span>
+        <span class="chip amber">● คลัง Label ที่จอง (ตัวเลข MPLS label คนละพื้นที่กันเลย)</span>
+      </div>
+      <canvas id="c-poolmatch" role="img" aria-label="แอนิเมชันแท่งสองแท่งความยาวเท่ากันแสดงว่าจำนวนตรงกัน แต่วางอยู่คนละตำแหน่งคนละช่วงตัวเลขกันโดยสิ้นเชิง พร้อมเครื่องหมายถูกยืนยันว่าขนาดตรงกัน และเครื่องหมายกากบาทแสดงว่าไม่จำเป็นต้องอยู่ตำแหน่งเดียวกัน"></canvas>
+    </div>
+    <p class="caption">สองแท่งนี้ยาวเท่ากันเป๊ะ (จำนวน entries เท่ากัน) แต่อยู่คนละช่วงตัวเลขกันโดยสิ้นเชิง — LIB เป็นเลข hex ในที่อยู่ IPv6 (เช่น E000-FFFF) ส่วน label pool เป็นเลข MPLS label ธรรมดา (เช่น 30000-38191) ระบบจับคู่ให้เองภายใน ไม่ต้องให้ตัวเลขตรงกัน</p>
+    <div class="callout">
+      <span class="tag">กฎที่ต้องจำ</span>
+      <p>สิ่งเดียวที่ต้องตรงคือ <strong>"จำนวน" (count)</strong> — คลัง label ต้องมีจำนวนช่องอย่างน้อยเท่ากับขนาดของ LIB จะเริ่มที่เลขอะไรก็ได้ ขอแค่ไม่ไปชนกับ label range อื่นที่ใช้อยู่ในเครื่องเดียวกัน</p>
+    </div>
+  </section>
+
+  <!-- ============ 8. Worked numbers ============ -->
+  <section id="numbers">
+    <span class="kicker"><span class="dot"></span>08 · ตัวอย่างตัวเลขจริง</span>
+    <h2>ลองคำนวณดูจริง ๆ</h2>
+    <p class="lede">มีตัวเลขตัวเดียวที่ต้องเลือก แล้วทุกอย่างคำนวณตามมาหมด — เอาค่านั้นคูณ 1024 จะได้จุดตัดระหว่าง GIB กับ LIB ยิ่งเลือกมาก ยิ่งเผื่อที่ให้ GIB (รองรับราวเตอร์เยอะ) แต่ LIB (และคลัง label ที่ต้องจอง) จะเล็กลงตาม</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ค่าที่เลือก</th><th>จุดตัด (×1024)</th><th>GIB ≈ รองรับกี่ราวเตอร์</th><th>LIB ≈ ต้องจอง label กี่ช่อง</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" data-label="ค่าที่เลือก">16 (ค่าเริ่มต้น)</td>
+            <td class="mono" data-label="จุดตัด">0x4000</td>
+            <td data-label="GIB">~16,383 ตัว</td>
+            <td data-label="LIB">~49,151 ช่อง</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="ค่าที่เลือก">56</td>
+            <td class="mono" data-label="จุดตัด">0xE000</td>
+            <td data-label="GIB">~57,343 ตัว</td>
+            <td data-label="LIB">~8,191 ช่อง</td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="ค่าที่เลือก">60 (สูงสุด)</td>
+            <td class="mono" data-label="จุดตัด">0xF000</td>
+            <td data-label="GIB">~61,439 ตัว</td>
+            <td data-label="LIB">~4,095 ช่อง</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">เห็น trade-off ชัดเจน: เลือก 60 รองรับราวเตอร์ได้เยอะสุด แต่เหลือที่ให้ทำ function ต่อราวเตอร์แค่ ~4,095 ช่อง — ต้องเลือกให้เหมาะกับขนาดเครือข่ายจริง ไม่ใช่เลือกสูงสุดไว้ก่อนเสมอไป</p>
+  </section>
+
+  <!-- ============ 9. Warning ============ -->
+  <section id="warning">
+    <span class="kicker"><span class="dot"></span>09 · ข้อควรระวัง</span>
+    <h2>จองน้อยไป ระบบไม่เตือนสักคำ</h2>
+    <p class="lede">ถ้าคลัง label ที่จองไว้เล็กกว่าขนาด LIB จริง <strong>คำสั่งตั้งค่าจะผ่านปกติ ไม่มี error ไม่มี warning เลยแม้แต่บรรทัดเดียว</strong> — แต่พอมี function ที่ดันไปตกอยู่ในโซนที่ label หมดพอดี prefix ของ function นั้นจะเงียบหายไปเองโดยไม่มีการแจ้งเตือนใด ๆ ต้องมานั่งไล่หาทีหลังว่าทำไม service บางตัวไม่ขึ้น</p>
+    <div class="callout">
+      <span class="tag">บทเรียน</span>
+      <p>ก่อนจองคลัง label ทุกครั้ง ต้องเปิดตารางดูว่าค่าที่เลือกไว้ให้ LIB ขนาดเท่าไหร่ก่อน แล้วจองให้ครบหรือมากกว่านั้นเสมอ — อย่าเดาหรือกะเอาคร่าว ๆ</p>
+    </div>
+  </section>
+
+  <!-- ============ 10. Summary ============ -->
+  <section id="summary">
+    <span class="kicker"><span class="dot"></span>10 · สรุป</span>
+    <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
+    <ul class="points">
+      <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
+      <li><span class="amber-text">SRv6</span> เอาที่อยู่ IPv6 มาเป็นจุดแวะโดยตรง ไม่มี MPLS label ปนบนสายเลย</li>
+      <li><span class="cyan-text">Micro-SID</span> บีบแต่ละจุดแวะเหลือ 16 บิต ใส่ได้ถึง 8 จุดในที่อยู่เดียว แก้ปัญหา overhead</li>
+      <li>16 บิตนั้นแบ่งเป็น <strong>GIB</strong> (ระบุราวเตอร์) กับ <strong>LIB</strong> (ระบุ function ในราวเตอร์นั้น) ด้วยตัวเลขตัวเดียว</li>
+      <li>label ที่เห็นในคอนฟิกเป็นแค่กลไก lookup ภายในฮาร์ดแวร์บางรุ่น ไม่เคยออกไปบนสายจริง</li>
+      <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — จองผิดขนาดแล้วไม่มี warning ให้เห็นด้วย ต้องคำนวณเองให้ครบตั้งแต่แรก</li>
+    </ul>
+  </section>
+
+  <p style="margin-top:-1rem;padding-bottom:3rem;"><a href="../index.html">← กลับไปดูโพสต์อื่น ๆ</a></p>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="mark">running config</div>
+    <div>อธิบายแนวคิด SRv6 Micro-SID และ Reserved Label Block แบบเข้าใจง่าย</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function readColors(){
+    var cs = getComputedStyle(document.documentElement);
+    function g(n){ return cs.getPropertyValue(n).trim(); }
+    return {
+      bg:g('--bg'), raised:g('--bg-raised'), sunk:g('--bg-sunk'),
+      ink:g('--ink'), soft:g('--ink-soft'), muted:g('--muted'),
+      line:g('--line'), lineStrong:g('--line-strong'),
+      amber:g('--amber'), amberSoft:g('--amber-soft'), amberInk:g('--amber-ink'),
+      cyan:g('--cyan'), cyanSoft:g('--cyan-soft'), cyanInk:g('--cyan-ink'),
+      good:g('--good')
+    };
+  }
+  var C = readColors();
+  function refresh(){ C = readColors(); }
+  if (window.matchMedia) {
+    try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refresh); } catch(e){}
+  }
+  new MutationObserver(refresh).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+  function ease(t){ return t<0?0:t>1?1:(t*t*(3-2*t)); } // smoothstep
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp01(x){ return x<0?0:x>1?1:x; }
+
+  function mount(canvas, draw, staticT){
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var running = false, raf = null, start = null;
+
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio||1, 2);
+      var rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width*dpr));
+      canvas.height = Math.max(1, Math.round(rect.height*dpr));
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function renderAt(t){
+      var rect = canvas.getBoundingClientRect();
+      draw(ctx, rect.width, rect.height, t, C);
+    }
+
+    if (REDUCED) {
+      renderAt(staticT);
+      window.addEventListener('resize', function(){ renderAt(staticT); });
+      new MutationObserver(function(){ renderAt(staticT); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+      return;
+    }
+
+    function frame(ts){
+      if(start === null) start = ts;
+      var t = (ts - start) / 1000;
+      renderAt(t);
+      if (running) raf = requestAnimationFrame(frame);
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting && !running){ running = true; start = null; raf = requestAnimationFrame(frame); }
+        else if (!e.isIntersecting && running){ running = false; if(raf) cancelAnimationFrame(raf); }
+      });
+    }, {threshold:.12});
+    io.observe(canvas);
+  }
+
+  function roundRectPath(ctx,x,y,w,h,r){
+    if (ctx.roundRect) { ctx.roundRect(x,y,w,h,r); return; }
+    ctx.rect(x,y,w,h);
+  }
+
+  /* ---------------- Hero ambient ---------------- */
+  mount(document.getElementById('c-hero'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var rows = 4;
+    for (var r=0;r<rows;r++){
+      var y = h*(0.15+r*0.24);
+      var speed = 46 + r*9;
+      var spacing = 64 + (r%2)*10;
+      var col = r%2===0 ? C.amber : C.cyan;
+      ctx.globalAlpha = 0.35 - r*0.03;
+      ctx.fillStyle = col;
+      var offset = (t*speed) % spacing;
+      for (var x = w + spacing - offset; x > -spacing; x -= spacing){
+        ctx.beginPath();
+        ctx.arc(x, y, 2.6, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }, 2.4);
+
+  /* ---------------- SRH: packet carrying a shrinking checklist ---------------- */
+  mount(document.getElementById('c-srh'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var n = 3;
+    var pad = w*0.14;
+    var y = h*0.58;
+    var xs = [];
+    for (var i=0;i<n;i++) xs.push(pad + (w-2*pad)*(i/(n-1)));
+    var boxW = Math.min(78, (w-2*pad)/n*0.5), boxH = 44;
+
+    var hopTime = 1.6, cycle = hopTime*(n-1) + 1.0;
+    var tt = t % cycle;
+    var hopIndex = Math.min(n-2, Math.floor(tt/hopTime));
+    var within = clamp01((tt - hopIndex*hopTime)/hopTime);
+    var p = ease(within);
+    var segsRemaining = n - 1 - hopIndex - (within>0.92?1:0);
+    segsRemaining = Math.max(0, Math.min(n-1, segsRemaining));
+
+    // path line
+    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(xs[n-1], y); ctx.stroke();
+
+    // router boxes
+    for (i=0;i<n;i++){
+      var active = (i===hopIndex+1 && within>0.85) || (i===0 && tt<0.3);
+      ctx.fillStyle = C.sunk;
+      ctx.strokeStyle = active ? C.amber : C.lineStrong;
+      ctx.lineWidth = active ? 2.6 : 1.6;
+      ctx.beginPath();
+      roundRectPath(ctx, xs[i]-boxW/2, y-boxH/2, boxW, boxH, 9);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.soft; ctx.font='600 11px "Inter", sans-serif'; ctx.textAlign='center';
+      ctx.fillText('R'+(i+1), xs[i], y+4);
+    }
+
+    // traveling packet
+    var px = lerp(xs[hopIndex], xs[hopIndex+1], p);
+    var pillW = 46, pillH = 22, py = y - boxH/2 - 34;
+    ctx.fillStyle = C.raised; ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
+    ctx.beginPath(); roundRectPath(ctx, px-pillW/2, py-pillH/2, pillW, pillH, 11); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.font='600 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
+    ctx.fillText('IPv6', px, py+3);
+
+    // checklist squares above the packet
+    var sq = 12, gap = 4;
+    var totalW = segsRemaining>0 ? segsRemaining*sq + (segsRemaining-1)*gap : 0;
+    var startX = px - totalW/2;
+    for (var s=0; s<segsRemaining; s++){
+      var cx = startX + s*(sq+gap) + sq/2;
+      var cy = py - pillH/2 - 14;
+      ctx.fillStyle = s===0 ? C.cyanSoft : C.sunk;
+      ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.4;
+      ctx.beginPath(); roundRectPath(ctx, cx-sq/2, cy-sq/2, sq, sq, 3); ctx.fill(); ctx.stroke();
+    }
+
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+    ctx.fillText('เหลือจุดแวะอีก ' + segsRemaining + ' จุด', w/2, py - pillH/2 - 28);
+  }, 2.0);
+
+  /* ---------------- Overhead bar growth ---------------- */
+  mount(document.getElementById('c-overhead'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 6.5, tt = t % cycle;
+    var maxSeg = 6;
+    var raw = 1 + (tt/cycle)*(maxSeg-1);
+    var seg = Math.max(1, Math.min(maxSeg, raw));
+    var segFloor = Math.round(seg);
+
+    var barX = w*0.12, barMaxW = w*0.76, barY = h*0.42, barH = 34;
+    var frac = (seg-1)/(maxSeg-1);
+    var barW = barMaxW*frac + barMaxW*0.06;
+
+    ctx.fillStyle = C.sunk; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.4;
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barMaxW, barH, 8); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = C.amberSoft; ctx.strokeStyle = C.amber; ctx.lineWidth = 2;
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barW, barH, 8); ctx.fill(); ctx.stroke();
+
+    ctx.font='700 14px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='left';
+    ctx.fillText(segFloor + ' จุดแวะ  ·  ' + (segFloor*128) + ' บิต', barX, barY-14);
+
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted;
+    ctx.fillText('1 จุดแวะ', barX, barY+barH+22);
+    ctx.textAlign='right';
+    ctx.fillText(maxSeg+' จุดแวะ', barX+barMaxW, barY+barH+22);
+  }, 4);
+
+  /* ---------------- Compression: 128-bit slot, 1 vs 8 ---------------- */
+  mount(document.getElementById('c-compress'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 4.5, tt = t % cycle;
+    var boxW = w*0.34, boxH = 64;
+    var leftX = w*0.10, rightX = w*0.56;
+    var y = h*0.4;
+
+    function frame(x,label){
+      ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.8; ctx.fillStyle = C.sunk;
+      ctx.beginPath(); roundRectPath(ctx, x, y, boxW, boxH, 8); ctx.fill(); ctx.stroke();
+      ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+      ctx.fillText(label, x+boxW/2, y+boxH+20);
+    }
+    frame(leftX, '128 บิต แบบเดิม');
+    frame(rightX, '128 บิต แบบ Micro-SID');
+
+    // left: single filled block
+    ctx.fillStyle = C.cyanSoft; ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.6;
+    ctx.beginPath(); roundRectPath(ctx, leftX+3, y+3, boxW-6, boxH-6, 5); ctx.fill(); ctx.stroke();
+    ctx.font='700 11px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+    ctx.fillText('1 จุดแวะ', leftX+boxW/2, y+boxH/2+4);
+
+    // right: 8 slots filling one by one
+    var slots = 8;
+    var fillCount = Math.floor(clamp01(tt/3.4)*slots + 0.001);
+    var slotW = (boxW-6)/slots;
+    for (var i=0;i<slots;i++){
+      var sx = rightX+3+i*slotW;
+      var filled = i < fillCount;
+      ctx.fillStyle = filled ? C.amberSoft : C.raised;
+      ctx.strokeStyle = filled ? C.amber : C.lineStrong;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); roundRectPath(ctx, sx+1, y+3, slotW-2, boxH-6, 3); ctx.fill(); ctx.stroke();
+      if (filled){
+        ctx.fillStyle = C.amberInk || C.ink; ctx.font='600 8px "JetBrains Mono", monospace'; ctx.textAlign='center';
+        ctx.fillText(String(i+1), sx+slotW/2, y+boxH/2+3);
+      }
+    }
+    if (fillCount>=slots){
+      ctx.font='700 12px "Inter", sans-serif'; ctx.fillStyle=C.good; ctx.textAlign='center';
+      ctx.fillText('✓ ได้ถึง 8 จุดแวะ ในพื้นที่เดิม', rightX+boxW/2, y-14);
+    }
+  }, 4.2);
+
+  /* ---------------- GIB / LIB split bar ---------------- */
+  mount(document.getElementById('c-giblib'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var cycle = 8, tt = t % cycle;
+    var fracA = 16/60, fracB = 56/60; // example split points (illustrative)
+    var frac;
+    if (tt<1) frac = fracA;
+    else if (tt<4) frac = lerp(fracA, fracB, ease((tt-1)/3));
+    else if (tt<5) frac = fracB;
+    else frac = lerp(fracB, fracA, ease((tt-5)/3));
+
+    var barX = w*0.08, barW = w*0.84, barY = h*0.4, barH = 46;
+    var boundary = barX + barW*frac;
+
+    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.6;
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barW, barH, 8); ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath(); roundRectPath(ctx, barX, barY, barW, barH, 8); ctx.clip();
+    ctx.fillStyle = C.amberSoft; ctx.fillRect(barX, barY, boundary-barX, barH);
+    ctx.fillStyle = C.cyanSoft; ctx.fillRect(boundary, barY, barX+barW-boundary, barH);
+    ctx.restore();
+
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(boundary, barY-6); ctx.lineTo(boundary, barY+barH+6); ctx.stroke();
+
+    ctx.font='700 11px "JetBrains Mono", monospace'; ctx.textAlign='center';
+    ctx.fillStyle = C.amberInk || C.ink;
+    ctx.fillText('GIB', barX + (boundary-barX)/2, barY+barH/2+4);
+    ctx.fillStyle = C.cyanInk || C.ink;
+    ctx.fillText('LIB', boundary + (barX+barW-boundary)/2, barY+barH/2+4);
+
+    var entries = Math.round(lerp(16,56, (frac-fracA)/(fracB-fracA+0.0001)));
+    entries = Math.max(16, Math.min(56, entries));
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='left';
+    ctx.fillText('global-sid-entries ≈ ' + entries, barX, barY-16);
+    ctx.textAlign='right';
+    var libSize = Math.round(65536*(1-frac));
+    ctx.fillText('LIB ≈ ' + libSize.toLocaleString() + ' ช่อง', barX+barW, barY-16);
+  }, 4);
+
+  /* ---------------- Wire vs internal label ---------------- */
+  mount(document.getElementById('c-wire'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var boxW = 78, boxH = 50, y = h*0.5;
+    var x1 = w*0.18, x2 = w*0.82;
+
+    function box(x,label){
+      ctx.fillStyle = C.sunk; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.8;
+      ctx.beginPath(); roundRectPath(ctx, x-boxW/2, y-boxH/2, boxW, boxH, 9); ctx.fill(); ctx.stroke();
+      ctx.font='600 11px "Inter", sans-serif'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+      ctx.fillText(label, x, y+4);
+    }
+    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1+boxW/2,y); ctx.lineTo(x2-boxW/2,y); ctx.stroke();
+    box(x1, 'R1'); box(x2, 'R2');
+
+    var cycle = 5, tt = t % cycle;
+    var travel = 1.6;
+    var p = clamp01(tt/travel);
+    var px = lerp(x1+boxW/2, x2-boxW/2, ease(p));
+
+    if (tt < travel){
+      ctx.fillStyle = C.raised; ctx.strokeStyle = C.good; ctx.lineWidth = 2;
+      ctx.beginPath(); roundRectPath(ctx, px-26, y-26-16, 52, 20, 10); ctx.fill(); ctx.stroke();
+      ctx.font='600 9px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+      ctx.fillText('IPv6 only', px, y-26-16+14);
+    }
+
+    // internal gear + label reveal at R2
+    var gearStart = travel, gearEnd = travel+1.2;
+    if (tt>=gearStart && tt<gearEnd){
+      var gp = (tt-gearStart)/(gearEnd-gearStart);
+      ctx.save();
+      ctx.translate(x2, y-boxH/2-30);
+      ctx.rotate(gp*Math.PI*3);
+      ctx.strokeStyle = C.amber; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.stroke();
+      for (var gi=0;gi<6;gi++){
+        var ga = gi*Math.PI/3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ga)*10, Math.sin(ga)*10);
+        ctx.lineTo(Math.cos(ga)*14, Math.sin(ga)*14);
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (gp>0.5){
+        ctx.globalAlpha = clamp01((gp-0.5)/0.5);
+        ctx.fillStyle = C.amberSoft; ctx.strokeStyle=C.amber; ctx.lineWidth=1.6;
+        ctx.beginPath(); roundRectPath(ctx, x2-34, y-boxH/2-58, 68, 20, 9); ctx.fill(); ctx.stroke();
+        ctx.font='600 9px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+        ctx.fillText('label #30007', x2, y-boxH/2-58+14);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // packet continues out from R2, still plain IPv6
+    var out2 = travel+1.4;
+    if (tt>=out2){
+      var op = clamp01((tt-out2)/0.6);
+      var opx = lerp(x2, x2+ (w-x2)*0.5, ease(op));
+      ctx.globalAlpha = 1-op*0.3;
+      ctx.fillStyle = C.raised; ctx.strokeStyle = C.good; ctx.lineWidth = 2;
+      ctx.beginPath(); roundRectPath(ctx, opx-26, y-26-16, 52, 20, 10); ctx.fill(); ctx.stroke();
+      ctx.font='600 9px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+      ctx.fillText('IPv6 only', opx, y-26-16+14);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='center';
+    ctx.fillText('label เกิดขึ้นแค่ในกล่อง R2 ชั่วครู่ แล้วหายไป', w/2, y+boxH/2+26);
+  }, 3.6);
+
+  /* ---------------- Pool size match, position mismatch ---------------- */
+  mount(document.getElementById('c-poolmatch'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var barW = w*0.5, barH = 30;
+    var y1 = h*0.28, y2 = h*0.56;
+    var x1 = w*0.08;
+    var x2 = w*0.36;
+
+    ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.4;
+
+    // LIB bar (hex range)
+    ctx.fillStyle = C.cyanSoft; ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.8;
+    ctx.beginPath(); roundRectPath(ctx, x1, y1, barW, barH, 7); ctx.fill(); ctx.stroke();
+    ctx.font='600 10px "JetBrains Mono", monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center';
+    ctx.fillText('LIB: 0xE000 – 0xFFFF', x1+barW/2, y1+barH/2+4);
+
+    // Label pool bar (decimal range), shifted position, same width
+    ctx.fillStyle = C.amberSoft; ctx.strokeStyle = C.amber; ctx.lineWidth = 1.8;
+    ctx.beginPath(); roundRectPath(ctx, x2, y2, barW, barH, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=C.ink;
+    ctx.fillText('Label pool: 30000 – 38191', x2+barW/2, y2+barH/2+4);
+
+    // brackets showing equal width
+    var bY = y2+barH+18;
+    ctx.strokeStyle = C.good; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x2,bY); ctx.lineTo(x2+barW,bY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2,bY-5); ctx.lineTo(x2,bY+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2+barW,bY-5); ctx.lineTo(x2+barW,bY+5); ctx.stroke();
+    ctx.fillStyle = C.good; ctx.font='700 11px "Inter", sans-serif';
+    ctx.fillText('✓ จำนวนเท่ากัน (8,192 ช่อง)', x2+barW/2, bY+18);
+
+    ctx.font='500 10px "Inter", sans-serif'; ctx.fillStyle=C.muted; ctx.textAlign='left';
+    ctx.fillText('✗ ตำแหน่ง/ค่าตัวเลข ไม่จำเป็นต้องตรงกัน', x1, y1-12);
+  }, 2);
+
+})();
+</script>
+<script src="../assets/theme.js"></script>
+</body>
+</html>
