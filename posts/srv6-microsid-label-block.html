@@ -97,7 +97,8 @@
       <li><a href="#realconfig" data-toc="realconfig">11 · ตัวอย่าง config จริง</a></li>
       <li><a href="#numbers" data-toc="numbers">12 · ลองคำนวณดูจริง ๆ</a></li>
       <li><a href="#warning" data-toc="warning">13 · จองน้อยไป ระวังตรงไหน</a></li>
-      <li><a href="#summary" data-toc="summary">14 · สรุป</a></li>
+      <li><a href="#labcase" data-toc="labcase">14 · เคสจริง จองน้อยไปแล้วเป็นยังไง</a></li>
+      <li><a href="#summary" data-toc="summary">15 · สรุป</a></li>
     </ol>
   </div>
 </nav>
@@ -799,9 +800,137 @@ A:admin@pe1# show router 100 route-table ipv6
     </div>
   </section>
 
+  <!-- ============ 9b. Lab case study: undersized block ============ -->
+  <section id="labcase">
+    <span class="kicker"><span class="dot"></span>14 · เคสจริง</span>
+    <h2>จองน้อยไปแล้วเป็นยังไง — ทดสอบเต็มรูปแบบบนแล็บจริง</h2>
+    <p class="lede">ข้อ 13 อธิบายไว้แล้วว่าโซน dynamic หมดแล้วจะเงียบ ทีนี้มาดูของจริงเต็ม ๆ — ตั้งใจจอง label-block ให้เล็กจนน่าจะพังแน่ ๆ (แค่ <strong>3 label</strong>) ไม่ใส่ <span class="mono">static-function</span> เลยแม้แต่บรรทัดเดียว แล้วสร้าง VPRN 10 ตัวรวด ดูว่าตัวไหนรอด ตัวไหนไม่รอด แล้วดันต่อไปอีกขั้น: เอา 2 PE มาต่อ BGP-IPVPN กันจริง ดูว่าฝั่งที่ไม่มี SID จะ "หายไป" จากมุมมองของอีกฝั่งยังไง</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Config — บล็อกเล็กจนสุดขั้ว ไม่มี static-function</h3>
+    <div class="code-block"><pre>[pr:/configure]
+A:admin@pe1# info router "Base" mpls-labels
+    reserved-label-block "SRv6-uSID-Alg0" {
+        start-label 30000
+        end-label 30002
+    }
+
+[pr:/configure]
+A:admin@pe1# info router "Base" segment-routing
+    segment-routing-v6 {
+        origination-fpe [1]
+        micro-segment {
+            block-length 32
+            global-sid-entries 16
+            sid-length 16
+            block "uSID-BLK" {
+                admin-state enable
+                termination-fpe [2]
+                label-block "SRv6-uSID-Alg0"
+                prefix {
+                    ip-prefix 2001:bbbb::/32
+                }
+            }
+        }
+        micro-segment-locator "uSID-Alg0-Loc" {
+            admin-state enable
+            block "uSID-BLK"
+            un {
+                srh-mode usp
+                value 1
+            }
+        }
+    }</pre></div>
+    <p class="caption">สังเกตว่า<strong>ไม่มี <span class="mono">static-function</span> container อยู่เลยแม้แต่บรรทัดเดียว</strong> — ตามความเข้าใจทั่วไปควรแปลว่า "ไม่กันที่ไว้ให้ static เลย" แต่ผลที่ได้จริงด้านล่างจะเห็นว่าไม่ใช่แบบนั้น</p>
+    <div class="code-block"><pre>A:admin@pe1# info service vprn "VPRN-101"
+    admin-state enable
+    service-id 101
+    customer "1"
+    segment-routing-v6 1 {
+        micro-segment-locator "uSID-Alg0-Loc" {
+            function {
+                udt46 {
+                }
+            }
+        }
+    }
+
+A:admin@pe1# info service vprn "VPRN-103"
+    admin-state enable
+    service-id 103
+    customer "1"
+    segment-routing-v6 1 {
+        micro-segment-locator "uSID-Alg0-Loc" {
+            function {
+                udt46 {
+                }
+            }
+        }
+    }</pre></div>
+    <p class="caption">VPRN-101 ถึง VPRN-110 (10 ตัวรวด) ใช้ config <strong>เหมือนกันทุกตัวอักษร</strong> — ไม่ระบุ <span class="mono">value</span> เลยสักตัว แปลว่าทุกตัวขอ function แบบ dynamic เหมือนกันหมด ต่างกันแค่ลำดับที่สร้างก่อน-หลัง</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Verify — บล็อก 3 label ได้ SID ใช้จริงแค่ 2 ตัว ไม่ใช่ 3</h3>
+    <div class="code-block"><pre>A:admin@pe1# show router segment-routing-v6 micro-segment-local-sid
+
+===============================================================================
+Micro Segment Routing v6 Local SIDs
+===============================================================================
+SID                                               Type           Function
+  Micro Segment Locator
+  Context
+-------------------------------------------------------------------------------
+2001:bbbb:1::                                     uN             1
+  uSID-Alg0-Loc
+  None
+2001:bbbb:1:4001::                                uDT46          16385
+  uSID-Alg0-Loc
+  SvcId: 101 Name: VPRN-101
+2001:bbbb:1:4002::                                uDT46          16386
+  uSID-Alg0-Loc
+  SvcId: 102 Name: VPRN-102
+-------------------------------------------------------------------------------
+SIDs : 3</pre></div>
+    <p class="caption">Dynamic ตัวแรกได้ <span class="mono">16385 (0x4001)</span> ไม่ใช่ <span class="mono">16384 (0x4000)</span> — index 1 (label 30000) ยังถูกกันไว้ให้ static อยู่ดี แม้จะลบ <span class="mono">static-function</span> container ทิ้งไปทั้งหมดแล้ว เพราะ <strong>ค่า default ของ <span class="mono">max-entries</span> คือ 1 ไม่ใช่ 0</strong> — บล็อก 3 label จึงเหลือ dynamic ใช้ได้จริงแค่ <strong>2 ช่อง</strong> ไม่ใช่ 3</p>
+    <div class="code-block"><pre>A:admin@pe1# show log log-id 99 count 60
+
+80  2026/09/19 02:44:02.030 UTC MINOR: SVCMGR #2135 Base
+"Allocation of function failed for vprn 103 srv6-instance 1 micro-segment-locator uSID-Alg0-Loc function udt46 value 0."
+79  2026/09/19 02:44:02.029 UTC MINOR: SVCMGR #2103 vprn103
+"Status of service 103 (customer 1) changed to administrative state: up, operational state: up"</pre></div>
+    <p class="caption">VPRN-103 (ตัวที่ 3 ที่สร้าง ไม่ใช่ตัวที่ 4) เป็นตัวแรกที่ชนขอบ — log เดียวกันเป๊ะเกิดซ้ำกับ VPRN-104 ถึง 110 ทุกตัว รวม 8 ตัวจาก 10 ที่ไม่มี SID จริง สังเกตลำดับ log: <strong>ประกาศ Oper State: Up ก่อน</strong> ที่จะ log ว่าจองไม่สำเร็จ — commit ไม่เคย reject เลยสักครั้ง</p>
+    <div class="code-block"><pre>A:admin@pe1# show service service-using vprn
+
+ServiceId    Type      Adm  Opr  CustomerId Service Name
+-------------------------------------------------------------------------------
+101          VPRN      Up   Up   1          VPRN-101
+102          VPRN      Up   Up   1          VPRN-102
+103          VPRN      Up   Up   1          VPRN-103
+...
+110          VPRN      Up   Up   1          VPRN-110
+-------------------------------------------------------------------------------
+Matching Services : 10</pre></div>
+    <p class="caption">ทั้ง 10 ตัวขึ้น <span class="mono">Up/Up</span> เหมือนกันหมด <span class="mono">show service id 103 base</span> ก็ให้ผลเหมือน VPRN-101 ทุกประการ (Admin State/Oper State/Router Oper State ล้วน Up) — <strong>แยกไม่ออกเลยจาก show คำสั่งระดับ service</strong> ว่าตัวไหนมี SID จริงหรือไม่มี</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">เอาไปทดสอบข้าม PE จริง — ผลกระทบที่มองเห็นเป็นรูปธรรม</h3>
+    <p>ต่อ PE ตัวที่สอง (PE2) เข้ามาด้วย BGP-IPVPN จริง (peering ตรง, RD/RT ตรงกันทุก service) แล้วสร้าง VPRN มิเรอร์ทั้ง 10 ตัวบน PE2 เหมือนกัน — PE2 มี label-block ใหญ่พอ (21 label) ทำให้ export ได้ครบทั้ง 10 ตัว ส่วน PE1 ยังติดปัญหาเดิม (export ได้แค่ 101/102) ผลที่ได้คือภาพเปรียบเทียบที่ชัดมาก:</p>
+    <div class="code-block"><pre>A:admin@pe1# show router 101 route-table          A:admin@pe1# show router 103 route-table
+172.16.1.101/32   Local   Local                   172.16.1.103/32   Local   Local
+172.16.2.101/32   Remote  BGP VPN (tunneled:SRV6)  172.16.2.103/32   Remote  BGP VPN (tunneled:SRV6)
+No. of Routes: 2                                   No. of Routes: 2
+
+A:admin@pe2# show router 101 route-table          A:admin@pe2# show router 103 route-table
+172.16.1.101/32   Remote  BGP VPN (tunneled:SRV6)  172.16.2.103/32   Local   Local
+172.16.2.101/32   Local   Local                    No. of Routes: 1
+No. of Routes: 2</pre></div>
+    <p class="caption">PE1 มองเห็น route ของ PE2 <strong>ครบทั้ง 10 ตัว</strong> (เพราะ PE2 export ได้หมด) แต่ PE2 มองเห็น route ของ PE1 <strong>แค่ 101 กับ 102</strong> — VPRN-103 ถึง 110 บน PE2 เหลือ route ของตัวเองแค่ตัวเดียว ไม่มีอะไรย้อนมาจาก PE1 เลย เพราะ PE1 ไม่มี SID จะ export ตั้งแต่ต้น เป็น <strong>asymmetric visibility</strong> ที่มองเห็นได้ตรง ๆ จาก route table สองฝั่ง ไม่ต้องเดา</p>
+    <div class="callout">
+      <span class="tag">สรุปเคสนี้ — สิ่งที่ต่างจากที่คิดไว้แต่แรก</span>
+      <p>ตั้งใจทดสอบว่า "บล็อก 3 label ควรได้ SID 3 ตัว แล้วตัวที่ 4 ถึงจะพัง" แต่ผลจริงคือ<strong>ได้แค่ 2 ตัว พังตั้งแต่ตัวที่ 3</strong> — เพราะ default ของ <span class="mono">max-entries</span> (=1) ยังกันที่ไว้เสมอแม้ไม่ได้ตั้ง <span class="mono">static-function</span> เอง กฎที่ต้องจำจริง ๆ คือ: <strong>label-block ขนาด N ช่อง ใช้ dynamic ได้จริงแค่ N−1 ช่อง</strong> ไม่ใช่ N ช่องเต็ม ถ้าไม่ได้ตั้งใจใช้ static function เลยแม้แต่ตัวเดียวก็ตาม</p>
+    </div>
+  </section>
+
   <!-- ============ 10. Summary ============ -->
   <section id="summary">
-    <span class="kicker"><span class="dot"></span>14 · สรุป</span>
+    <span class="kicker"><span class="dot"></span>15 · สรุป</span>
     <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
     <ul class="points">
       <li>Segment Routing ฝัง "รายการจุดแวะ" ไปกับแพ็กเก็ตตั้งแต่ต้นทาง ไม่ต้องเดาทางทีละ hop</li>
@@ -814,6 +943,7 @@ A:admin@pe1# show router 100 route-table ipv6
       <li>คลัง label ต้องมี <strong>จำนวน</strong> ครบเท่า LIB เสมอ แต่ <strong>ตัวเลขไม่ต้องตรงกับ hex ของ LIB</strong> — ละเมิดขอบเขต static ส่วนใหญ่ reject ทันทีตอน commit แต่ถ้าโซน dynamic หมดพอดี จะเงียบจริง (commit ผ่าน, service ขึ้น Up หลอกตา, ไม่มี SID) ต้องคำนวณให้ครบตั้งแต่แรกและ monitor log SVCMGR #2135 ไว้</li>
       <li><strong>static-function</strong> ผ่า LIB อีกชั้นเป็นโซน static (uA/service-SID/binding-SID ที่ตั้งเอง) กับ dynamic (ระบบเลือกให้) — ค่าที่พิมพ์เป็น index ไม่ใช่ hex ของ LIB ตรง ๆ (สูตรจริง: LIB start + index − 1) และแก้ max-entries ทีหลังจะทำให้ block ทั้งก้อน admin-state toggle</li>
       <li><strong>binding-SID (uB6)</strong> ของ SRv6 policy ต้องอ้างอิงแบบเต็มรูป <span class="mono">&lt;block&gt;&lt;uN&gt;&lt;uB6&gt;</span> เสมอ ใส่แค่ค่า uB6 ลอย ๆ ไม่ได้</li>
+      <li>ทดสอบจริงกับ label-block 3 ช่อง ไม่มี static-function เลย: ได้ dynamic SID ใช้จริงแค่ <strong>2 ช่อง ไม่ใช่ 3</strong> (default max-entries=1 กันที่ไว้เสมอ) — เอาไปต่อ BGP-IPVPN ข้าม 2 PE จริง เห็นผลเป็นรูปธรรมว่า PE ที่ไม่มี SID จะ "หายไป" จาก route table ของอีกฝั่งแบบ asymmetric ทันที</li>
     </ul>
   </section>
 
