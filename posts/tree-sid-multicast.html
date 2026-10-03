@@ -1,0 +1,1935 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multicast บน SR-MPLS ด้วย Tree-SID · running config</title>
+<meta name="description" content="อธิบาย multicast ตั้งแต่ศูนย์ ไปจนถึง NG-MVPN และ Tree-SID (SR P2MP policy) แบบ static บน Nokia SR OS พร้อม lab จริงบน SR-SIM 26.7.R2: I-PMSI, S-PMSI, ลิงก์ล่มแบบไม่มีและมี FRR และ gotcha ที่ไม่มีในตัวอย่างของเอกสาร">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* Post-only: step-through control for the Tree-SID walkthrough (section 08) — same as the SRv6 post */
+  .entries-control{
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:1.1rem 1.3rem 1.3rem; margin:0 0 1.3rem;
+  }
+  .range-slider{
+    width:100%; margin:.3rem 0 1.1rem; appearance:none; height:6px; border-radius:999px;
+    background:var(--bg-sunk); outline:none; cursor:pointer;
+  }
+  .range-slider::-webkit-slider-thumb{
+    appearance:none; width:20px; height:20px; border-radius:50%;
+    background:var(--amber); border:3px solid var(--bg-raised); box-shadow:0 0 0 1px var(--amber);
+    cursor:grab;
+  }
+  .range-slider::-moz-range-thumb{
+    width:20px; height:20px; border-radius:50%; border:3px solid var(--bg-raised);
+    background:var(--amber); box-shadow:0 0 0 1px var(--amber); cursor:grab;
+  }
+  .entries-stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; }
+  @media (max-width:640px){ .entries-stats{ grid-template-columns:repeat(2,1fr); } }
+  .entries-stats .stat{ display:flex; flex-direction:column; gap:.15rem; min-width:0; }
+  .stat-label{ font-size:.72rem; color:var(--muted); font-family:"Inter",sans-serif; }
+  .stat-value{ font-size:.92rem; font-weight:600; color:var(--ink); overflow-wrap:anywhere; }
+  .step-row{ display:flex; align-items:center; gap:.7rem; margin-bottom:.5rem; }
+  .step-row label{ font-family:"Inter",sans-serif; font-size:.92rem; font-weight:600; color:var(--ink); flex:1; }
+  .step-btn{
+    font-family:"Inter",sans-serif; font-size:.85rem; font-weight:600; color:var(--ink);
+    background:var(--bg-sunk); border:1px solid var(--line); border-radius:999px;
+    width:2.1rem; height:2.1rem; line-height:1; cursor:pointer; flex:none;
+  }
+  .step-btn:hover:not(:disabled){ border-color:var(--amber); color:var(--amber-ink); }
+  .step-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .step-value{ font-size:.92rem; font-weight:600; color:var(--amber-ink); white-space:nowrap; }
+  .step-desc{ font-family:"Sarabun",sans-serif; font-size:.88rem; color:var(--ink-soft); margin:.2rem 0 .9rem; min-height:2.6em; max-width:none; }
+
+  /* Post-only: MD-CLI config / show-output blocks — same as the SRv6 post */
+  .code-block{
+    background:var(--bg-sunk); border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:1rem 1.2rem; margin:1.3rem 0; overflow-x:auto; box-shadow:var(--shadow);
+  }
+  .code-block pre{
+    margin:0; font-family:"JetBrains Mono",monospace; font-size:.86rem; line-height:1.65;
+    color:var(--ink); white-space:pre;
+  }
+  .code-block .cm{ color:var(--muted); }
+
+  /* Post-only: lab topology SVG (section 11) — reuses .tree-figure / .tree-node from style.css */
+  .topo-figure{ max-width:620px; margin-left:auto; margin-right:auto; }
+  .topo-edge-label{ fill:var(--muted); font-family:"JetBrains Mono",monospace; }
+  .tree-edge.dashed{ stroke-dasharray:6 5; }
+
+  /* Post-only: long output file names in the appendix must wrap inside the stacked mobile cards */
+  @media (max-width:600px){ .table-wrap td{ overflow-wrap:anywhere; } }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress-bar"></div>
+<nav class="toc-widget" id="toc-widget">
+  <button type="button" class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-panel">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    <span class="toc-toggle-label">สารบัญ</span>
+  </button>
+  <div class="toc-panel" id="toc-panel" hidden>
+    <ol>
+      <li><a href="#tldr" data-toc="tldr">00 · อ่านเร็ว</a></li>
+      <li><a href="#cast" data-toc="cast">01 · Unicast, broadcast, multicast</a></li>
+      <li><a href="#group" data-toc="group">02 · Group, IGMP และ (S,G)</a></li>
+      <li><a href="#rpf" data-toc="rpf">03 · RPF และ PIM</a></li>
+      <li><a href="#tunnel" data-toc="tunnel">04 · ทำไมต้องมี provider tunnel</a></li>
+      <li><a href="#mvpn" data-toc="mvpn">05 · NG-MVPN ภาษาคน</a></li>
+      <li><a href="#options" data-toc="options">06 · ตัวเลือก provider tunnel บนแกน SR</a></li>
+      <li><a href="#treesid" data-toc="treesid">07 · Tree-SID คืออะไร</a></li>
+      <li><a href="#walk" data-toc="walk">08 · เดินตามแพ็กเก็ตทีละ hop</a></li>
+      <li><a href="#instance" data-toc="instance">09 · tree-id, candidate path, instance</a></li>
+      <li><a href="#static" data-toc="static">10 · static หรือ NSP</a></li>
+      <li><a href="#lab" data-toc="lab">11 · Lab topology</a></li>
+      <li><a href="#labels" data-toc="labels">12 · แผน label</a></li>
+      <li><a href="#config" data-toc="config">13 · Config ทีละ block</a></li>
+      <li><a href="#verify" data-toc="verify">14 · ตรวจทีละชั้น</a></li>
+      <li><a href="#traffic" data-toc="traffic">15 · ส่ง traffic จริง: I-PMSI และ S-PMSI</a></li>
+      <li><a href="#failure" data-toc="failure">16 · ตัดลิงก์: ไม่มี FRR และมี FRR</a></li>
+      <li><a href="#gotchas" data-toc="gotchas">17 · Gotchas</a></li>
+      <li><a href="#srsim" data-toc="srsim">18 · ข้อจำกัดของ SR-SIM</a></li>
+      <li><a href="#summary" data-toc="summary">19 · สรุป</a></li>
+      <li><a href="#appendix" data-toc="appendix">20 · ภาคผนวก: ไฟล์ output</a></li>
+    </ol>
+  </div>
+</nav>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
+    <div class="links">
+      <a class="back" href="../index.html">← กลับหน้าแรก</a>
+      <a class="tool-link" href="../tools/ip-calculator/index.html">Tools</a>
+      <button id="theme-toggle" aria-label="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="c-hero" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <span class="kicker"><span class="dot"></span>Nokia SR OS ฉบับเข้าใจง่าย · 2026-10-03</span>
+    <h1>Multicast บน SR-MPLS<br>ด้วย <span class="amber-text">Tree-SID แบบ static</span></h1>
+    <p class="lede">จากศูนย์ ถึง lab ที่ส่ง traffic ได้จริง — เริ่มจาก "multicast คืออะไร" แบบไม่ต้องมีพื้นฐาน ต่อด้วยว่าทำไม MPLS/VPN ต้องมี "ท่อ" สำหรับ multicast แล้วลงไปที่ Tree-SID ต้นไม้ multicast ที่ใช้ label ของ Segment Routing ล้วน ๆ ไม่ต้องมี LDP หรือ RSVP ในแกน ปิดท้ายด้วย lab จริงบน Nokia SR-SIM 26.7.R2 ทั้งตอนที่ทำงานปกติ ตอนลิงก์ล่ม และ gotcha ที่ไม่มีในตัวอย่างของเอกสาร</p>
+    <span class="scroll-cue">เลื่อนลงเพื่อเริ่มเรียนรู้
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6l5 5 5-5"/></svg>
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ 0. TL;DR ============ -->
+  <section id="tldr">
+    <span class="kicker"><span class="dot"></span>00 · อ่านเร็ว</span>
+    <h2>สรุปสั้น ๆ ก่อนเริ่ม</h2>
+    <ul class="points">
+      <li><strong>Tree-SID</strong> คือการทำ "ต้นไม้ multicast" บน SR-MPLS โดยไม่ต้องมี mLDP หรือ RSVP-TE ในแกน ทุก node บนต้นไม้มี <strong>replication segment</strong> หนึ่งตัว ทำหน้าที่ push (ที่ราก), swap + แตกกิ่ง (กลางทาง) หรือ pop (ที่ใบ)</li>
+      <li>ถ้าไม่มี NSP (PCE) ต้นไม้ต้องเขียนมือ <strong>ทุก node ทุก label</strong> เราลองทำจริงบน SR-SIM 26.7.R2: root → P → leaf1/leaf2 ใน VPRN ที่ใช้ NG-MVPN (BGP auto-discovery + BGP C-multicast)</li>
+      <li>ผล: multicast ถึง receiver ทั้งสองฝั่ง <strong>0% loss</strong> ทั้งบน I-PMSI และ S-PMSI และ <span class="mono">p2mp-lsp-ping</span> ได้คำตอบจาก leaf ครบ ตัดลิงก์ที่ไม่มี FRR แล้ว leaf2 ดับ<strong>ตลอดเวลาที่ลิงก์ล่ม (26 วินาที)</strong> แม้ IGP จะหาทางใหม่ได้แล้ว พอใส่ FRR (protect next-hop) ก็ไม่เห็นช่องว่างเกิน 100 ms เลย</li>
+      <li>เจอ gotcha ที่ไม่มีในตัวอย่างของเอกสารหลายข้อ: leaf ต้องมี "policy หลอก" ถึงจะรับได้, ช่วงสลับไป S-PMSI traffic หายไป ~22 วินาทีถ้า BGP MRAI ยังเป็นค่า default 30 วินาที, และ protect next-hop ที่ลืมผูกจะกลายเป็นกิ่งจริงจนส่งแพ็กเก็ตซ้ำ</li>
+    </ul>
+    <div class="callout">
+      <span class="tag">Lab และเอกสารอ้างอิง</span>
+      <p>Lab ชื่อ <span class="mono">mcastlab</span> บน containerlab ทุก router เป็น Nokia SR OS 26.7.R2 (SR-SIM sr-1) เอกสารหลักที่อ้างถึงตลอดโพสต์: <em>Multicast Routing Protocols Guide 26.7.R1</em> บทที่ 12 "SR P2MP policy" (ย่อว่า <strong>MRPG 12.x</strong>), <em>MD-CLI Command Reference Guide 26.7.R1</em> (ย่อว่า <strong>MD-CLI ref</strong>) และ <em>Layer 3 Services Guide 26.7.R1</em> (ย่อว่า <strong>L3SG</strong>)</p>
+    </div>
+  </section>
+
+  <!-- ============ 1. Unicast / broadcast / multicast ============ -->
+  <section id="cast">
+    <span class="kicker"><span class="dot"></span>01 · จุดเริ่มต้น</span>
+    <h2>Unicast, broadcast, multicast ต่างกันอย่างไร</h2>
+    <p class="lede">ลองนึกถึงการส่งของ: <strong>unicast</strong> คือส่งพัสดุถึงคนคนเดียว ถ้าจะส่งให้ 100 คนต้องแพ็ก 100 กล่อง <strong>broadcast</strong> คือประกาศเสียงตามสายให้ทั้งหมู่บ้านได้ยินไม่ว่าจะอยากฟังหรือไม่ ส่วน <strong>multicast</strong> คือรายการวิทยุ ผู้ส่งออกอากาศ<strong>ครั้งเดียว</strong> ใครอยากฟังก็ "จูนคลื่น" เอง แล้วเครือข่ายเป็นคน<strong>ทำสำเนา</strong>ตรงทางแยก เฉพาะทางที่มีคนฟังอยู่</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● อยากฟัง</span>
+        <span class="chip good">● ได้รับแล้ว</span>
+      </div>
+      <canvas id="c-cast" style="height:300px" role="img" aria-label="แอนิเมชันผู้ส่งหนึ่งจุด ผู้รับหกเครื่องที่มีสามเครื่องอยากฟัง สลับให้ดูสามแบบ: unicast ผู้ส่งยิงสามสำเนาแยกกันจนลิงก์แรกแบกสามเท่า, broadcast ส่งถึงทุกเครื่องรวมเครื่องที่ไม่อยากฟัง, multicast ส่งลูกเดียวแล้วแตกสำเนาเฉพาะทางแยกที่มีคนฟัง"></canvas>
+    </div>
+    <p class="caption">แอนิเมชันสลับให้ดูสามแบบ unicast: ผู้ส่งทำสำเนาเองสามชุด ลิงก์แรกแบก ×3 broadcast: ทุกเครื่องได้หมด รวมเครื่องที่ไม่อยากฟัง (ในชีวิตจริง broadcast อยู่แค่ใน subnet เดียว router ไม่ส่งข้ามไปไหน ภาพนี้แค่วางเทียบให้เห็น) multicast: ลิงก์แรกแบกแค่ ×1 แล้วไปแตกสำเนาที่ router ตรงทางแยกที่มีคนฟังเท่านั้น</p>
+    <div class="trio">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>Unicast</h3>
+        <p>ผู้รับชัดเจนทีละคน ส่ง 100 คนต้องส่ง 100 รอบ ผู้ส่งเหนื่อยและท่อขาออกเต็ม</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>Broadcast</h3>
+        <p>ทุกคนในวงได้หมด ใช้ได้แค่ในวงเล็ก ๆ (subnet เดียว) router ไม่ส่ง broadcast ข้ามไป</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>Multicast</h3>
+        <p>ส่งครั้งเดียว เครือข่ายทำสำเนาที่ทางแยก ส่งเฉพาะทางที่มีคนอยากรับ</p>
+      </div>
+    </div>
+    <p>ข้อดีที่สำคัญที่สุดของ multicast คือ<strong>ผู้ส่งและลิงก์ช่วงต้นไม่ต้องแบกภาระตามจำนวนผู้รับ</strong> IPTV, ราคาหุ้นในตลาดหลักทรัพย์ และการกระจายไฟล์ firmware ใช้ multicast ด้วยเหตุผลนี้</p>
+  </section>
+
+  <!-- ============ 2. Group / IGMP / (S,G) ============ -->
+  <section id="group">
+    <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
+    <h2>Group address, IGMP และ (S,G)</h2>
+    <p class="lede">ปลายทางของแพ็กเก็ต multicast ไม่ใช่เครื่องใดเครื่องหนึ่ง แต่เป็น <strong>group</strong> ซึ่งก็คือ IP address ช่วงพิเศษ คิดว่าเป็น "ชื่อคลื่นวิทยุ" ก็ได้</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ช่วง</th><th>ใช้ทำอะไร</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" data-label="ช่วง">224.0.0.0/4</td><td data-label="ใช้ทำอะไร">ช่วง multicast ทั้งหมดของ IPv4 (224.0.0.0 - 239.255.255.255, RFC 5771)</td></tr>
+          <tr><td class="mono" data-label="ช่วง">224.0.0.0/24</td><td data-label="ใช้ทำอะไร">link-local control เช่น OSPF hello 224.0.0.5, PIM 224.0.0.13 ไม่ข้าม router</td></tr>
+          <tr><td class="mono" data-label="ช่วง">232.0.0.0/8</td><td data-label="ใช้ทำอะไร">Source-Specific Multicast (SSM, RFC 4607) ช่วงที่ lab นี้ใช้</td></tr>
+          <tr><td class="mono" data-label="ช่วง">239.0.0.0/8</td><td data-label="ใช้ทำอะไร">administratively scoped (RFC 2365) ใช้ภายในองค์กร คล้าย private IP ของ multicast</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>ฝั่ง Ethernet จะแปลง group เป็น MAC <span class="mono">01:00:5e:xx:xx:xx</span> เช่นใน lab นี้ group <span class="mono">232.1.1.1</span> ออกมาเป็น <span class="mono">01:00:5e:01:01:01</span></p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Source, receiver และ IGMP</h3>
+    <ul class="points">
+      <li><strong>Source</strong> คือเครื่องที่ส่ง ไม่ต้อง "join" อะไรเลย แค่ส่งแพ็กเก็ตไปที่ group</li>
+      <li><strong>Receiver</strong> คือเครื่องที่อยากรับ ต้องบอก router ที่อยู่ใกล้ที่สุดว่า "ฉันอยากรับ group นี้" ผ่านโปรโตคอล <strong>IGMP</strong> (Internet Group Management Protocol, IPv4) หรือ MLD (IPv6)</li>
+      <li><strong>IGMPv2</strong>: "ฉันอยากรับ group G" (ไม่สนว่าใครส่ง) &nbsp;·&nbsp; <strong>IGMPv3</strong> (RFC 3376): "ฉันอยากรับ group G <strong>จาก source S เท่านั้น</strong>" ซึ่งเป็นสิ่งที่ SSM ต้องการ</li>
+    </ul>
+    <p>ใน lab นี้ receiver ใช้ <span class="mono">iperf -s -u -B 232.1.1.1 -H 192.168.10.10</span> ซึ่งทำให้ Linux ส่ง IGMPv3 join แบบ (S,G) ออกไป</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip cyan">● ข้อความ join</span>
+        <span class="chip amber">● กิ่งของต้นไม้</span>
+      </div>
+      <canvas id="c-igmp" style="height:300px" role="img" aria-label="แอนิเมชัน receiver ทีละเครื่องส่ง IGMP join ไปหา router ใกล้ตัว router ส่ง PIM Join ย้อนขึ้นไปหาต้นทาง กิ่งของต้นไม้สว่างขึ้นทีละกิ่ง จากนั้น traffic จึงไหลลงเฉพาะกิ่งที่สว่าง"></canvas>
+    </div>
+    <p class="caption">receiver "ยกมือ" ด้วย IGMP แล้ว router ส่ง Join ย้อนขึ้นไปหาต้นทางทีละ hop ทุก router ที่ Join ผ่านจะจดว่า "ขาที่ join มาคือขาออก" ต้นไม้จึงงอกขึ้นมาเองทีละกิ่ง และ router ที่มี state ของ group นั้นอยู่แล้วไม่ต้องส่ง Join ขึ้นไปซ้ำ</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">(S,G) กับ (*,G)</h3>
+    <ul class="points">
+      <li><strong>(S,G)</strong> อ่านว่า "S comma G" คือ traffic จาก source S ไป group G เส้นทางเดินจาก S ตรงมาหา receiver (shortest-path tree)</li>
+      <li><strong>(*,G)</strong> คือ traffic ไป group G <strong>จากใครก็ได้</strong> ต้องมีจุดนัดพบกลางที่เรียกว่า <strong>RP (Rendezvous Point)</strong> ให้ source กับ receiver มาเจอกัน โหมดนี้เรียกว่า ASM (Any-Source Multicast)</li>
+    </ul>
+    <p>SSM ใช้แค่ (S,G) ไม่ต้องมี RP เลย จึงง่ายกว่ามาก lab นี้เลือก SSM ด้วยเหตุผลนี้</p>
+  </section>
+
+  <!-- ============ 3. RPF + PIM ============ -->
+  <section id="rpf">
+    <span class="kicker"><span class="dot"></span>03 · พื้นฐานที่ 2</span>
+    <h2>RPF กฎกันลูป และ PIM ในหนึ่งย่อหน้า</h2>
+    <p class="lede">unicast ตัดสินว่า "จะส่ง<strong>ไป</strong>ทางไหน" จากปลายทาง แต่ multicast คิดกลับด้าน: router ดูว่าแพ็กเก็ต "<strong>มาจาก</strong>ทางไหน" แล้วถามตัวเองว่า "ถ้าจะส่ง unicast กลับไปหา source ฉันจะออกขาไหน" ถ้าแพ็กเก็ตเข้ามาทางขานั้นก็รับ ถ้าเข้ามาขาอื่นก็ทิ้ง กฎนี้เรียกว่า <strong>RPF (Reverse Path Forwarding)</strong> และเป็นหัวใจที่กันไม่ให้ multicast วนลูป</p>
+    <p>ใน MVPN คำถาม RPF จะกลายเป็น "PE ตัวไหนอยู่ต้นทางของ source" ซึ่งเราจะเห็นใน output ของ lab เป็นบรรทัด <span class="mono">Rpf Neighbor : 10.0.0.1</span> และ <span class="mono">Incoming Intf : mpls-if-73728</span></p>
+    <div class="callout">
+      <span class="tag">PIM (Protocol Independent Multicast)</span>
+      <p>PIM คือโปรโตคอลที่ router คุยกันเพื่อสร้างต้นไม้ multicast คำว่า "protocol independent" แปลว่ามันไม่มีตาราง routing ของตัวเอง แต่ยืม unicast routing table (จาก OSPF/IS-IS/BGP อะไรก็ได้) มาใช้ทำ RPF แล้วส่ง Join/Prune ทีละ hop ย้อนจาก receiver ขึ้นไปหา source (หรือ RP) แบบที่เห็นในแอนิเมชันของข้อ 02 ใน lab นี้ PIM ทำงานเฉพาะ<strong>ขอบ</strong> (ฝั่งลูกค้าใน VPRN) ส่วนแกนกลางไม่มี PIM เลย</p>
+    </div>
+  </section>
+
+  <!-- ============ 4. Provider tunnel ============ -->
+  <section id="tunnel">
+    <span class="kicker"><span class="dot"></span>04 · ปัญหาที่ตามมา</span>
+    <h2>ทำไม multicast ใน MPLS/VPN ต้องมี "provider tunnel"</h2>
+    <p class="lede">ใน L3VPN (VPRN) ปกติ แกนกลาง (P router) ไม่รู้จัก route ของลูกค้าเลย มันรู้แค่ label PE ห่อแพ็กเก็ตลูกค้าด้วย label แล้วส่งผ่านแกน วิธีนี้ทำงานดีมากกับ unicast แต่ multicast ต้อง<strong>ทำสำเนาระหว่างทาง</strong> ถ้าแกนไม่รู้จัก group ของลูกค้า แล้วจะทำสำเนาที่ไหน?</p>
+    <p>ทางที่ง่ายที่สุดคือให้ PE ต้นทางทำสำเนาเองแล้วยิง unicast ไปหา PE ปลายทางทุกตัว (ingress replication) แต่นั่นก็คือการกลับไปเป็น unicast 100 กล่องในข้อ 01 ทางที่ดีกว่าคือสร้าง<strong>ท่อ point-to-multipoint (P2MP) ในแกน</strong>ที่แกนรู้จักในระดับ label: แพ็กเก็ตเข้าที่ราก แตกกิ่งที่ P แล้วไปออกที่ PE ปลายทางหลายตัว ท่อนี้เรียกว่า <strong>provider tunnel</strong> หรือ <strong>PMSI</strong> (P-Multicast Service Interface)</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● แพ็กเก็ตลูกค้า</span>
+        <span class="chip cyan">● ท่อ P2MP</span>
+      </div>
+      <canvas id="c-pmsi" style="height:260px" role="img" aria-label="แอนิเมชัน VPN สามไซต์ แพ็กเก็ต multicast ของลูกค้าเข้าที่ PE1 ถูกห่อเข้าท่อ P2MP ท่อแตกเป็นสองกิ่งที่ P ไปออกที่ PE2 และ PE3 แล้วถูกแกะห่อส่งให้ลูกค้าแต่ละไซต์"></canvas>
+    </div>
+    <p class="caption">PE1 ห่อแพ็กเก็ตลูกค้าเข้าท่อ P2MP, P ทำสำเนาตาม label โดยไม่ต้องรู้จัก group ของลูกค้าเลย แล้ว PE2/PE3 แกะห่อส่งต่อให้ลูกค้า</p>
+  </section>
+
+  <!-- ============ 5. NG-MVPN ============ -->
+  <section id="mvpn">
+    <span class="kicker"><span class="dot"></span>05 · กลไกที่ 1</span>
+    <h2>NG-MVPN แบบภาษาคน</h2>
+    <p class="lede"><strong>NG-MVPN</strong> (RFC 6513/6514) คือชุดกติกาที่ PE ใช้ BGP คุยกันเรื่อง multicast ในแต่ละ VPN แทนการวิ่ง PIM ข้ามแกน ของหลัก ๆ มีสามอย่าง</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ชื่อ</th><th>เปรียบเทียบ</th><th>BGP route ที่เกี่ยวข้อง</th></tr></thead>
+        <tbody>
+          <tr><td data-label="ชื่อ"><strong>I-PMSI</strong> (Inclusive)</td><td data-label="เปรียบเทียบ">"ท่อรวม" ของ VPN นี้ ไปหา PE <strong>ทุกตัว</strong> ใน VPN</td><td data-label="BGP route">Intra-AS I-PMSI A-D route (route type 1)</td></tr>
+          <tr><td data-label="ชื่อ"><strong>S-PMSI</strong> (Selective)</td><td data-label="เปรียบเทียบ">"ท่อเฉพาะ" สำหรับ (S,G) ตัวใดตัวหนึ่ง ควรไปหาเฉพาะ PE ที่มีคนรับ</td><td data-label="BGP route">S-PMSI A-D route (type 3) และ Leaf A-D route (type 4)</td></tr>
+          <tr><td data-label="ชื่อ"><strong>C-multicast route</strong></td><td data-label="เปรียบเทียบ">"join ของลูกค้า" ที่ PE ปลายทางส่งกลับไปบอก PE ต้นทาง แทน PIM join</td><td data-label="BGP route">Source Tree Join (type 7)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● ท่อรวม I-PMSI</span>
+        <span class="chip cyan">● ท่อเฉพาะ S-PMSI</span>
+      </div>
+      <canvas id="c-mvpn" style="height:300px" role="img" aria-label="แอนิเมชันสี่จังหวะของ NG-MVPN: หนึ่ง ทุก PE ประกาศ Intra-AD และ PE ต้นทางแนบ PTA สอง receiver ส่ง IGMP และ PE ปลายทางส่ง Source-Join ไปหา PE ต้นทาง สาม traffic ไหลในท่อรวมไปหา PE ทุกตัว สี่ rate เกิน threshold จึงเกิดท่อเฉพาะพร้อม S-PMSI A-D และ Leaf A-D"></canvas>
+    </div>
+    <ol class="points" style="counter-reset:none">
+      <li><strong>①</strong> PE ทุกตัวประกาศ <strong>Intra-AS I-PMSI A-D</strong> ว่า "ฉันอยู่ใน VPN นี้" PE ต้นทางแนบ <strong>PMSI Tunnel Attribute (PTA)</strong> บอกว่า "ท่อรวมของฉันคือท่อชนิดนี้ เลขนี้"</li>
+      <li><strong>②</strong> receiver ส่ง IGMP ให้ PE ปลายทาง PE ปลายทางหาว่า source อยู่หลัง PE ไหน (RPF ผ่าน VPN route) แล้วส่ง <strong>C-multicast Source-Join</strong> ไปหา PE นั้น</li>
+      <li><strong>③</strong> PE ต้นทางเอา traffic (S,G) ใส่ท่อ I-PMSI</li>
+      <li><strong>④</strong> ถ้า traffic แรงเกิน threshold PE ต้นทางจะย้าย (S,G) นั้นไปท่อ S-PMSI โดยประกาศ <strong>S-PMSI A-D</strong> แล้ว PE ที่สนใจตอบด้วย <strong>Leaf A-D</strong></li>
+    </ol>
+  </section>
+
+  <!-- ============ 6. Options ============ -->
+  <section id="options">
+    <span class="kicker"><span class="dot"></span>06 · เลือกใช้อะไร</span>
+    <h2>ตัวเลือกของ provider tunnel บนแกน SR</h2>
+    <p class="lede">ถ้าแกนกลางเป็น SR-MPLS อยู่แล้ว ท่อ multicast ทำได้หลายแบบ แต่ละแบบแลกกับสิ่งที่ต้องเปิดเพิ่มในแกนต่างกัน</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ตัวเลือก</th><th>ทำงานอย่างไร</th><th>ต้องมีอะไรเพิ่มในแกน</th><th>หมายเหตุบน SR OS 26.7</th></tr></thead>
+        <tbody>
+          <tr>
+            <td data-label="ตัวเลือก">Ingress Replication</td>
+            <td data-label="ทำงานอย่างไร">PE ต้นทางทำสำเนาเอง ยิง unicast</td>
+            <td data-label="ต้องมีเพิ่ม">ไม่ต้อง</td>
+            <td data-label="หมายเหตุ">ง่ายสุด แต่ลิงก์ขาออกของ root รับภาระตามจำนวน PE และไม่มีใน provider-tunnel ของ VPRN NG-MVPN บน 26.7 (MD-CLI ref ระบุว่า inclusive เลือกได้แค่ bier, mldp, p2mp-sr, pim, rsvp)</td>
+          </tr>
+          <tr>
+            <td data-label="ตัวเลือก">mLDP</td>
+            <td data-label="ทำงานอย่างไร">ต้นไม้ P2MP สร้างจาก LDP</td>
+            <td data-label="ต้องมีเพิ่ม">LDP ทุก node</td>
+            <td data-label="หมายเหตุ">ถ้าแกนเป็น SR ล้วน ก็ต้องเปิด LDP กลับมาเพื่อ multicast อย่างเดียว</td>
+          </tr>
+          <tr>
+            <td data-label="ตัวเลือก">RSVP-TE P2MP</td>
+            <td data-label="ทำงานอย่างไร">ต้นไม้แบบ TE จาก RSVP</td>
+            <td data-label="ต้องมีเพิ่ม">RSVP ทุก node</td>
+            <td data-label="หมายเหตุ">state ต่อ LSP ในแกนเยอะ</td>
+          </tr>
+          <tr>
+            <td data-label="ตัวเลือก">BIER</td>
+            <td data-label="ทำงานอย่างไร">header บอก "bit ของ PE ปลายทาง" แกนไม่มี state ต่อ flow เลย</td>
+            <td data-label="ต้องมีเพิ่ม">BIER ใน IGP</td>
+            <td data-label="หมายเหตุ">ต้อง FP4/FP5 และไม่รองรับบน 7250 IXR (MRPG บทที่ 11)</td>
+          </tr>
+          <tr>
+            <td data-label="ตัวเลือก"><strong>Tree-SID</strong></td>
+            <td data-label="ทำงานอย่างไร">ต้นไม้ P2MP ที่ใช้ label จาก SR แต่ละ node บนต้นไม้มี replication segment</td>
+            <td data-label="ต้องมีเพิ่ม">ไม่ต้องมี LDP/RSVP แต่ต้องมี "คนวางต้นไม้" (PCE หรือคนเขียนมือ)</td>
+            <td data-label="หมายเหตุ">static ด้วย CLI หรือ NSP ผ่าน PCEP (MRPG 12.4.1, 12.4.2)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 7. Tree-SID concept ============ -->
+  <section id="treesid">
+    <span class="kicker"><span class="dot"></span>07 · กลไกที่ 2</span>
+    <h2>Tree-SID: policy ที่ราก กับ replication segment ทุก node</h2>
+    <p class="lede">Tree-SID มาจาก draft ของ IETF กลุ่ม SR P2MP policy (draft-voyer-pim-sr-p2mp-policy, draft-voyer-spring-sr-replication-policy ฯลฯ ดูรายชื่อเต็มใน MRPG 12) แก่นของมันคือการแยกของออกเป็นสองชั้น</p>
+    <div class="trio">
+      <div class="card">
+        <span class="num">01</span>
+        <h3>P2MP policy</h3>
+        <p>อยู่ที่ root เท่านั้น ระบุตัวด้วยคู่ <span class="mono">&lt;root-address, tree-id&gt;</span> บอกว่า "ต้นไม้นี้คือต้นไหน" แต่<strong>ไม่มีข้อมูล forwarding เลย</strong> (MRPG 12.1)</p>
+      </div>
+      <div class="card">
+        <span class="num">02</span>
+        <h3>Replication segment</h3>
+        <p>อยู่บน<strong>ทุก node</strong> ของต้นไม้ คือคำสั่ง forwarding จริง: "รับ label X แล้วทำสำเนาออกขา A ด้วย label Y และขา B ด้วย label Z" (MRPG 12.2)</p>
+      </div>
+      <div class="card">
+        <span class="num">03</span>
+        <h3>Key ร่วม</h3>
+        <p>replication segment แต่ละตัวถูกระบุด้วย <span class="mono">&lt;tree-id, root-address, instance-id&gt;</span> (MRPG 12.4.1) ทุก node ของต้นเดียวกันต้องใช้ค่าเดียวกัน</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>บทบาท</th><th>sid-action</th><th>ทำอะไร</th></tr></thead>
+        <tbody>
+          <tr><td data-label="บทบาท">Root</td><td class="mono" data-label="sid-action">push</td><td data-label="ทำอะไร">รับแพ็กเก็ตจาก VPRN ติด label ของกิ่งแรก แล้วส่งออก</td></tr>
+          <tr><td data-label="บทบาท">Transit</td><td class="mono" data-label="sid-action">swap</td><td data-label="ทำอะไร">รับ label ขาเข้า (incoming-sid) ทำสำเนาตามจำนวน downstream-nodes แล้วเปลี่ยน label เป็นของกิ่งถัดไป</td></tr>
+          <tr><td data-label="บทบาท">Leaf</td><td class="mono" data-label="sid-action">pop</td><td data-label="ทำอะไร">ถอด label แล้วส่งให้ VPRN ที่ผูกกับต้นไม้นี้</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">ค่าที่เลือกได้ของ <span class="mono">sid-action</span> คือ none/push/pop/swap ตาม MD-CLI ref (<span class="mono">replication-segment ... segment-routing-mpls sid-action</span>)</p>
+  </section>
+
+  <!-- ============ 8. Walkthrough ============ -->
+  <section id="walk">
+    <span class="kicker"><span class="dot"></span>08 · เห็นภาพรวม</span>
+    <h2>เดินตามแพ็กเก็ตทีละ hop บน topology ของ lab</h2>
+    <p class="lede">เอาทุกอย่างมารวมกันบน topology จริงของ lab: แพ็กเก็ต multicast <span class="mono">192.168.10.10 → 232.1.1.1</span> เข้าที่ root แล้วเดินบนต้นไม้ I-PMSI (tree-id 9000) ด้วย label ที่วางแผนไว้ <span class="mono">30002 / 30003 / 30004</span> กดปุ่มด้านล่างเพื่อเดินทีละขั้นเอง</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● label ของ Tree-SID</span>
+        <span class="chip cyan">● แพ็กเก็ต IP ของลูกค้า</span>
+      </div>
+      <canvas id="c-walk" style="height:320px" role="img" aria-label="แผนภาพ lab src, root, p, leaf1, leaf2, rcv1, rcv2 พร้อมแพ็กเก็ตที่เดินตามขั้นที่เลือก: root push label 30002, p swap และทำสำเนาเป็น 30003 ไป leaf1 และ 30004 ไป leaf2, leaf ทั้งสอง pop แล้วส่งเข้า VPRN"></canvas>
+    </div>
+    <div class="entries-control">
+      <div class="step-row">
+        <label for="walk-slider">ลองเดินแพ็กเก็ตทีละขั้นเอง</label>
+        <button type="button" class="step-btn" id="walk-prev" aria-label="ขั้นก่อนหน้า">‹</button>
+        <span class="step-value mono" id="walk-readout">ขั้น 1 / 5</span>
+        <button type="button" class="step-btn" id="walk-next" aria-label="ขั้นถัดไป">›</button>
+      </div>
+      <input type="range" class="range-slider" id="walk-slider" min="0" max="4" step="1" value="0" aria-describedby="walk-desc">
+      <p class="step-desc" id="walk-desc"></p>
+      <div class="entries-stats">
+        <div class="stat"><span class="stat-label">ตำแหน่ง</span><span class="stat-value mono" id="walk-node">—</span></div>
+        <div class="stat"><span class="stat-label">sid-action</span><span class="stat-value mono" id="walk-action">—</span></div>
+        <div class="stat"><span class="stat-label">label ขาเข้า</span><span class="stat-value mono" id="walk-in">—</span></div>
+        <div class="stat"><span class="stat-label">label ขาออก</span><span class="stat-value mono" id="walk-out">—</span></div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="tag">ข้อสำคัญ</span>
+      <p>label ของ replication segment คือ <strong>label ที่ node ปลายกิ่ง "รอฟัง" อยู่</strong> (incoming-sid ของ node ถัดไป) ฝั่ง upstream ต้องรู้ว่า downstream รอ label อะไร ถ้าไม่มี PCE แปลว่าเราต้องวาง<strong>แผน label</strong>เองให้ตรงกันทั้งต้นไม้ (ข้อ 12)</p>
+    </div>
+  </section>
+
+  <!-- ============ 9. tree-id / CP / instance ============ -->
+  <section id="instance">
+    <span class="kicker"><span class="dot"></span>09 · ลงลึกอีกนิด</span>
+    <h2>tree-id, candidate path และ instance</h2>
+    <ul class="points">
+      <li><strong>tree-id</strong>: เลขประจำต้นไม้ (ต่อ root) ช่วงที่ใช้ได้คือ <span class="mono">8193-16286</span> (MD-CLI ref, <span class="mono">p2mp-policy tree-id</span>) เลขนี้ถูกแนบไปใน BGP PTA ให้ leaf รู้ว่า "ท่อของ VPN นี้คือต้นไม้ <span class="mono">&lt;root, tree-id&gt;</span>" และ<strong>ไม่ได้สร้างอัตโนมัติ</strong> มาจากค่าที่เราใส่ใน policy (MRPG 12.4.1.2)</li>
+      <li><strong>candidate path (CP)</strong>: ต้นไม้หนึ่งต้นมีได้หลายทางเลือก ตัวที่ preference สูงสุดและ oper up จะถูกใช้งาน ทำหน้าที่เป็น tree redundancy (MRPG 12.1, 12.4.4.1)</li>
+      <li><strong>path instance</strong>: ใน CP หนึ่งมีได้หลาย instance (แต่ละตัวคือ P2MP LSP หนึ่งต้น) ใช้ทำ make-before-break ตอน re-optimize: สร้าง instance ใหม่ให้ครบทั้งต้นก่อน แล้วค่อยสลับ <span class="mono">active-instance</span> (MRPG 12.4.9)</li>
+    </ul>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip good">● instance ที่ active</span>
+        <span class="chip amber">● กำลังสร้าง</span>
+      </div>
+      <canvas id="c-instance" style="height:310px" role="img" aria-label="แอนิเมชันกล่องซ้อนสามชั้น P2MP policy ครอบ candidate path ครอบ instance 1 และ instance 2 แต่ละ instance โยงไปหา replication segment บนแต่ละ node เริ่มจาก instance 1 active จากนั้นสร้าง instance 2 ครบทุก node แล้วสลับ active-instance ไปที่ instance 2"></canvas>
+    </div>
+    <p class="caption">make-before-break: instance ใหม่ต้องมี replication segment ครบทุก node ก่อน แล้วจึงสลับ <span class="mono">active-instance</span> (ภาพนี้อธิบายแนวคิดตาม MRPG 12.4.9 ส่วนใน lab ใช้แค่ instance 1)</p>
+  </section>
+
+  <!-- ============ 10. Static vs NSP ============ -->
+  <section id="static">
+    <span class="kicker"><span class="dot"></span>10 · ทำไม static</span>
+    <h2>ทำไม "static" ในงานนี้ และ NSP จะเพิ่มอะไรให้</h2>
+    <p class="lede">SR OS สร้าง P2MP policy ได้สองแบบ (MRPG 12.4): <strong>static ด้วย CLI</strong> ที่เราเขียน policy ที่ root และ replication segment บนทุก node เอง หรือ <strong>PCE (NSP) ผ่าน PCEP</strong> ที่ root เรียนรู้ leaf จาก BGP MVPN (Leaf A-D ฯลฯ) แล้วรายงานไปให้ PCE จากนั้น PCE คำนวณต้นไม้จาก topology (BGP-LS) แล้ว<strong>ดาวน์โหลด</strong>ทั้ง policy และ replication segment ลงทุก node ให้เอง (MRPG 12.4.2)</p>
+    <p>ถ้าไม่มี NSP ก็เหลือทางเดียวคือ static และสิ่งที่หายไปเมื่อไม่มี PCE คือ:</p>
+    <ul class="points">
+      <li>ต้นไม้<strong>ไม่โตตาม receiver</strong>: BGP Leaf A-D ไม่ได้ทำให้เกิดกิ่งใหม่ static S-PMSI หนึ่งต้นใช้ร่วมกันทุก (S,G) ที่ข้าม threshold (MRPG 12.4.1.1)</li>
+      <li><strong>ไม่มี re-optimization อัตโนมัติ</strong>: ลิงก์ล่มแล้ว IGP หาทางใหม่ได้ แต่ต้นไม้ไม่ขยับ (เราจะเห็นในข้อ 16)</li>
+      <li>FRR, การ re-optimize (instance ใหม่ + MBB) และ CP สำรอง ต้องเขียนเองทั้งต้น</li>
+      <li>PCE ฝั่ง SR OS เอง เท่าที่เอกสารระบุไว้ ไม่ได้ทำ P2MP ให้ (ฝั่ง PCC พูด draft-dhs-spring-pce-sr-p2mp-policy-00 ตาม L3SG ส่วน standards) ในทางปฏิบัติจึงหมายถึง NSP</li>
+    </ul>
+  </section>
+
+  <!-- ============ 11. Lab topology ============ -->
+  <section id="lab">
+    <span class="kicker"><span class="dot"></span>11 · ทดสอบจริง</span>
+    <h2>Lab: root → P → leaf1/leaf2 บน SR-SIM 26.7.R2</h2>
+    <p class="lede">แกนกลางมีแค่ <strong>IS-IS L2 + SR-MPLS</strong> ไม่มี LDP ไม่มี RSVP และไม่มี PIM ในแกน P ทำหน้าที่ทั้ง transit ของต้นไม้และ BGP route reflector ส่วนลิงก์ leaf1-leaf2 มีไว้เป็นทาง IGP สำรองและใช้ทำ FRR</p>
+    <figure class="tree-figure topo-figure">
+      <svg viewBox="0 0 560 520" role="img" aria-label="แผนภาพ topology ของ lab: src 192.168.10.10 ต่อกับ root (10.0.0.1, Root PE) ต่อลงมาที่ p (10.0.0.2, transit และ route reflector) แล้วแตกไปที่ leaf1 (10.0.0.3) และ leaf2 (10.0.0.4) ซึ่งต่อกันเองด้วยลิงก์สำรองสำหรับ FRR และแต่ละ leaf มี receiver rcv1 กับ rcv2">
+        <!-- edges -->
+        <path class="tree-edge" d="M280,62 L280,112"/>
+        <path class="tree-edge" d="M280,168 L280,232"/>
+        <path class="tree-edge" d="M240,288 L170,356"/>
+        <path class="tree-edge" d="M320,288 L390,356"/>
+        <path class="tree-edge dashed" d="M250,384 L310,384"/>
+        <path class="tree-edge" d="M140,412 L140,462"/>
+        <path class="tree-edge" d="M420,412 L420,462"/>
+
+        <!-- flow dots: multicast flowing down the tree -->
+        <circle class="flow-dot" style="offset-path:path('M280,62 L280,112'); animation-duration:1.2s"/>
+        <circle class="flow-dot" style="offset-path:path('M280,168 L280,232'); animation-delay:.4s; animation-duration:1.4s"/>
+        <circle class="flow-dot" style="offset-path:path('M240,288 L170,356'); animation-delay:.9s; animation-duration:1.5s"/>
+        <circle class="flow-dot" style="offset-path:path('M320,288 L390,356'); animation-delay:.9s; animation-duration:1.5s"/>
+        <circle class="flow-dot" style="offset-path:path('M140,412 L140,462'); animation-delay:1.4s; animation-duration:1.2s"/>
+        <circle class="flow-dot" style="offset-path:path('M420,412 L420,462'); animation-delay:1.4s; animation-duration:1.2s"/>
+
+        <!-- edge labels -->
+        <text class="topo-edge-label" x="292" y="92" font-size="11.5">VPRN MCAST · 192.168.10.1/24</text>
+        <text class="topo-edge-label" x="292" y="205" font-size="11.5">10.12.0.0/30 · 1/1/c1/1</text>
+        <text class="topo-edge-label" x="196" y="318" font-size="11.5" text-anchor="end">10.23.0.0/30</text>
+        <text class="topo-edge-label" x="364" y="318" font-size="11.5">10.24.0.0/30</text>
+        <text class="topo-edge-label" x="280" y="430" font-size="11" text-anchor="middle">10.34.0.0/30</text>
+        <text class="topo-edge-label" x="280" y="445" font-size="11" text-anchor="middle">(FRR detour)</text>
+
+        <!-- src -->
+        <g class="tree-node">
+          <rect x="185" y="18" width="190" height="44" rx="9"/>
+          <text x="280" y="37" text-anchor="middle" font-size="14" font-weight="700">src (Linux, iperf2)</text>
+          <text x="280" y="54" text-anchor="middle" font-size="11.5" class="sub">192.168.10.10</text>
+        </g>
+        <!-- root -->
+        <g class="tree-node gm">
+          <rect x="160" y="112" width="240" height="56" rx="10"/>
+          <text x="280" y="135" text-anchor="middle" font-size="15" font-weight="700">root · Root PE (push)</text>
+          <text x="280" y="155" text-anchor="middle" font-size="11.5" class="sub">10.0.0.1 · node-SID 20001</text>
+        </g>
+        <!-- p -->
+        <g class="tree-node">
+          <rect x="160" y="232" width="240" height="56" rx="10"/>
+          <text x="280" y="255" text-anchor="middle" font-size="15" font-weight="700">p · transit (swap) + RR</text>
+          <text x="280" y="275" text-anchor="middle" font-size="11.5" class="sub">10.0.0.2 · node-SID 20002</text>
+        </g>
+        <!-- leaf1 / leaf2 -->
+        <g class="tree-node">
+          <rect x="30" y="356" width="220" height="56" rx="10"/>
+          <text x="140" y="379" text-anchor="middle" font-size="15" font-weight="700">leaf1 · Leaf PE (pop)</text>
+          <text x="140" y="399" text-anchor="middle" font-size="11.5" class="sub">10.0.0.3 · node-SID 20003</text>
+        </g>
+        <g class="tree-node">
+          <rect x="310" y="356" width="220" height="56" rx="10"/>
+          <text x="420" y="379" text-anchor="middle" font-size="15" font-weight="700">leaf2 · Leaf PE (pop)</text>
+          <text x="420" y="399" text-anchor="middle" font-size="11.5" class="sub">10.0.0.4 · node-SID 20004</text>
+        </g>
+        <!-- receivers -->
+        <g class="tree-node">
+          <rect x="50" y="462" width="180" height="44" rx="9"/>
+          <text x="140" y="481" text-anchor="middle" font-size="14" font-weight="700">rcv1</text>
+          <text x="140" y="498" text-anchor="middle" font-size="11.5" class="sub">192.168.21.10 (gw .1)</text>
+        </g>
+        <g class="tree-node">
+          <rect x="330" y="462" width="180" height="44" rx="9"/>
+          <text x="420" y="481" text-anchor="middle" font-size="14" font-weight="700">rcv2</text>
+          <text x="420" y="498" text-anchor="middle" font-size="11.5" class="sub">192.168.22.10 (gw .1)</text>
+        </g>
+      </svg>
+      <figcaption>จุดสีน้ำเงิน = multicast ที่ไหลลงตามต้นไม้ · เส้นประ = ลิงก์ leaf1-leaf2 ที่ใช้เป็นทาง IGP สำรองและทางเบี่ยงของ FRR · พอร์ตลูกค้าของทุก PE คือ <span class="mono">1/1/c4/1</span> · node-SID = SRGB 20000 + index</figcaption>
+    </figure>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>node</th><th>ชนิด</th><th>mgmt IP</th><th>บทบาท</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" data-label="node">root</td><td data-label="ชนิด">SR-SIM 26.7.R2 sr-1</td><td class="mono" data-label="mgmt IP">172.20.20.111</td><td data-label="บทบาท">Root PE</td></tr>
+          <tr><td class="mono" data-label="node">p</td><td data-label="ชนิด">SR-SIM 26.7.R2 sr-1</td><td class="mono" data-label="mgmt IP">172.20.20.112</td><td data-label="บทบาท">Transit + RR</td></tr>
+          <tr><td class="mono" data-label="node">leaf1</td><td data-label="ชนิด">SR-SIM 26.7.R2 sr-1</td><td class="mono" data-label="mgmt IP">172.20.20.113</td><td data-label="บทบาท">Leaf PE</td></tr>
+          <tr><td class="mono" data-label="node">leaf2</td><td data-label="ชนิด">SR-SIM 26.7.R2 sr-1</td><td class="mono" data-label="mgmt IP">172.20.20.114</td><td data-label="บทบาท">Leaf PE</td></tr>
+          <tr><td class="mono" data-label="node">src / rcv1 / rcv2</td><td data-label="ชนิด">Linux <span class="mono">local/trafgen:1.0</span></td><td class="mono" data-label="mgmt IP">.115 / .116 / .117</td><td data-label="บทบาท">sender / receivers</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 12. Label plan ============ -->
+  <section id="labels">
+    <span class="kicker"><span class="dot"></span>12 · วางแผนก่อนเขียน config</span>
+    <h2>แผน label: ขาออกของ upstream = ขาเข้าของ downstream</h2>
+    <p class="lede">เพราะไม่มี PCE คอยแจก label เราจึงตั้งสูตรให้อ่านง่าย: incoming SID บน node = <span class="mono">300&lt;tree&gt;&lt;node index&gt;</span> ทุก node จอง block <span class="mono">30000-30999</span> ไว้ให้ Tree-SID (<span class="mono">reserved-label-block "treeSID"</span>) แยกจาก SRGB <span class="mono">20000-20999</span> ที่ใช้กับ node-SID</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ต้นไม้</th><th>tree-id</th><th>root push ไป P</th><th>P รับ (incoming)</th><th>P ส่งให้ leaf1</th><th>P ส่งให้ leaf2</th><th>leaf1 รับ (pop)</th><th>leaf2 รับ (pop)</th></tr></thead>
+        <tbody>
+          <tr><td data-label="ต้นไม้">I-PMSI</td><td class="mono" data-label="tree-id">9000</td><td class="mono" data-label="root push">30002</td><td class="mono" data-label="P รับ">30002</td><td class="mono" data-label="P → leaf1">30003</td><td class="mono" data-label="P → leaf2">30004</td><td class="mono" data-label="leaf1 รับ">30003</td><td class="mono" data-label="leaf2 รับ">30004</td></tr>
+          <tr><td data-label="ต้นไม้">S-PMSI</td><td class="mono" data-label="tree-id">9001</td><td class="mono" data-label="root push">30012</td><td class="mono" data-label="P รับ">30012</td><td class="mono" data-label="P → leaf1">30013</td><td class="mono" data-label="P → leaf2">30014</td><td class="mono" data-label="leaf1 รับ">30013</td><td class="mono" data-label="leaf2 รับ">30014</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip good">● คู่ที่ตรงกัน</span>
+        <span class="chip amber">● แพ็กเก็ต</span>
+      </div>
+      <canvas id="c-labelplan" style="height:280px" role="img" aria-label="แอนิเมชันต้นไม้ I-PMSI ที่ไฮไลต์ทีละคู่ว่า label ขาออกของ upstream ต้องเท่ากับ label ขาเข้าของ downstream ได้แก่ 30002, 30003, 30004 จากนั้นจำลองว่าพิมพ์ผิดหนึ่งตัวที่กิ่ง leaf2 ทุก node ยังขึ้น Up แต่กิ่งนั้นไม่มี traffic"></canvas>
+    </div>
+    <p class="caption">ช่วงท้ายของแอนิเมชันเป็นกรณีสมมติที่พิมพ์ <span class="mono">replication-sid</span> ผิดหนึ่งตัว: ไม่มีอะไรเตือน ต้นไม้ยัง "Up" ทุกจุด แต่กิ่งนั้นไม่มี traffic (ดู gotcha ข้อ 2)</p>
+  </section>
+
+  <!-- ============ 13. Config ============ -->
+  <section id="config">
+    <span class="kicker"><span class="dot"></span>13 · Config</span>
+    <h2>Config ทีละ block (flat MD-CLI ตามลำดับที่ใส่จริง)</h2>
+    <p class="lede">ไฟล์เต็มของแต่ละ node อยู่คู่กับร่างบทความ (<span class="mono">configs/root.cfg</span>, <span class="mono">p.cfg</span>, <span class="mono">leaf1.cfg</span>, <span class="mono">leaf2.cfg</span> และ config เต็มหลัง <span class="mono">admin save</span>) ด้านล่างคือส่วนสำคัญ เรียงตามลำดับที่ใส่</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 1: port และ interface (ทุก node)</h3>
+    <p>SR-SIM sr-1 ใช้ connector จึงต้องสั่ง breakout ก่อน แล้วค่อยใช้ <span class="mono">1/1/cX/1</span></p>
+    <div class="code-block"><pre>/configure port 1/1/c1 admin-state enable
+/configure port 1/1/c1 connector breakout c1-100g
+/configure port 1/1/c1/1 admin-state enable
+/configure port 1/1/c1/1 ethernet mode network
+...
+/configure router "Base" interface "system" ipv4 primary address 10.0.0.1 prefix-length 32
+/configure router "Base" interface "to-p" port 1/1/c1/1
+/configure router "Base" interface "to-p" ipv4 primary address 10.12.0.1 prefix-length 30</pre></div>
+    <p class="caption">พอร์ตฝั่งลูกค้า (<span class="mono">1/1/c4/1</span>) เป็น <span class="mono">ethernet mode access</span>, <span class="mono">encap-type null</span> เพราะจะใช้เป็น SAP ใน VPRN</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 2: label และ IS-IS + SR (ทุก node)</h3>
+    <div class="code-block"><pre>/configure router "Base" mpls-labels sr-labels start 20000 end 20999
+/configure router "Base" mpls-labels reserved-label-block "treeSID" start-label 30000 end-label 30999
+/configure router "Base" isis 0 admin-state enable
+/configure router "Base" isis 0 level-capability 2
+/configure router "Base" isis 0 area-address 49.0001
+/configure router "Base" isis 0 advertise-router-capability as
+/configure router "Base" isis 0 traffic-engineering true
+/configure router "Base" isis 0 level 2 wide-metrics-only true
+/configure router "Base" isis 0 segment-routing admin-state enable
+/configure router "Base" isis 0 segment-routing prefix-sid-range global
+/configure router "Base" isis 0 interface "system" passive true
+/configure router "Base" isis 0 interface "system" ipv4-node-sid index 1
+/configure router "Base" isis 0 interface "to-p" interface-type point-to-point</pre></div>
+    <ul class="points">
+      <li><span class="mono">reserved-label-block</span> คือก้อน label ที่ Tree-SID จะใช้เป็น incoming SID (MRPG 12.4.3 ตัวอย่างแรก)</li>
+      <li>node-SID = SRGB start + index เช่น leaf2 index 4 = <span class="mono">20004</span> ซึ่งเราจะใช้อีกครั้งตอนทำ FRR</li>
+    </ul>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 3: เปิด Tree-SID (ทุก node)</h3>
+    <div class="code-block"><pre>/configure router "Base" p2mp-sr-tree admin-state enable
+/configure router "Base" p2mp-sr-tree reserved-label-block "treeSID"</pre></div>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 4: BGP (P เป็น RR)</h3>
+    <div class="code-block"><pre><span class="cm"># p</span>
+/configure router "Base" bgp group "CLIENTS" peer-as 65000
+/configure router "Base" bgp group "CLIENTS" cluster cluster-id 10.0.0.2
+/configure router "Base" bgp group "CLIENTS" family vpn-ipv4 true
+/configure router "Base" bgp group "CLIENTS" family mvpn-ipv4 true
+/configure router "Base" bgp neighbor "10.0.0.1" group "CLIENTS"
+...
+/configure router "Base" bgp min-route-advertisement 1
+<span class="cm"># root / leaf1 / leaf2</span>
+/configure router "Base" bgp group "RR" family vpn-ipv4 true
+/configure router "Base" bgp group "RR" family mvpn-ipv4 true
+/configure router "Base" bgp neighbor "10.0.0.2" group "RR"
+/configure router "Base" bgp min-route-advertisement 1</pre></div>
+    <p class="caption">family <span class="mono">mvpn-ipv4</span> คือที่วิ่งของ A-D route และ C-multicast route ทั้งหมด ส่วน <span class="mono">min-route-advertisement 1</span> อธิบายใน gotcha ข้อ 6 (ตอนแรกไม่ได้ใส่ และมันมีผลจริง)</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 5: P2MP policy (root เท่านั้น)</h3>
+    <div class="code-block"><pre>/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" admin-state enable
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" root-address 10.0.0.1
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" tree-id 9000
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" candidate-path "primary" admin-state enable
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" candidate-path "primary" preference 100
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" candidate-path "primary" path-instances 1 instance-id 1
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-MCAST" candidate-path "primary" active-instance 1</pre></div>
+    <p class="caption"><span class="mono">"SPMSI-MCAST"</span> เหมือนกันทุกบรรทัด ต่างแค่ <span class="mono">tree-id 9001</span> อ่านง่าย ๆ ว่า "ต้นไม้ (10.0.0.1, 9000) มีทางเลือกชื่อ primary ซึ่งตอนนี้ใช้ instance 1"</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 6: replication segment (ทุก node, ทุกต้นไม้)</h3>
+    <p>root (push):</p>
+    <div class="code-block"><pre>/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" admin-state enable
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" root-address 10.0.0.1
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" tree-id 9000
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" instance-id 1
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" segment-routing-mpls sid-action push
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" segment-routing-mpls downstream-nodes 1 admin-state enable
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" segment-routing-mpls downstream-nodes 1 next-hop-address 10.12.0.2
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-root" segment-routing-mpls downstream-nodes 1 label sid-list 1 replication-sid 30002</pre></div>
+    <p>p (swap + แตก 2 กิ่ง):</p>
+    <div class="code-block"><pre>... replication-segment "rs-IPMSI-p" root-address 10.0.0.1
+... replication-segment "rs-IPMSI-p" tree-id 9000
+... replication-segment "rs-IPMSI-p" instance-id 1
+... replication-segment "rs-IPMSI-p" segment-routing-mpls sid-action swap
+... replication-segment "rs-IPMSI-p" segment-routing-mpls incoming-sid 30002
+... downstream-nodes 1 next-hop-address 10.23.0.2      ... downstream-nodes 1 label sid-list 1 replication-sid 30003
+... downstream-nodes 2 next-hop-address 10.24.0.2      ... downstream-nodes 2 label sid-list 1 replication-sid 30004</pre></div>
+    <p>leaf1 (pop):</p>
+    <div class="code-block"><pre>... replication-segment "rs-IPMSI-leaf1" root-address 10.0.0.1
+... replication-segment "rs-IPMSI-leaf1" tree-id 9000
+... replication-segment "rs-IPMSI-leaf1" instance-id 1
+... replication-segment "rs-IPMSI-leaf1" segment-routing-mpls sid-action pop
+... replication-segment "rs-IPMSI-leaf1" segment-routing-mpls incoming-sid 30003</pre></div>
+    <ul class="points">
+      <li><span class="mono">root-address / tree-id / instance-id</span> ต้อง<strong>เหมือนกันทุก node</strong> ของต้นไม้เดียวกัน เพราะนี่คือ key ที่ผูกทุกอย่างเข้าด้วยกัน (MRPG 12.4.1)</li>
+      <li><span class="mono">next-hop-address</span> เป็น <strong>IP ของ interface เพื่อนบ้านที่ต่อตรง</strong> ใส่ loopback ไม่ได้ (MRPG 12.4.13)</li>
+      <li>leaf ไม่มี downstream-nodes เพราะ pop แล้วส่งเข้า VPRN</li>
+    </ul>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Block 7: VPRN + NG-MVPN</h3>
+    <p>root:</p>
+    <div class="code-block"><pre>/configure service vprn "MCAST" service-id 100
+/configure service vprn "MCAST" customer "1"
+/configure service vprn "MCAST" bgp-ipvpn mpls admin-state enable
+/configure service vprn "MCAST" bgp-ipvpn mpls route-distinguisher "10.0.0.1:100"
+/configure service vprn "MCAST" bgp-ipvpn mpls vrf-target community "target:65000:100"
+/configure service vprn "MCAST" bgp-ipvpn mpls auto-bind-tunnel resolution filter
+/configure service vprn "MCAST" bgp-ipvpn mpls auto-bind-tunnel resolution-filter sr-isis true
+/configure service vprn "MCAST" interface "to-src" ipv4 primary address 192.168.10.1 prefix-length 24
+/configure service vprn "MCAST" interface "to-src" sap 1/1/c4/1
+/configure service vprn "MCAST" pim interface "to-src"
+/configure service vprn "MCAST" mvpn auto-discovery type bgp
+/configure service vprn "MCAST" mvpn c-mcast-signaling bgp
+/configure service vprn "MCAST" mvpn vrf-target unicast true
+/configure service vprn "MCAST" mvpn provider-tunnel inclusive p2mp-sr admin-state enable
+/configure service vprn "MCAST" mvpn provider-tunnel inclusive p2mp-sr static-policy-mpls "IPMSI-MCAST"
+/configure service vprn "MCAST" mvpn provider-tunnel selective p2mp-sr admin-state enable
+/configure service vprn "MCAST" mvpn provider-tunnel selective p2mp-sr static-policy-mpls "SPMSI-MCAST"
+/configure service vprn "MCAST" mvpn provider-tunnel selective data-threshold group-prefix 232.2.0.0/16 threshold 1</pre></div>
+    <ul class="points">
+      <li><span class="mono">auto-discovery type bgp</span> + <span class="mono">c-mcast-signaling bgp</span> = NG-MVPN เต็มรูปแบบ (ไม่มี PIM ข้ามแกน)</li>
+      <li><span class="mono">static-policy-mpls</span> คือจุดที่ผูก VPRN เข้ากับ P2MP policy ที่เราสร้าง tree-id ใน BGP PTA มาจากตรงนี้ (MRPG 12.4.3, 12.4.1.2)</li>
+      <li><span class="mono">data-threshold 232.2.0.0/16 threshold 1</span> (kbps): group ในช่วงนี้ที่แรงเกิน 1 kbps จะย้ายไป S-PMSI ส่วน <span class="mono">232.1.1.1</span> อยู่นอกช่วง จึงอยู่บน I-PMSI ตลอด ทำให้ดูทั้งสองแบบได้พร้อมกัน</li>
+    </ul>
+    <p>leaf (ส่วนที่ต่างจาก root):</p>
+    <div class="code-block"><pre>/configure service vprn "MCAST" interface "to-rcv" ipv4 primary address 192.168.21.1 prefix-length 24
+/configure service vprn "MCAST" interface "to-rcv" sap 1/1/c4/1
+/configure service vprn "MCAST" pim interface "to-rcv"
+/configure service vprn "MCAST" igmp interface "to-rcv" version 3
+/configure service vprn "MCAST" mvpn auto-discovery type bgp
+/configure service vprn "MCAST" mvpn c-mcast-signaling bgp
+/configure service vprn "MCAST" mvpn vrf-target unicast true
+<span class="cm"># --- สิ่งที่ doc ไม่ได้แสดง แต่ lab พบว่าจำเป็น (ดู gotcha ข้อ 1)</span>
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-LOCAL" admin-state enable
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-LOCAL" root-address 10.0.0.3
+/configure router "Base" p2mp-sr-tree p2mp-policy "IPMSI-LOCAL" tree-id 9100
+/configure service vprn "MCAST" mvpn mdt-type receiver-only
+/configure service vprn "MCAST" mvpn provider-tunnel inclusive p2mp-sr admin-state enable
+/configure service vprn "MCAST" mvpn provider-tunnel inclusive p2mp-sr static-policy-mpls "IPMSI-LOCAL"</pre></div>
+    <p class="caption"><span class="mono">igmp ... version 3</span> เพราะ receiver ใช้ SSM</p>
+  </section>
+
+  <!-- ============ 14. Verify ============ -->
+  <section id="verify">
+    <span class="kicker"><span class="dot"></span>14 · Verify</span>
+    <h2>ตรวจทีละชั้น และวิธีอ่าน output</h2>
+    <p class="lede">ไล่จากล่างขึ้นบน: IGP/SR → BGP MVPN → ต้นไม้ → VPRN/PIM/IGMP → OAM ถ้าชั้นไหนไม่ผ่าน ชั้นบนก็ไม่มีทางผ่าน</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">ชั้นที่ 1: IS-IS / SR</h3>
+    <div class="code-block"><pre>A:admin@root# show router isis prefix-sids
+Prefix                            SID        Lvl/Typ    SRMS   AdvRtr
+10.0.0.1/32                       1          2/Int.      N     root
+10.0.0.2/32                       2          2/Int.      N     p
+10.0.0.3/32                       3          2/Int.      N     leaf1
+10.0.0.4/32                       4          2/Int.      N     leaf2
+...
+A:admin@root# show router mpls-labels summary
+Segment Routing Start Label    : 20000
+Segment Routing End Label      : 20999
+Reserved Label Block Name      :
+	treeSID</pre></div>
+    <p class="caption">ทุก node มี node-SID index ตามแผน (คอลัมน์ SID เป็น index), tunnel-table มี SR-ISIS ไปทุก system address และ block <span class="mono">treeSID</span> ถูกจองแล้ว</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">ชั้นที่ 2: BGP MVPN</h3>
+    <p>ที่ root ระหว่างมี receiver:</p>
+    <div class="code-block"><pre>Flag  RouteType                   OriginatorIP           ...
+i     Intra-Ad                    10.0.0.1      <span class="cm">&lt;- ของเราเอง</span>
+u*&gt;i  Source-Join                 -             <span class="cm">&lt;- C-multicast จาก leaf1 (Nexthop 10.0.0.3) ขอ (192.168.10.10, 232.1.1.1)</span>
+u*&gt;i  Intra-Ad                    10.0.0.3
+u*&gt;i  Intra-Ad                    10.0.0.4</pre></div>
+    <p>ที่ leaf1 ดู PTA ของ root:</p>
+    <div class="code-block"><pre>PMSI Tunnel Attributes :
+Tunnel-type    : TREE-SID-MPLS
+Flags          : Type: RNVE(0) BM: 0 U: 0 Leaf: not required
+Root-addr      : 10.0.0.1               Tree-Idx       : 9000</pre></div>
+    <p class="caption">root บอกทุกคนว่า "ท่อรวมของ VPN นี้คือ Tree-SID ต้น (10.0.0.1, 9000)" leaf จะเอาคู่นี้ไปหา replication segment ของตัวเองที่มี key เดียวกัน ส่วน Intra-AD ของ leaf ไม่มี PTA เลยเพราะ <span class="mono">mdt-type receiver-only</span></p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">ชั้นที่ 3: ต้นไม้</h3>
+    <div class="code-block"><pre>A:admin@root# show router p2mp-sr-tree p2mp-policy
+Name                                    TreeId NumPaths       Adm/Opr
+IPMSI-MCAST                             9000   1              Up/Up
+SPMSI-MCAST                             9001   1              Up/Up
+
+A:admin@root# show router p2mp-sr-tree tunnel
+Tunnel-Id                       TreeId    Type      Oper           Num Leaves
+73728                           9000      tx        inService      2</pre></div>
+    <div class="code-block"><pre>A:admin@p# show router p2mp-sr-tree replication-segment sr-mpls
+Name                                Origin InstId        NumNhIds  Adm/Opr
+RootAddr                                   TreeId        InSID     Action
+rs-IPMSI-p                          Static 1             2         Up/Up
+10.0.0.1                                   9000          30002     Swap
+rs-SPMSI-p                          Static 1             2         Up/Up
+10.0.0.1                                   9001          30012     Swap
+
+A:admin@p# show router p2mp-sr-tree replication-segment "rs-IPMSI-p" downstream-nodes
+1                                                                    Up/Up
+  10.23.0.2     30003
+2                                                                    Up/Up
+  10.24.0.2     30004</pre></div>
+    <p class="caption">P รับ 30002 แล้วแตกเป็นสองสำเนา: 30003 ไป 10.23.0.2 (leaf1) และ 30004 ไป 10.24.0.2 (leaf2) ตรงกับแผน label คำสั่ง <span class="mono">show router p2mp-sr-tree database replication-segment</span> จะบอกชื่อ interface ขาออกและ "Down-Reason" ด้วย ใช้ตอน debug ได้ดีมาก ฝั่ง leaf1 เห็น <span class="mono">rs-IPMSI-leaf1 ... 30003 Pop</span> และ tunnel ชนิด <span class="mono">rx</span></p>
+    <div class="callout">
+      <span class="tag">หมายเหตุเรื่อง show router p2mp-sr-tree label</span>
+      <p>คำสั่งนี้ list label ทั้ง block ทีละบรรทัด (1000 บรรทัดใน lab นี้) และบน SR-SIM คอลัมน์ InUse แสดง <span class="mono">No</span> ทุกตัวแม้ต้นไม้จะทำงานอยู่ จึงไม่ได้ใช้คำสั่งนี้เป็นหลักฐาน</p>
+    </div>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">ชั้นที่ 4: VPRN / PIM / IGMP</h3>
+    <div class="code-block"><pre><span class="cm"># root</span>
+ipmsi              : p2mp-sr-mpls IPMSI-MCAST
+i-pmsi Tunnel Name : mpls-if-73728
+spmsi              : p2mp-sr-mpls SPMSI-MCAST
+data-threshold     : 232.2.0.0/16 --&gt; 1 kbps
+
+Interface                        Originator Address   Adm  Opr  Transport Type
+mpls-if-73728                    10.0.0.1             Up   Up   Tx-IPMSI</pre></div>
+    <div class="code-block"><pre><span class="cm"># leaf1</span>
+(192.168.10.10,232.1.1.1)                                 UpTime: ...
+    Fwd List  : to-rcv
+
+Group Address      : 232.1.1.1
+Source Address     : 192.168.10.10
+Rpf Neighbor       : 10.0.0.1
+Incoming Intf      : mpls-if-73728
+Outgoing Intf List : to-rcv</pre></div>
+    <p class="caption">IGMPv3 join จาก rcv1 สร้าง (S,G) บน leaf1, RPF ชี้ไปที่ root (10.0.0.1) และขาเข้าคือ tunnel interface ของต้นไม้ 9000 (<span class="mono">Rx-IPMSI</span>) นี่คือจุดที่ "Tree-SID" กับ "MVPN" ผูกกันสำเร็จ</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">ชั้นที่ 5: OAM</h3>
+    <div class="code-block"><pre>A:root# /oam p2mp-lsp-ping p2mp-policy root-address 10.0.0.1 root-tree-id 9000 instance-id 1 detail
+P2MP Policy - Root Address 10.0.0.1, Root Tree ID 9000, Instance ID 1: | 88 bytes MPLS payload
+From             RTT                  Return Code
+10.0.0.3         =3.83ms              EgressRtr(3)
+10.0.0.4         =3.92ms              EgressRtr(3)
+Total Leafs responded = 2</pre></div>
+    <ul class="points">
+      <li>คำสั่งนี้มี<strong>ใน classic CLI เท่านั้น</strong> (MRPG 12.6 เขียนไว้ว่า "only applies for the classic CLI") ใน MD-CLI 26.7.R2 พิมพ์ <span class="mono">oam p2mp-lsp-ping</span> จะได้ <span class="mono">Unknown element</span> ต้องใช้ <span class="mono">//oam ...</span> เพื่อกระโดดไป classic ชั่วคราว</li>
+      <li>keyword ที่ใช้ได้จริงคือ <span class="mono">root-tree-id</span> (ตัวอย่างใน doc มีบรรทัดที่เขียน <span class="mono">tree-id</span> ซึ่ง 26.7.R2 ตอบ <span class="mono">Invalid parameter</span>)</li>
+      <li>ping ต้น S-PMSI (9001) <strong>ตอนยังไม่มี S-PMSI ใช้งาน</strong> ไม่มี leaf ตอบเลย และตอนที่ S-PMSI ทำงานอยู่ ตอบแค่ leaf1 ข้อสังเกตจาก lab: leaf ตอบเฉพาะต้นไม้ที่ถูกผูกเข้ากับ VPRN แล้ว (leaf2 ไม่มี receiver ของ 232.2.2.2 จึงไม่ผูก)</li>
+    </ul>
+  </section>
+
+  <!-- ============ 15. Traffic tests 1-2 ============ -->
+  <section id="traffic">
+    <span class="kicker"><span class="dot"></span>15 · ทดสอบ traffic</span>
+    <h2>ส่ง traffic จริง: I-PMSI และ S-PMSI</h2>
+    <p class="lede">ผู้ส่ง: <span class="mono">iperf -c &lt;group&gt; -u -b 400k -l 1000 -T 32 -B 192.168.10.10</span> = 50 pps (SR-SIM จำกัดราว 1000 pps ต่อพอร์ต จึงใช้ rate ต่ำ) ผู้รับ: <span class="mono">iperf -s -u -B &lt;group&gt; -H 192.168.10.10</span> (SSM join) และใช้ tcpdump นับแพ็กเก็ตที่ <span class="mono">eth1</span></p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Test 1: I-PMSI, receiver ทั้งสองฝั่ง</h3>
+    <div class="code-block"><pre>### src
+[  1] Sent 1004 datagrams
+### rcv1
+[  1] 0.0000-20.0176 sec   979 KBytes   401 Kbits/sec   0.460 ms 0/1003 (0%)
+### rcv2
+[  1] 0.0000-20.0174 sec   979 KBytes   401 Kbits/sec   0.483 ms 0/1003 (0%)</pre></div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● 232.1.1.1 · 50 pps</span>
+      </div>
+      <canvas id="c-counter" style="height:230px" role="img" aria-label="แอนิเมชันตัวนับแพ็กเก็ตสามช่อง src, rcv1, rcv2 วิ่งขึ้นพร้อมกันตลอด 20 วินาที จบที่ src ส่ง 1004 datagrams และ rcv1, rcv2 รับครบ 0 จาก 1003 สูญหาย"></canvas>
+    </div>
+    <p class="caption">ทั้งสองฝั่งได้ครบ 0% loss และ tcpdump ที่ rcv ยืนยันว่าเป็นแพ็กเก็ต <span class="mono">192.168.10.10 &gt; 232.1.1.1</span> ไปที่ MAC <span class="mono">01:00:5e:01:01:01</span> จริง (ตัวนับในภาพเร่งเวลา 20 วินาทีให้สั้นลง)</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Test 2: S-PMSI และ leaf ที่ไม่มีคนรับ</h3>
+    <p>ส่ง <span class="mono">232.2.2.2</span> (อยู่ในช่วง data-threshold) โดยให้ <strong>rcv1 join อย่างเดียว</strong> ส่วน rcv2 ไม่ join ที่ root เห็น:</p>
+    <div class="code-block"><pre>i     Spmsi-Ad                    10.0.0.1     ... 192.168.10.10 / 232.2.2.2
+u*&gt;i  Leaf-Ad (Spmsi-Ad)          10.0.0.3     ... 192.168.10.10 / 232.2.2.2
+...
+Tunnel-type    : TREE-SID-MPLS
+Flags          : Type: RNVE(0) BM: 0 U: 0 Leaf: required
+Root-addr      : 10.0.0.1               Tree-Idx       : 9001</pre></div>
+    <p>และ (S,G) ของ 232.2.2.2 มี <span class="mono">Outgoing Intf List : mpls-if-73728 (mpls-if-7373x)</span> คือย้ายไปท่อ S-PMSI แล้ว ส่วนที่ leaf1 เห็น <span class="mono">Incoming SPMSI Intf: mpls-if-...</span> และ <span class="mono">Curr Fwding Rate : ~411 kbps</span> สรุปคือ S-PMSI A-D ขอ <span class="mono">Leaf: required</span> และมีแค่ leaf1 ตอบ Leaf A-D ตามที่คาด</p>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● I-PMSI 232.1.1.1</span>
+        <span class="chip cyan">● S-PMSI 232.2.2.2</span>
+      </div>
+      <canvas id="c-spmsi" style="height:320px" role="img" aria-label="แอนิเมชันสองต้นไม้ซ้อนกัน ต้น I-PMSI ส่งถึง rcv1 และ rcv2 ต้น S-PMSI ยังแตกกิ่งไป leaf2 ด้วยแม้ไม่มีคนรับ leaf2 จึง pop แล้วทิ้ง"></canvas>
+    </div>
+    <p class="caption">static tree ไม่ตัดกิ่งเอง: ต้น 9001 ถูกเขียนไว้แล้วว่าแตกไปทั้ง leaf1 และ leaf2 ไม่ว่าใครจะตอบ Leaf A-D หรือไม่</p>
+    <p><strong>แต่</strong>นี่คือ static tree หลักฐานจาก counter ที่ P: ในเวลา 18 วินาที P ส่ง MPLS ออกทั้ง <span class="mono">to-leaf1</span> และ <span class="mono">to-leaf2</span> เพิ่มขึ้นเท่ากัน <strong>1,737 แพ็กเก็ต</strong> (ราว 96 pps = สองสตรีม 50 pps) ทั้งที่ฝั่ง leaf2 ไม่มีคนรับ 232.2.2.2 เลย leaf2 แค่ pop แล้วทิ้ง (ไม่มี state ของ 232.2.2.2) และ rcv2 นับได้ 0</p>
+    <div class="callout">
+      <span class="tag">สรุปข้อนี้ให้ชัด</span>
+      <p><strong>ข้อดีของ S-PMSI ที่ "ส่งเฉพาะ PE ที่สนใจ" หายไปเมื่อใช้ static tree</strong> สิ่งที่ยังได้คือการแยก (S,G) ใหญ่ออกจากท่อรวม (เช่นแยก QoS, แยก FRR) เท่านั้น ถ้าต้องการให้ต้นไม้โตตามผู้รับจริงต้องมี PCE (MRPG 12.4.2.1)</p>
+    </div>
+  </section>
+
+  <!-- ============ 16. Failure tests 3-4 ============ -->
+  <section id="failure">
+    <span class="kicker"><span class="dot"></span>16 · ลองให้พัง</span>
+    <h2>ตัดลิงก์ P-leaf2: ไม่มี FRR เทียบกับมี FRR</h2>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Test 3: ไม่มี FRR</h3>
+    <p class="lede">disable <span class="mono">1/1/c3/1</span> ที่ P ประมาณ 25 วินาทีแล้วเปิดคืน ระหว่างนั้นจับแพ็กเก็ตต่อเนื่องที่ rcv1/rcv2 แล้วหาช่องว่างที่เกิน 100 ms</p>
+    <div class="code-block"><pre>## rcv2 (behind leaf2)
+GAP 26.061 s  from 03:53:12 to 03:53:38
+## rcv1 (behind leaf1)
+packets=2305 ... avg pps=50.0          <span class="cm">&lt;- ไม่มี gap</span></pre></div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● multicast</span>
+        <span class="chip cyan">● ทาง IGP ใหม่</span>
+      </div>
+      <canvas id="c-fail" style="height:320px" role="img" aria-label="แอนิเมชันลิงก์ P ไป leaf2 ขาด IGP หาทางใหม่ผ่าน leaf1 ทันที แต่แพ็กเก็ต multicast ยังวิ่งไปชนลิงก์ที่ขาดแล้วหายไป นาฬิกาที่ rcv2 นับเวลาดับไปถึง 26 วินาที ขณะที่ root ยังแสดง Up/Up"></canvas>
+    </div>
+    <p class="caption">IGP หายใจได้ แต่ต้นไม้ไม่: unicast ไป leaf2 อ้อมผ่าน leaf1 ได้ทันที แต่ replication segment ที่ P ยังชี้ลิงก์ที่ขาด (เวลาในภาพถูกเร่งให้สั้นลง ตัวเลขที่แสดงคือค่าจริงจากการวัด)</p>
+    <p>ระหว่างลิงก์ล่ม:</p>
+    <ul class="points">
+      <li>IS-IS หาทางใหม่ทันที: root เห็น <span class="mono">10.0.0.4/32</span> ผ่าน P ด้วย metric 30 (อ้อมผ่าน leaf1) unicast VPN ไป leaf2 ยังใช้ได้</li>
+      <li>แต่ต้นไม้ไม่ขยับ: P แสดง <span class="mono">downstream-nodes 2 ... Up/Down</span></li>
+      <li>และที่ root <strong>ทุกอย่างยังดูปกติ</strong>: policy <span class="mono">Up/Up</span>, tunnel <span class="mono">inService</span>, <span class="mono">Num Leaves 2</span> สอดคล้องกับ MRPG 12.4.4.2 ที่ CP จะ down เฉพาะเมื่อ replication segment <strong>ที่ root</strong> down</li>
+      <li><span class="mono">p2mp-lsp-ping</span> ตอบแค่ <span class="mono">10.0.0.3</span> นี่จึงเป็นเครื่องมือหลักในการหาว่า leaf ไหนหลุดจากต้นไม้</li>
+    </ul>
+    <p>ผลคือ leaf2 ดับ<strong>ตลอดเวลาที่ลิงก์ล่ม</strong> และพอเปิดลิงก์คืน traffic ก็กลับมาทันที</p>
+
+    <h3 style="font-size:1.05rem;margin:1.8rem 0 .6rem">Test 4: FRR แบบ link protection</h3>
+    <p>FRR ของ Tree-SID รองรับเฉพาะ facility bypass แบบ link protection ไม่มี node protection (MRPG 12.4.5) วิธีที่ใช้ใน lab: ที่ P เพิ่ม "ขาสำรอง" ให้กิ่ง P-leaf2 โดยใช้ SID list ของ unicast SR พาอ้อมผ่าน leaf1 (MRPG 12.5 บอกว่า protection next-hop ใช้ SID list ได้)</p>
+    <div class="code-block"><pre><span class="cm"># downstream-nodes 3 = ขาสำรอง: node-SID leaf1, node-SID leaf2, replication SID ของ leaf2</span>
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-p" segment-routing-mpls downstream-nodes 3 admin-state enable
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-p" segment-routing-mpls downstream-nodes 3 label sid-list 1 replication-sid 20003
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-p" segment-routing-mpls downstream-nodes 3 label sid-list 2 replication-sid 20004
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-p" segment-routing-mpls downstream-nodes 3 label sid-list 3 replication-sid 30004
+<span class="cm"># ผูกให้ downstream 2 (กิ่งหลักไป leaf2) ใช้ 3 เป็นตัวสำรอง</span>
+/configure router "Base" p2mp-sr-tree replication-segment "rs-IPMSI-p" segment-routing-mpls downstream-nodes 2 protect-nexthop-id 3</pre></div>
+    <div class="code-block"><pre>A:admin@p# show router p2mp-sr-tree replication-segment "rs-IPMSI-p" downstream-nodes
+2                                                                    Up/Up
+  10.24.0.2     30004
+  3               --                 <span class="cm">&lt;- ProtectNhId = 3</span>
+3                                                                    Up/Up
+  0.0.0.0       20003,20004,30004    <span class="cm">&lt;- ไม่ได้ใส่ next-hop-address, ทางออกหาจาก SID ตัวแรก (MRPG 12.5)</span></pre></div>
+    <p class="caption">ทำไมไม่ใช้ node-SID ของ leaf2 ตัวเดียว: ตอนลิงก์เพิ่งขาด เส้นทาง IGP ไป 20004 ของ P ยังชี้ลิงก์ที่ขาดอยู่ จึงต้องบังคับให้ไป leaf1 ก่อนด้วย 20003</p>
+    <div class="code-block"><pre>## rcv2 (behind leaf2, protected branch)
+packets=2406  first=03:51:31 last=03:52:19  span=48.1 s  avg pps=50.0     <span class="cm">&lt;- ไม่มีบรรทัด GAP เลย</span>
+## rcv1
+packets=2507  ...  avg pps=50.0</pre></div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● multicast</span>
+        <span class="chip cyan">● ทางเบี่ยง FRR</span>
+      </div>
+      <canvas id="c-frr" style="height:320px" role="img" aria-label="แอนิเมชันลิงก์ P ไป leaf2 ขาด แต่ P สลับไปใช้ทางเบี่ยงผ่าน leaf1 ทันที แพ็กเก็ตออกจาก P พร้อม label สามชั้น 20003, 20004, 30004 ตัวนับที่ leaf1 ขาออกไป leaf2 เพิ่มขึ้นจาก 0 เป็น 1,913 และ rcv2 ไม่สะดุด"></canvas>
+    </div>
+    <p class="caption">P ใส่ label สามชั้น <span class="mono">20003 · 20004 · 30004</span> แล้วส่งไปทาง leaf1 ชั้น node-SID ใช้นำทางและหลุดออกไประหว่างทางตามกลไก SR ปกติ จนเหลือ 30004 ให้ leaf2 pop (ภาพไม่ได้ระบุว่าแต่ละช่วงเหลือกี่ชั้น เพราะดักแพ็กเก็ตบนพอร์ต SR-SIM ไม่ได้ สิ่งที่ยืนยันได้คือ counter)</p>
+    <p>ไม่มีช่องว่างเกิน 100 ms ทั้งตอนสลับไปขาสำรองและตอนสลับกลับ ระหว่างลิงก์ล่ม leaf1 ส่ง MPLS ออก <span class="mono">to-leaf2</span> จาก 0 เป็น <strong>1,913 แพ็กเก็ต</strong> ยืนยันว่า traffic อ้อมผ่าน leaf1 จริง และ <span class="mono">p2mp-lsp-ping</span> ตอบครบทั้งสอง leaf</p>
+    <div class="callout">
+      <span class="tag">อ่านตัวเลขนี้ให้ถูก</span>
+      <p>ความละเอียดของการวัดคือ 20 ms ต่อแพ็กเก็ต (50 pps) และ failure ที่ใช้คือ admin disable พอร์ต ซึ่งเป็นกรณีที่ตรวจจับง่ายที่สุด ตัวเลขนี้จึงพูดได้แค่ว่า "ไม่เห็นช่องว่างเกิน 100 ms บน SR-SIM" ไม่ใช่ตัวเลข convergence ของ hardware</p>
+    </div>
+  </section>
+
+  <!-- ============ 17. Gotchas ============ -->
+  <section id="gotchas">
+    <span class="kicker"><span class="dot"></span>17 · ข้อควรระวัง</span>
+    <h2>Gotchas ที่เจอจริงใน lab</h2>
+
+    <div class="callout">
+      <span class="tag">1 · Leaf ต้องมี "provider tunnel หลอก" ถึงจะรับได้</span>
+      <p>ตัวอย่างใน MRPG 12.4.3 แสดง MVPN เฉพาะฝั่ง root ใน lab ลองไล่ดังนี้:</p>
+      <ul class="points">
+        <li>leaf ที่ไม่มี <span class="mono">provider-tunnel</span> เลย: ได้ IGMP join, ได้ Intra-AD ของ root (PTA ถูกต้อง) แต่ PIM ค้าง <span class="mono">Resolved By : unresolved</span> ไม่มี tunnel interface และไม่ส่ง Source-Join</li>
+        <li>เพิ่ม <span class="mono">mdt-type receiver-only</span> อย่างเดียว: ยังเหมือนเดิม</li>
+        <li>ใส่ <span class="mono">inclusive p2mp-sr admin-state enable</span> โดยไม่มี policy: commit ไม่ผ่าน <span class="mono">MGMT_CORE #3001 ... inclusive p2mp-sr static-policy-mpls or static-policy-srv6 is missing</span></li>
+        <li><strong>ทางที่ใช้ได้</strong>: สร้าง <span class="mono">p2mp-policy "IPMSI-LOCAL"</span> (root = ตัวเอง, tree-id 9100, ไม่มี CP) แล้วชี้ <span class="mono">static-policy-mpls</span> ไปที่มัน พร้อม <span class="mono">mdt-type receiver-only</span> ทันทีที่ commit leaf ได้ <span class="mono">Rx-IPMSI</span> จาก 10.0.0.1 และ RPF resolve</li>
+      </ul>
+      <p><strong>ข้อควรระวัง:</strong> เรื่อง sender-only/receiver-only ใน L3SG 3.4.7.7 ระบุว่ารองรับกับ provider tunnel แบบ RSVP-TE และ LDP ไม่ได้พูดถึง p2mp-sr ผลที่เห็นนี้จึงเป็นพฤติกรรมของ 26.7.R2 บน SR-SIM ที่<strong>ยังไม่มีเอกสารยืนยัน</strong> ควรถาม Nokia ก่อนใช้งานจริง (นอกจากนี้ option <span class="mono">p2mp-policy-mpls</span> ที่ MD-CLI ref มีใน <span class="mono">inclusive p2mp-sr</span> ไม่มีให้ใช้บน image 26.7.R2 ที่ทดสอบ ตอบ <span class="mono">Unknown element</span>)</p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">2 · แผน label คือทุกอย่าง</span>
+      <p>ไม่มีอะไรเตือนถ้า <span class="mono">replication-sid</span> ของ upstream ไม่ตรงกับ <span class="mono">incoming-sid</span> ของ downstream ต้นไม้จะ "Up" ทุกจุด แต่กิ่งนั้นไม่มี traffic ทางป้องกัน: ใช้สูตร label ที่อ่านแล้วรู้ว่าเป็นของต้นไหน node ไหน เก็บตาราง label คู่กับ config และรัน <span class="mono">p2mp-lsp-ping</span> หลังแก้ทุกครั้ง</p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">3 · next-hop ต้องต่อตรง</span>
+      <p><span class="mono">next-hop-address</span> ของ downstream ต้องเป็น interface ของเพื่อนบ้านที่ต่อตรง (ถ้าไม่ใช่ unnumbered) ใส่ loopback ไม่ได้ (MRPG 12.4.13) ถ้าจะข้าม node ที่ไม่รองรับ replication ให้ใช้ SID list (MRPG 12.5) และเมื่อใช้ SID list หลายตัว<strong>ห้ามใส่ next-hop-address</strong> ไม่งั้น commit ไม่ผ่านด้วย <span class="mono">TREE_SID #3016 ... can configure either next-hop address/name or Sid-List</span></p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">4 · ไม่มี re-optimization อัตโนมัติ และ root มองไม่เห็นปัญหากลางทาง</span>
+      <p>Test 3 แสดงชัดว่า IGP หายใจได้แต่ต้นไม้ไม่ และ root ยัง <span class="mono">Up/Up</span> ถ้าจะ re-route ต้นไม้ต้องสร้าง instance ใหม่ครบทั้งต้นแล้วสลับ <span class="mono">active-instance</span> (MRPG 12.4.9) ต้องมี monitoring ที่ไม่พึ่งสถานะที่ root เช่นรัน <span class="mono">p2mp-lsp-ping</span> เป็นระยะ หรือดู <span class="mono">downstream-nodes</span> บนทุก transit</p>
+    </div>
+
+    <div class="callout">
+      <span class="tag">5 · FRR: link protection เท่านั้น และ protect next-hop ที่ไม่ได้ผูกจะกลายเป็นกิ่งจริง</span>
+      <ul class="points">
+        <li>รองรับเฉพาะ facility bypass แบบ link protection ไม่มี node protection (MRPG 12.4.5) และถ้า node หนึ่งมี replication segment ที่พึ่ง protection tunnel เยอะ เวลา FRR อาจเกิน 50 ms (MRPG 12.4.13)</li>
+        <li>ตอนกลับสู่ทางหลัก doc บอกว่าอาจมี outage สั้น ๆ และจะกลับเมื่อ ARP ของ next-hop หลักพร้อม (MRPG 12.4.6) ใน lab ไม่เห็นช่องว่างเกิน 100 ms</li>
+        <li><strong>gotcha ที่เจอจริง:</strong> ถ้า <span class="mono">downstream-nodes 3</span> ยังอยู่แต่ลบ <span class="mono">protect-nexthop-id 3</span> ออก มันจะกลายเป็นกิ่งปกติทันที leaf2 ได้ทุกแพ็กเก็ตสองครั้ง (rcv2 วัดได้ 100 pps จากสตรีม 50 pps, IP id ซ้ำ, TTL ต่างกัน 1 เพราะสำเนาที่อ้อมผ่าน leaf1 ผ่านมากกว่าหนึ่ง hop) ตอนถอด FRR จึงต้องลบหรือ disable downstream ตัวสำรองด้วย</li>
+        <li>ต้องทำ FRR แยกต่อกิ่งต่อต้นไม้ ใน lab ทำเฉพาะกิ่ง P-leaf2 ของ I-PMSI ส่วนต้น S-PMSI ยังไม่มีการป้องกัน</li>
+      </ul>
+      <div class="code-block" style="margin-bottom:0"><pre>packets=922  first=03:52:46 last=03:52:55  span=9.2 s  avg pps=100.2
+03:52:58.151324 IP (tos 0x0, ttl 29, id 14338, ...) 192.168.10.10.40793 &gt; 232.1.1.1.5001: UDP, length 1000
+03:52:58.153375 IP (tos 0x0, ttl 28, id 14338, ...) 192.168.10.10.40793 &gt; 232.1.1.1.5001: UDP, length 1000</pre></div>
+    </div>
+
+    <div class="callout">
+      <span class="tag">6 · S-PMSI สลับแล้วหายไป 20 กว่าวินาที ถ้า BGP MRAI เป็นค่า default</span>
+      <p>ตอนแรกไม่ได้ตั้ง <span class="mono">min-route-advertisement</span> (default 30 วินาที, อ่านค่าจาก running config ด้วย <span class="mono">defaults</span>) ผลที่ rcv1 (นับทีละ 3 วินาที ปกติได้ ~103): สตรีม 232.2.2.2 ช่วงแรกได้ครบ มีสะดุดหนึ่งช่วง (14 แพ็กเก็ต) แล้วกลับมา จากนั้น<strong>เงียบไปราว 22 วินาที</strong> (03:38:09 ถึง 03:38:31) ก่อนกลับมาเต็มบน S-PMSI</p>
+    </div>
+    <div class="stage">
+      <div class="stage-label">
+        <span class="chip amber">● MRAI 30 s (default)</span>
+        <span class="chip good">● MRAI 1 s</span>
+      </div>
+      <canvas id="c-mrai" style="height:300px" role="img" aria-label="กราฟแท่งจำนวนแพ็กเก็ตที่ rcv1 ได้รับทุกสามวินาทีหลังเริ่มสตรีม 232.2.2.2 แถวบน MRAI 30 วินาที: 103, 14, 104 แล้วเป็นศูนย์เจ็ดช่วงติดกัน ก่อนกลับมา 61 และราว 103 แถวล่าง MRAI 1 วินาที: ได้ 101 ถึง 104 ทุกช่วงไม่มีช่วงหาย"></canvas>
+    </div>
+    <p class="caption">แต่ละแท่ง = จำนวนแพ็กเก็ตที่ rcv1 ได้ใน 3 วินาที (15 ช่วงแรกหลังเริ่มสตรีม) ค่าจาก output จริงของทั้งสองรอบ ในรอบแรกสคริปต์นับพิมพ์ "1" แทนค่า 0 (บันทึกไว้ในหัวไฟล์) กราฟนี้แสดงเป็น 0 ตามความหมายจริง</p>
+    <p>คำอธิบายที่สอดคล้องกับผล: root ย้าย (S,G) ไปต้น 9001 หลัง data-delay-interval (3 วินาที) แต่ leaf1 ยังไม่ได้รับ S-PMSI A-D (ต้องผ่าน RR และติด MRAI) จึงยังไม่ผูกต้น 9001 เข้ากับ VPRN แพ็กเก็ตที่มาทางต้น 9001 จึงถูกทิ้ง หลังตั้ง <span class="mono">min-route-advertisement 1</span> ทุก node แล้วทดสอบซ้ำ ไม่มีช่วงหายเลย (ทุกช่วง 3 วินาทีนับได้ 101-104 แพ็กเก็ต) และ S-PMSI ถูกสร้างใหม่จริงในรอบนั้น (ทุกครั้งที่สตรีมเริ่มใหม่ root ได้ tunnel id ใหม่ของต้น 9001 เช่น <span class="mono">mpls-if-73732</span> และตัวนับ <span class="mono">Total Tx S-pmsis</span> ที่ root เพิ่มขึ้นทุกรอบ)</p>
+    <div class="callout">
+      <span class="tag">ผลจากการทดลอง ยังไม่ได้ยืนยันกับเอกสาร</span>
+      <p>นี่คือผลจากการทดลองสองรอบบน SR-SIM ยังไม่ได้ยืนยันกับ doc ว่า root ควรรอ Leaf A-D ก่อนย้ายหรือไม่ ประเด็นที่ควรจำคือ <strong>ใน MVPN ความเร็วของ BGP คือความเร็วของ data plane ตอนสลับท่อ</strong> ใน production ควรพิจารณา MRAI ของ family mvpn บน RR และ PE (และควรทดสอบผลกระทบต่อ family อื่นด้วย)</p>
+    </div>
+  </section>
+
+  <!-- ============ 18. SR-SIM limits ============ -->
+  <section id="srsim">
+    <span class="kicker"><span class="dot"></span>18 · บอกกันตรง ๆ</span>
+    <h2>ข้อจำกัดของ SR-SIM ที่เจอ</h2>
+    <ul class="points">
+      <li>จำกัดประมาณ 1000 pps ต่อพอร์ต จึงใช้แค่ 50 pps ต่อสตรีม</li>
+      <li><strong>ดักแพ็กเก็ตบนพอร์ตของ SR-SIM ไม่ได้</strong>: tcpdump ใน network namespace ของ node SR-SIM เห็น 0 แพ็กเก็ตแม้ traffic วิ่งอยู่ จึงไม่มีภาพ label บนสาย หลักฐานเรื่อง label ทั้งหมดมาจาก show command ของ SR OS และ counter</li>
+      <li>เวลาที่วัด (FRR, switchover) เป็นของ SR-SIM ใช้เทียบ "มี/ไม่มีช่องว่าง" ได้ แต่ไม่ใช่ตัวเลข convergence ของ hardware</li>
+      <li>datapath multicast ของ Tree-SID บน SR-SIM <strong>ทำงานจริง</strong> (ต่างจาก SRv6 VPN datapath ที่เคยทดสอบในโพสต์ก่อนแล้วไม่ forward) ข้อนี้เป็นข่าวดีสำหรับคนที่อยากลองเอง</li>
+    </ul>
+  </section>
+
+  <!-- ============ 19. Summary ============ -->
+  <section id="summary">
+    <span class="kicker"><span class="dot"></span>19 · สรุป</span>
+    <h2>รวมทุกอย่างเข้าด้วยกัน</h2>
+    <ul class="points">
+      <li>Multicast ส่งครั้งเดียวแล้วให้เครือข่ายทำสำเนาที่ทางแยก receiver บอกความต้องการด้วย IGMP และ router กันลูปด้วย RPF</li>
+      <li>ใน MPLS/VPN แกนไม่รู้จัก group ของลูกค้า จึงต้องมี <strong>provider tunnel (PMSI)</strong> และ NG-MVPN ใช้ BGP แทน PIM ข้ามแกน: Intra-AD + PTA, Source-Join, S-PMSI A-D + Leaf A-D</li>
+      <li><span class="amber-text">Tree-SID</span> ทำให้แกน SR-MPLS ทำ multicast ได้โดยไม่ต้องเปิด LDP หรือ RSVP กลับมา โครงสร้างเข้าใจง่าย: policy ที่ root บอกว่าต้นไหน, replication segment ทุก node บอกว่าจะทำสำเนาอย่างไร (push / swap / pop)</li>
+      <li>แบบ static ใช้ได้จริง traffic ไหลถูกต้องทั้ง I-PMSI และ S-PMSI แต่ทุกอย่างที่ "อัตโนมัติ" ใน multicast แบบเดิม (ต้นไม้โตตามผู้รับ, re-route ตาม IGP, ตัดกิ่งที่ไม่มีคนรับ) <strong>หายไปหมด</strong> และต้องเขียนเองทุก node ทุก label</li>
+      <li>เหมาะกับ: ต้นไม้ไม่กี่ต้น topology นิ่ง จำนวน PE ไม่เยอะ (เช่น IPTV ที่ส่งไปทุก PE อยู่แล้ว หรือ lab/POC) และควรมี FRR บนทุกกิ่งสำคัญ</li>
+      <li>ถ้าต้นไม้เยอะหรือผู้รับเปลี่ยนบ่อย ควรมองไปที่ NSP (PCE) หรือเทคโนโลยีอื่นตามตารางในข้อ 06</li>
+    </ul>
+  </section>
+
+  <!-- ============ 20. Appendix ============ -->
+  <section id="appendix">
+    <span class="kicker"><span class="dot"></span>20 · ภาคผนวก</span>
+    <h2>รายการไฟล์ output จาก lab</h2>
+    <p class="lede">output ทุกชิ้นที่อ้างในโพสต์นี้เก็บไว้เป็นไฟล์แยก เรียงตามลำดับขั้นทดสอบ</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ไฟล์</th><th>เนื้อหา</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" data-label="ไฟล์">00_traffic_test_ipmsi_232.1.1.1</td><td data-label="เนื้อหา">Test 1 iperf + tcpdump ทั้งสองฝั่ง</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">01_root_isis_sr, 01_p_isis</td><td data-label="เนื้อหา">IS-IS adjacency, prefix-SID, tunnel-table, label summary</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">02_p_bgp_rr, 02_root_bgp_mvpn, 02_leaf1_bgp_mvpn, 02b_root_intra_ad_all_detail</td><td data-label="เนื้อหา">BGP summary, VPN/MVPN routes, PTA</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">03_*_treesid</td><td data-label="เนื้อหา">P2MP policy, replication segment, downstream-nodes, tunnel, statistics</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">04_*_mvpn_*</td><td data-label="เนื้อหา">MVPN, IGMP, PIM tunnel-interface, PIM (S,G)</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">05_root_oam_p2mp_ping</td><td data-label="เนื้อหา">p2mp-lsp-ping ต้น 9000 และ 9001 (ตอนยังไม่มี S-PMSI)</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">06_srsim_wire_capture_not_possible</td><td data-label="เนื้อหา">หลักฐานว่าดักแพ็กเก็ตบนพอร์ต SR-SIM ไม่ได้</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">07_*_during_traffic</td><td data-label="เนื้อหา">สถานะระหว่างมี traffic ทั้งสองสตรีม รวม S-PMSI A-D, Leaf A-D, ping ต้น 9001</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">08_spmsi_switchover_gap_rcv1, 08b_spmsi_switchover_mrai1_rcv1, 08c_root_spmsi_counters</td><td data-label="เนื้อหา">การสลับ I-PMSI → S-PMSI ที่ MRAI 30 s และ 1 s, ตัวนับ S-PMSI ที่ root</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">09_*</td><td data-label="เนื้อหา">counter ที่ P และ leaf2 ที่ไม่มีผู้รับ 232.2.2.2</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">10_*, 10b_nofrr_gap_analysis</td><td data-label="เนื้อหา">ลิงก์ล่มแบบไม่มี FRR</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">11_*</td><td data-label="เนื้อหา">FRR: config/state, ระหว่าง failure, gap analysis</td></tr>
+          <tr><td class="mono" data-label="ไฟล์">12_gotcha_unreferenced_protect_nh_duplicates</td><td data-label="เนื้อหา">protect NH ที่ไม่ได้ผูกทำให้ส่งซ้ำ</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="tag">หมายเหตุการอ่านไฟล์</span>
+      <p>ไฟล์ <span class="mono">08_...</span> รอบแรกมีปัญหาของสคริปต์นับ (ค่า "1" หมายถึง 0) ระบุไว้ในหัวไฟล์ ส่วนไฟล์ <span class="mono">10_failure_nofrr_rcv*_timeline</span> นับแบบหน้าต่าง 2 วินาทีที่ tcpdump เริ่มช้าไปราว 1 วินาที (จึงได้ ~51 ต่อหน้าต่างแทน 100) ใช้ดูแค่ "มี/ไม่มี" ส่วนตัวเลขช่องว่างที่แม่นยำให้ใช้ <span class="mono">10b_...</span> และ <span class="mono">11_frr_gap_analysis</span></p>
+    </div>
+  </section>
+
+  <p style="margin-top:-1rem;padding-bottom:3rem;"><a href="../index.html">← กลับไปดูโพสต์อื่น ๆ</a></p>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="mark">running config</div>
+    <div>อธิบาย multicast, NG-MVPN และ Tree-SID แบบ static บน Nokia SR OS แบบเข้าใจง่าย</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var RED = '#e0526a';
+
+  function readColors(){
+    var cs = getComputedStyle(document.documentElement);
+    function g(n){ return cs.getPropertyValue(n).trim(); }
+    return {
+      bg:g('--bg'), raised:g('--bg-raised'), sunk:g('--bg-sunk'),
+      ink:g('--ink'), soft:g('--ink-soft'), muted:g('--muted'),
+      line:g('--line'), lineStrong:g('--line-strong'),
+      amber:g('--amber'), amberSoft:g('--amber-soft'), amberInk:g('--amber-ink'),
+      cyan:g('--cyan'), cyanSoft:g('--cyan-soft'), cyanInk:g('--cyan-ink'),
+      good:g('--good'), goodSoft:g('--good-soft')
+    };
+  }
+  var C = readColors();
+  function refresh(){ C = readColors(); }
+  if (window.matchMedia) {
+    try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refresh); } catch(e){}
+  }
+  new MutationObserver(refresh).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+  function ease(t){ return t<0?0:t>1?1:(t*t*(3-2*t)); } // smoothstep
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp01(x){ return x<0?0:x>1?1:x; }
+
+  /* mount(): same pattern as the other posts — DPR-aware resize, IntersectionObserver
+     pauses off-screen canvases, prefers-reduced-motion renders one static frame.
+     Returns a redraw() hook so reader-controlled canvases can repaint after input. */
+  function mount(canvas, draw, staticT){
+    if(!canvas) return function(){};
+    var ctx = canvas.getContext('2d');
+    var running = false, raf = null, start = null, lastT = staticT;
+
+    function resize(){
+      var dpr = Math.min(window.devicePixelRatio||1, 2);
+      var rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width*dpr));
+      canvas.height = Math.max(1, Math.round(rect.height*dpr));
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function renderAt(t){
+      lastT = t;
+      var rect = canvas.getBoundingClientRect();
+      draw(ctx, rect.width, rect.height, t, C);
+    }
+
+    if (REDUCED) {
+      renderAt(staticT);
+      window.addEventListener('resize', function(){ renderAt(staticT); });
+      new MutationObserver(function(){ renderAt(staticT); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+      return function(){ renderAt(staticT); };
+    }
+
+    function frame(ts){
+      if(start === null) start = ts;
+      var t = (ts - start) / 1000;
+      renderAt(t);
+      if (running) raf = requestAnimationFrame(frame);
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting && !running){ running = true; start = null; raf = requestAnimationFrame(frame); }
+        else if (!e.isIntersecting && running){ running = false; if(raf) cancelAnimationFrame(raf); }
+      });
+    }, {threshold:.12});
+    io.observe(canvas);
+    renderAt(staticT);
+    return function(){ if (!running) renderAt(lastT); };
+  }
+
+  function roundRectPath(ctx,x,y,w,h,r){
+    if (ctx.roundRect) { ctx.roundRect(x,y,w,h,r); return; }
+    ctx.rect(x,y,w,h);
+  }
+
+  /* ---------------- shared drawing helpers ---------------- */
+  function fsz(w){ return w < 480 ? 9 : 11; }
+
+  function box(ctx,x,y,bw,bh,title,stroke,lw,fs,sub){
+    ctx.fillStyle = C.raised; ctx.strokeStyle = stroke || C.lineStrong; ctx.lineWidth = lw || 1.6;
+    ctx.beginPath(); roundRectPath(ctx, x-bw/2, y-bh/2, bw, bh, 8); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = C.ink; ctx.font = '600 '+fs+'px "Inter", sans-serif';
+    ctx.fillText(title, x, sub ? y - fs*0.55 : y);
+    if (sub){
+      ctx.fillStyle = C.muted; ctx.font = '500 '+(fs-1.5)+'px "JetBrains Mono", monospace';
+      ctx.fillText(sub, x, y + fs*0.7);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function line(ctx,a,b,color,width,dash){
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = width || 2; ctx.lineCap = 'round';
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.restore();
+  }
+
+  function pill(ctx,x,y,text,fs,fill,stroke,ink,alpha){
+    ctx.save();
+    if (alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.font = '700 '+fs+'px "JetBrains Mono", monospace';
+    var tw = ctx.measureText(text).width, pw = tw + 10, ph = fs + 7;
+    var cw = ctx.canvas.clientWidth;
+    if (cw) x = Math.max(pw/2 + 2, Math.min(cw - pw/2 - 2, x));   // never clip at the canvas edge
+    ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = 1.4;
+    ctx.beginPath(); roundRectPath(ctx, x-pw/2, y-ph/2, pw, ph, ph/2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y+0.5);
+    ctx.restore();
+    return ph;
+  }
+
+  function dot(ctx,x,y,r,fill,stroke,alpha){
+    ctx.save();
+    if (alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = 1.6; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // text that shrinks until it fits maxW
+  function fitText(ctx,text,x,y,maxW,weight,size,family,color,align){
+    var s = size;
+    ctx.font = weight+' '+s+'px '+family;
+    while (ctx.measureText(text).width > maxW && s > 7){ s -= 0.5; ctx.font = weight+' '+s+'px '+family; }
+    ctx.fillStyle = color; ctx.textAlign = align || 'left';
+    ctx.fillText(text, x, y);
+  }
+
+  function at(a,b,p){ return {x:lerp(a.x,b.x,p), y:lerp(a.y,b.y,p)}; }
+
+  // multicast "packet": cyan IP body on the link + stack of amber label hats above it
+  function packet(ctx,pos,labels,fs,alpha,bodyText){
+    var y = pos.y - 12;
+    pill(ctx, pos.x, y, bodyText || 'IP', fs, C.cyanSoft, C.cyan, C.cyanInk, alpha);
+    var hy = y - (fs+7) - 1;
+    for (var i=labels.length-1; i>=0; i--){
+      pill(ctx, pos.x, hy, labels[i], fs, C.amberSoft, C.amber, C.amberInk, alpha);
+      hy -= (fs+7) + 1;
+    }
+  }
+
+  /* lab layout shared by the walkthrough + test canvases:
+     src - root - p -< leaf1/leaf2 - rcv1/rcv2 */
+  function labLayout(w,h,top,bottom){
+    var H = h - top - bottom, ym = top + H*0.5, dy = H*0.31;
+    var bw = Math.max(40, Math.min(78, w*0.12)), bh = w < 480 ? 28 : 34;
+    function cx(f){ return Math.max(bw/2+3, Math.min(w-bw/2-3, w*f)); }
+    return {
+      bw:bw, bh:bh,
+      src:{x:cx(0.065), y:ym}, root:{x:cx(0.265), y:ym}, p:{x:cx(0.48), y:ym},
+      leaf1:{x:cx(0.71), y:ym-dy}, leaf2:{x:cx(0.71), y:ym+dy},
+      rcv1:{x:cx(0.925), y:ym-dy}, rcv2:{x:cx(0.925), y:ym+dy}
+    };
+  }
+  var LAB_EDGES = [['src','root'],['root','p'],['p','leaf1'],['p','leaf2'],['leaf1','rcv1'],['leaf2','rcv2']];
+  function drawLab(ctx,L,fs,opt){
+    opt = opt || {};
+    var es = opt.edges || {};
+    if (opt.l12){
+      var s12 = es['leaf1-leaf2'] || {};
+      line(ctx, L.leaf1, L.leaf2, s12.color || C.lineStrong, s12.width || 1.6, s12.dash || [5,4]);
+    }
+    LAB_EDGES.forEach(function(e){
+      var k = e[0]+'-'+e[1], s = es[k] || {};
+      line(ctx, L[e[0]], L[e[1]], s.color || C.lineStrong, s.width || 2, s.dash);
+    });
+    if (opt.after) opt.after();
+    var hl = opt.hl || {};
+    ['src','root','p','leaf1','leaf2','rcv1','rcv2'].forEach(function(n){
+      var col = hl[n];
+      box(ctx, L[n].x, L[n].y, L.bw, L.bh, n, col || C.lineStrong, col ? 2.6 : 1.6, fs);
+    });
+  }
+
+  /* ---------------- Hero ambient: a stream that keeps branching ---------------- */
+  mount(document.getElementById('c-hero'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var P = function(x,y){ return {x:x*w, y:y*h}; };
+    var paths = [
+      [P(-0.02,0.5),P(0.34,0.5),P(0.62,0.24),P(1.02,0.12)],
+      [P(-0.02,0.5),P(0.34,0.5),P(0.62,0.24),P(1.02,0.36)],
+      [P(-0.02,0.5),P(0.34,0.5),P(0.62,0.76),P(1.02,0.64)],
+      [P(-0.02,0.5),P(0.34,0.5),P(0.62,0.76),P(1.02,0.88)]
+    ];
+    ctx.globalAlpha = 0.22; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.4;
+    paths.forEach(function(p){
+      ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y);
+      for (var i=1;i<p.length;i++) ctx.lineTo(p[i].x,p[i].y);
+      ctx.stroke();
+    });
+    var period = 1.1, travel = 5.4;
+    for (var k=0;k<6;k++){
+      var u = ((t + k*period) % (period*6)) / travel;
+      if (u > 1) continue;
+      paths.forEach(function(p, pi){
+        var segs = p.length-1, f = u*segs, i = Math.min(segs-1, Math.floor(f));
+        var pos = at(p[i], p[i+1], f-i);
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = (pi < 2) ? C.amber : C.cyan;
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, 3, 0, Math.PI*2); ctx.fill();
+      });
+    }
+    ctx.globalAlpha = 1;
+  }, 2.4);
+
+  /* ---------------- 01 · unicast / broadcast / multicast ---------------- */
+  var LISTEN = [true,true,false,false,true,false];
+  function castLayout(w,h){
+    var top = 46, bottom = 30, H = h - top - bottom;
+    var L = {
+      S:{x:Math.max(18, w*0.07), y:top+H*0.5}, R1:{x:w*0.30, y:top+H*0.5},
+      R2:{x:w*0.56, y:top+H*0.21}, R3:{x:w*0.56, y:top+H*0.79}, hosts:[]
+    };
+    var sp = H*0.15, hx = Math.min(w-14, w*0.9);
+    [L.R2, L.R3].forEach(function(r){ for (var k=-1;k<=1;k++) L.hosts.push({x:hx, y:r.y + k*sp}); });
+    return L;
+  }
+  function castPath(i,L){ return [L.S, L.R1, i<3 ? L.R2 : L.R3, L.hosts[i]]; }
+  function alongPath(pts,p){
+    var i = Math.min(pts.length-2, Math.floor(p));
+    return at(pts[i], pts[i+1], p-i);
+  }
+  function drawCastBase(ctx,L,fs,o){
+    // o.lit: edges to light {key:true}; o.s1w: width of S-R1 link
+    var lit = o.lit || {};
+    function E(a,b,key){ line(ctx, a, b, lit[key] ? C.amber : C.lineStrong, lit[key] ? 3 : 1.6); }
+    line(ctx, L.S, L.R1, lit['S-R1'] ? C.amber : C.lineStrong, o.s1w || (lit['S-R1'] ? 3 : 1.6));
+    E(L.R1, L.R2, 'R1-R2'); E(L.R1, L.R3, 'R1-R3');
+    for (var i=0;i<6;i++) E(i<3?L.R2:L.R3, L.hosts[i], 'H'+i);
+    var rs = Math.max(22, Math.min(30, L.R1.x*0.24));
+    [['R1',L.R1],['R2',L.R2],['R3',L.R3]].forEach(function(r){
+      box(ctx, r[1].x, r[1].y, rs+6, rs, r[0], o.rhl && o.rhl[r[0]] ? C.amber : C.lineStrong, o.rhl && o.rhl[r[0]] ? 2.4 : 1.6, fs);
+    });
+    dot(ctx, L.S.x, L.S.y, 12, C.raised, C.amber);
+    ctx.fillStyle = C.amberInk; ctx.font = '700 '+fs+'px "Inter", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('S', L.S.x, L.S.y+0.5); ctx.textBaseline='alphabetic';
+    var hs = o.hosts || [];
+    for (i=0;i<6;i++){
+      var st = hs[i] || {};
+      dot(ctx, L.hosts[i].x, L.hosts[i].y, 8, st.fill || C.raised, st.stroke || (LISTEN[i] ? C.amber : C.lineStrong));
+      if (st.mark){
+        ctx.fillStyle = st.markColor || C.ink; ctx.font = '700 9px "Inter", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(st.mark, L.hosts[i].x, L.hosts[i].y+0.5); ctx.textBaseline='alphabetic';
+      }
+    }
+  }
+
+  mount(document.getElementById('c-cast'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), L = castLayout(w,h);
+    var modeDur = 4.6, cycle = modeDur*3, tc = t % cycle;
+    var mode = Math.floor(tc/modeDur), tt = tc - mode*modeDur, seg = 0.62;
+    var flows = [];
+    if (mode === 0){ [0,1,4].forEach(function(i,k){ flows.push({i:i, t0:k*0.5}); }); }
+    else if (mode === 1){ for (var i=0;i<6;i++) flows.push({i:i, t0:0}); }
+    else { [0,1,4].forEach(function(i){ flows.push({i:i, t0:0}); }); }
+
+    var hosts = [];
+    flows.forEach(function(f){
+      if (tt >= f.t0 + 3*seg){
+        hosts[f.i] = LISTEN[f.i] ? {fill:C.good, stroke:C.good, mark:'✓', markColor:C.raised}
+                                 : {fill:C.sunk, stroke:RED, mark:'✗', markColor:RED};
+      }
+    });
+    drawCastBase(ctx, L, fs, {s1w: mode===0 ? 6 : 2.4, hosts:hosts, lit: mode===0 ? {} : {'S-R1':true}});
+
+    // load badge on the first link
+    var mid = at(L.S, L.R1, 0.5);
+    pill(ctx, mid.x, mid.y-16, mode===0 ? '×3' : '×1', fs, mode===0 ? C.amberSoft : C.goodSoft, mode===0 ? C.amber : C.good, mode===0 ? C.amberInk : C.good);
+
+    flows.forEach(function(f){
+      var p = (tt - f.t0)/seg;
+      if (p < 0 || p > 3) return;
+      var pos = alongPath(castPath(f.i, L), p);
+      dot(ctx, pos.x, pos.y, 5, C.amber, null);
+    });
+
+    var titles = [
+      'UNICAST · ผู้ส่งทำสำเนาเอง 3 ชุด ลิงก์แรกแบก 3 เท่า',
+      'BROADCAST · ทุกเครื่องได้หมด รวมเครื่องที่ไม่อยากฟัง (✗)',
+      'MULTICAST · ส่งครั้งเดียว แตกสำเนาเฉพาะทางแยกที่มีคนฟัง'
+    ];
+    fitText(ctx, titles[mode], 12, h-12, w-24, '600', fs+1, '"Inter", "Sarabun", sans-serif', mode===2 ? C.good : C.ink);
+  }, 12.2);
+
+  /* ---------------- 02 · IGMP join + tree forming ---------------- */
+  mount(document.getElementById('c-igmp'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), L = castLayout(w,h);
+    var cycle = 9.2, tt = t % cycle;
+    var lit = {}, hosts = [], rhl = {};
+    // events: [start, end, from, to, label, onArrive]
+    var ev = [
+      [0.2, 1.0, L.hosts[0], L.R2, 'IGMP', function(){ lit['H0']=true; rhl.R2=true; }],
+      [1.0, 1.8, L.R2, L.R1, 'PIM Join', function(){ lit['R1-R2']=true; lit['S-R1']=true; rhl.R1=true; }],
+      [2.0, 2.7, L.hosts[1], L.R2, 'IGMP', function(){ lit['H1']=true; }],
+      [2.9, 3.7, L.hosts[4], L.R3, 'IGMP', function(){ lit['H4']=true; rhl.R3=true; }],
+      [3.7, 4.5, L.R3, L.R1, 'PIM Join', function(){ lit['R1-R3']=true; }]
+    ];
+    var msgs = [];
+    ev.forEach(function(e){
+      if (tt >= e[1]) e[5]();
+      else if (tt >= e[0]) msgs.push({pos:at(e[2], e[3], ease((tt-e[0])/(e[1]-e[0]))), label:e[4]});
+    });
+    [0,1,4].forEach(function(i){ if (lit['H'+i]) hosts[i] = {stroke:C.amber, fill:C.amberSoft}; });
+
+    // traffic only after the tree is complete
+    var flowOn = tt >= 4.7;
+    if (flowOn){
+      var ft = tt - 4.7, seg = 0.55;
+      for (var k=0;k<5;k++){
+        var lt = ft - k*0.9;
+        if (lt >= 3*seg) [0,1,4].forEach(function(i){ hosts[i] = {fill:C.good, stroke:C.good, mark:'✓', markColor:C.raised}; });
+      }
+    }
+    drawCastBase(ctx, L, fs, {lit:lit, hosts:hosts, rhl:rhl});
+    if (flowOn){
+      for (k=0;k<5;k++){
+        var p = (ft - k*0.9)/seg;
+        if (p < 0 || p > 3) continue;
+        [0,1,4].forEach(function(i){ var pos = alongPath(castPath(i,L), p); dot(ctx,pos.x,pos.y,5,C.amber,null); });
+      }
+    }
+    msgs.forEach(function(m){ pill(ctx, m.pos.x, m.pos.y-12, m.label, fs, C.cyanSoft, C.cyan, C.cyanInk); });
+
+    var status;
+    if (tt < 1.0) status = '① receiver ยกมือ: IGMPv3 join (S,G) ไปหา R2';
+    else if (tt < 1.9) status = '② R2 ส่ง PIM Join ย้อนขึ้นไปหา source (RPF) กิ่ง R1-R2 เกิดขึ้น';
+    else if (tt < 2.85) status = '③ คนที่สองหลัง R2 join: R2 มี state แล้ว ไม่ต้อง Join ขึ้นไปซ้ำ';
+    else if (tt < 4.6) status = '④ receiver หลัง R3 join แล้ว R3 ส่ง PIM Join ขึ้นไป';
+    else status = '⑤ ต้นไม้ครบ: traffic ไหลลงเฉพาะกิ่งที่มีคนฟัง';
+    fitText(ctx, status, 12, h-12, w-24, '600', fs+1, '"Sarabun", "Inter", sans-serif', C.ink);
+  }, 6.4);
+
+  /* ---------------- 04 · provider tunnel (PMSI) ---------------- */
+  mount(document.getElementById('c-pmsi'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), top = 46, bottom = 30, H = h-top-bottom;
+    var bw = Math.max(38, Math.min(64, w*0.11)), bh = w<480 ? 26 : 32;
+    function cx(f){ return Math.max(bw/2+3, Math.min(w-bw/2-3, w*f)); }
+    var N = {
+      CE1:{x:cx(0.06), y:top+H*0.5}, PE1:{x:cx(0.25), y:top+H*0.5}, P:{x:cx(0.5), y:top+H*0.5},
+      PE2:{x:cx(0.75), y:top+H*0.2}, PE3:{x:cx(0.75), y:top+H*0.8},
+      CE2:{x:cx(0.94), y:top+H*0.2}, CE3:{x:cx(0.94), y:top+H*0.8}
+    };
+    // tube
+    ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+    [[N.PE1,N.P],[N.P,N.PE2],[N.P,N.PE3]].forEach(function(s){
+      ctx.strokeStyle = C.cyanSoft; ctx.lineWidth = 20; ctx.beginPath(); ctx.moveTo(s[0].x,s[0].y); ctx.lineTo(s[1].x,s[1].y); ctx.stroke();
+    });
+    ctx.restore();
+    [[N.CE1,N.PE1],[N.PE1,N.P],[N.P,N.PE2],[N.P,N.PE3],[N.PE2,N.CE2],[N.PE3,N.CE3]].forEach(function(s){ line(ctx,s[0],s[1],C.lineStrong,1.6); });
+
+    var cycle = 4.6, tt = t % cycle, seg = 0.85;
+    var hl = {};
+    if (tt >= seg*0.9 && tt < seg*1.5) hl.PE1 = C.cyan;
+    if (tt >= seg*1.9 && tt < seg*2.5) hl.P = C.cyan;
+    if (tt >= seg*2.9 && tt < seg*3.5){ hl.PE2 = C.cyan; hl.PE3 = C.cyan; }
+    ['CE1','PE1','P','PE2','PE3','CE2','CE3'].forEach(function(n){
+      box(ctx, N[n].x, N[n].y, bw, bh, n, hl[n] || C.lineStrong, hl[n] ? 2.4 : 1.6, fs);
+    });
+
+    var s = tt/seg, pos, wrapped = false, list = [];
+    if (s < 1) list.push(at(N.CE1, N.PE1, ease(s)));
+    else if (s < 2){ list.push(at(N.PE1, N.P, ease(s-1))); wrapped = true; }
+    else if (s < 3){ list.push(at(N.P, N.PE2, ease(s-2))); list.push(at(N.P, N.PE3, ease(s-2))); wrapped = true; }
+    else if (s < 4){ list.push(at(N.PE2, N.CE2, ease(s-3))); list.push(at(N.PE3, N.CE3, ease(s-3))); }
+    list.forEach(function(p){
+      if (wrapped){ dot(ctx, p.x, p.y, 9, C.cyanSoft, C.cyan); }
+      dot(ctx, p.x, p.y, 5, C.amber, null);
+    });
+
+    var note = '';
+    if (s >= 0.9 && s < 1.6) note = 'PE1 ห่อแพ็กเก็ตลูกค้าเข้าท่อ P2MP (ใส่ label)';
+    else if (s >= 1.6 && s < 2.6) note = 'P ทำสำเนาตาม label โดยไม่รู้จัก group ของลูกค้า';
+    else if (s >= 2.6 && s < 3.6) note = 'PE2 / PE3 แกะห่อ ส่งให้ลูกค้าแต่ละไซต์';
+    else note = 'แพ็กเก็ต multicast ของลูกค้าเข้าที่ PE1';
+    fitText(ctx, note, 12, h-10, w-24, '600', fs+1, '"Sarabun", "Inter", sans-serif', C.ink);
+  }, 1.4);
+
+  /* ---------------- 05 · NG-MVPN four beats ---------------- */
+  mount(document.getElementById('c-mvpn'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), top = 50, bottom = 30, H = h-top-bottom;
+    var bw = Math.max(40, Math.min(66, w*0.12)), bh = w<480 ? 26 : 32;
+    function cx(f){ return Math.max(bw/2+3, Math.min(w-bw/2-3, w*f)); }
+    var N = {
+      S:{x:cx(0.06), y:top+H*0.5}, PE1:{x:cx(0.24), y:top+H*0.5}, hub:{x:w*0.5, y:top+H*0.5},
+      PE2:{x:cx(0.76), y:top+H*0.18}, PE3:{x:cx(0.76), y:top+H*0.82},
+      rcv:{x:cx(0.94), y:top+H*0.18}
+    };
+    var cycle = 13.2, tt = t % cycle, ph = Math.floor(tt/3.3), pt = tt - ph*3.3;
+
+    // core cloud
+    ctx.save(); ctx.fillStyle = C.sunk; ctx.strokeStyle = C.line; ctx.lineWidth = 1.2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); roundRectPath(ctx, w*0.36, top+H*0.22, w*0.28, H*0.56, 18); ctx.fill(); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = C.muted; ctx.font = '500 '+(fs-1)+'px "Inter", sans-serif'; ctx.textAlign='center';
+    ctx.fillText('แกน (BGP + RR)', w*0.5, top+H*0.22+fs+4);
+
+    function tube(path, col, width){
+      ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle = col; ctx.lineWidth = width;
+      ctx.beginPath(); ctx.moveTo(path[0].x,path[0].y); for (var i=1;i<path.length;i++) ctx.lineTo(path[i].x,path[i].y); ctx.stroke(); ctx.restore();
+    }
+    var incl = ph >= 2;
+    if (incl){ tube([N.PE1,N.hub,N.PE2],C.amberSoft,14); tube([N.hub,N.PE3],C.amberSoft,14); }
+    var sel = ph === 3 && pt > 1.0;
+    var selPath = [{x:N.PE1.x, y:N.PE1.y-9},{x:N.hub.x, y:N.hub.y-9},{x:N.PE2.x, y:N.PE2.y+10}];
+    if (sel) tube(selPath, C.cyanSoft, 10);
+
+    [[N.S,N.PE1],[N.PE2,N.rcv]].forEach(function(s){ line(ctx,s[0],s[1],C.lineStrong,1.6); });
+    var hl = {};
+    if (ph === 1 && pt > 1.2) hl.PE2 = C.cyan;
+    box(ctx, N.PE1.x, N.PE1.y, bw, bh, 'PE1', C.amber, 2.2, fs);
+    box(ctx, N.PE2.x, N.PE2.y, bw, bh, 'PE2', hl.PE2 || C.lineStrong, hl.PE2 ? 2.4 : 1.6, fs);
+    box(ctx, N.PE3.x, N.PE3.y, bw, bh, 'PE3', C.lineStrong, 1.6, fs);
+    dot(ctx, N.S.x, N.S.y, 11, C.raised, C.amber);
+    ctx.fillStyle = C.amberInk; ctx.font = '700 '+fs+'px "Inter", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('S', N.S.x, N.S.y+0.5); ctx.textBaseline='alphabetic';
+    var rcvOn = ph >= 1;
+    dot(ctx, N.rcv.x, N.rcv.y, 9, rcvOn ? C.amberSoft : C.raised, rcvOn ? C.amber : C.lineStrong);
+    ctx.fillStyle = C.muted; ctx.font = '500 '+(fs-1)+'px "Inter", sans-serif'; ctx.textAlign='center';
+    ctx.fillText('ไม่มีผู้รับ', N.PE3.x, N.PE3.y + bh/2 + fs + 3);
+
+    var msg;
+    if (ph === 0){
+      var p0 = ease(pt/2.4), a0 = 1 - clamp01((pt-2.4)/0.8);
+      [['PE1','Intra-AD + PTA'],['PE2','Intra-AD'],['PE3','Intra-AD']].forEach(function(o){
+        var pos = at(N[o[0]], N.hub, p0*0.8);
+        pill(ctx, pos.x, pos.y - (o[0]==='PE1' ? 18 : 14), o[1], fs, o[0]==='PE1' ? C.amberSoft : C.raised, o[0]==='PE1' ? C.amber : C.lineStrong, o[0]==='PE1' ? C.amberInk : C.soft, a0);
+      });
+      msg = '① ทุก PE ประกาศ Intra-AS I-PMSI A-D · PE1 แนบ PTA บอกชนิดและเลขท่อ';
+    } else if (ph === 1){
+      if (pt < 1.2){
+        var pi = at(N.rcv, N.PE2, ease(pt/1.2));
+        pill(ctx, pi.x, pi.y-14, 'IGMP', fs, C.cyanSoft, C.cyan, C.cyanInk);
+      } else if (pt < 3.0){
+        var pj = ease((pt-1.2)/1.8);
+        var pos1 = pj < 0.5 ? at(N.PE2, N.hub, pj*2) : at(N.hub, N.PE1, (pj-0.5)*2);
+        pill(ctx, pos1.x, pos1.y-14, 'Source-Join', fs, C.cyanSoft, C.cyan, C.cyanInk);
+      }
+      msg = '② receiver ส่ง IGMP → PE2 ส่ง C-multicast Source-Join ไปหา PE1';
+    } else if (ph === 2){
+      for (var k=0;k<4;k++){
+        var u = ((pt + k*0.8) % 3.2)/1.6;
+        if (u > 1) continue;
+        var q = u < 0.5 ? [at(N.PE1,N.hub,u*2)] : [at(N.hub,N.PE2,(u-0.5)*2), at(N.hub,N.PE3,(u-0.5)*2)];
+        q.forEach(function(p){ dot(ctx,p.x,p.y,4.5,C.amber,null); });
+      }
+      msg = '③ PE1 ส่ง traffic (S,G) ในท่อรวม I-PMSI ซึ่งไปถึง PE ทุกตัว (รวม PE3)';
+    } else {
+      // rate meter next to PE1
+      var mx = N.PE1.x - bw/2 - 4, mh = H*0.42, my = N.PE1.y - bh/2 - 8;
+      var level = clamp01(pt/1.0);
+      ctx.fillStyle = C.sunk; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
+      ctx.beginPath(); roundRectPath(ctx, mx-6, my-mh, 8, mh, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = level > 0.6 ? RED : C.amber;
+      ctx.fillRect(mx-5, my - mh*level, 6, mh*level);
+      line(ctx, {x:mx-10, y:my-mh*0.6}, {x:mx+6, y:my-mh*0.6}, C.ink, 1.4);
+      if (pt > 1.0){
+        var pa = ease((pt-1.0)/1.0);
+        var sp = at(N.PE1, N.hub, pa*0.7);
+        pill(ctx, sp.x, sp.y-30, 'S-PMSI A-D', fs, C.cyanSoft, C.cyan, C.cyanInk, 1-clamp01((pt-2.4)/0.6));
+        if (pt > 1.6){
+          var lp = at(N.PE2, N.hub, ease((pt-1.6)/1.0)*0.7);
+          pill(ctx, lp.x, lp.y+18, 'Leaf A-D', fs, C.cyanSoft, C.cyan, C.cyanInk, 1-clamp01((pt-2.8)/0.5));
+        }
+      }
+      if (sel){
+        for (k=0;k<3;k++){
+          var u2 = ((pt + k*0.6) % 1.8)/1.2;
+          if (u2 > 1) continue;
+          var p2 = u2 < 0.5 ? at(selPath[0],selPath[1],u2*2) : at(selPath[1],selPath[2],(u2-0.5)*2);
+          dot(ctx,p2.x,p2.y,4.5,C.cyan,null);
+        }
+      }
+      msg = '④ rate เกิน threshold → S-PMSI A-D, PE ที่สนใจตอบ Leaf A-D แล้วย้ายไปท่อเฉพาะ';
+    }
+    fitText(ctx, msg, 12, h-10, w-24, '600', fs+1, '"Sarabun", "Inter", sans-serif', C.ink);
+  }, 11.5);
+
+  /* ---------------- 08 · Tree-SID walkthrough (reader-controlled + animated) ---------------- */
+  (function(){
+    var canvas = document.getElementById('c-walk');
+    var slider = document.getElementById('walk-slider');
+    if (!canvas || !slider) return;
+    var prevBtn = document.getElementById('walk-prev'), nextBtn = document.getElementById('walk-next');
+    var readout = document.getElementById('walk-readout'), descEl = document.getElementById('walk-desc');
+    var nodeEl = document.getElementById('walk-node'), actEl = document.getElementById('walk-action');
+    var inEl = document.getElementById('walk-in'), outEl = document.getElementById('walk-out');
+    var STEPS = [
+      {node:'src → root', act:'—', inl:'— (IP ธรรมดา)', outl:'—',
+       desc:'src (192.168.10.10) ส่ง UDP ไปที่ group 232.1.1.1 เป็น IP multicast ธรรมดา ยังไม่มี label ใด ๆ เข้าที่ SAP 1/1/c4/1 ของ VPRN "MCAST" บน root'},
+      {node:'root (10.0.0.1)', act:'push', inl:'— (มาจาก VPRN)', outl:'30002 → 10.12.0.2',
+       desc:'root เอา (S,G) ใส่ท่อ I-PMSI: replication segment "rs-IPMSI-root" (sid-action push) ติด label 30002 แล้วส่งออก downstream-nodes 1 ไปที่ next-hop 10.12.0.2 (P)'},
+      {node:'p (10.0.0.2)', act:'swap + replicate', inl:'30002', outl:'30003 → 10.23.0.2 · 30004 → 10.24.0.2',
+       desc:'P เห็น incoming-sid 30002 ตรงกับ "rs-IPMSI-p" จึงทำสำเนาตามจำนวน downstream-nodes (2 ขา) ใบหนึ่งเปลี่ยน label เป็น 30003 ไป leaf1 อีกใบเป็น 30004 ไป leaf2 P ไม่รู้จัก group ของลูกค้าเลย'},
+      {node:'leaf1 / leaf2', act:'pop', inl:'30003 / 30004', outl:'— → VPRN "MCAST"',
+       desc:'leaf ทั้งสองเห็น incoming-sid ของตัวเอง (30003, 30004) จึง pop label ทิ้ง แล้วส่งแพ็กเก็ตเข้า VPRN ทาง tunnel interface mpls-if-73728 (Rx-IPMSI) ซึ่ง PIM ใช้เป็น RPF ของ (S,G)'},
+      {node:'rcv1 / rcv2', act:'—', inl:'—', outl:'iperf 0/1003 (0%)',
+       desc:'PIM ใน VPRN ส่งออก to-rcv ตาม IGMPv3 join ของแต่ละ receiver ทั้ง rcv1 และ rcv2 ได้ครบ 0% loss (Test 1 ในข้อ 15)'}
+    ];
+    var step = 0;
+
+    var redraw = mount(canvas, function(ctx,w,h,t,C){
+      ctx.clearRect(0,0,w,h);
+      var fs = fsz(w), L = labLayout(w,h,58,30);
+      var hl = {};
+      if (step===0) hl.src = C.amber;
+      if (step===1) hl.root = C.amber;
+      if (step===2) hl.p = C.amber;
+      if (step===3){ hl.leaf1 = C.amber; hl.leaf2 = C.amber; }
+      if (step===4){ hl.rcv1 = C.good; hl.rcv2 = C.good; }
+      var act = {};
+      if (step===0) act['src-root'] = 1;
+      if (step===1) act['root-p'] = 1;
+      if (step===2){ act['p-leaf1'] = 1; act['p-leaf2'] = 1; }
+      if (step===3){ act['leaf1-rcv1'] = 1; act['leaf2-rcv2'] = 1; }
+      var edges = {};
+      Object.keys(act).forEach(function(k){ edges[k] = {color:C.amber, width:3}; });
+      drawLab(ctx, L, fs, {hl:hl, edges:edges});
+
+      // label plan written on the core links
+      [['root','p','30002'],['p','leaf1','30003'],['p','leaf2','30004']].forEach(function(e){
+        var m = at(L[e[0]], L[e[1]], 0.5), on = act[e[0]+'-'+e[1]];
+        var off = e[1]==='leaf2' ? 14 : -14;
+        if (!on) pill(ctx, m.x, m.y + off, e[2], fs-1, C.raised, C.line, C.muted);
+      });
+
+      var p = 0.15 + 0.7*ease(((t % 1.9))/1.5);
+      if (step===0) packet(ctx, at(L.src,L.root,p), [], fs);
+      if (step===1) packet(ctx, at(L.root,L.p,p), ['30002'], fs);
+      if (step===2){ packet(ctx, at(L.p,L.leaf1,p), ['30003'], fs); packet(ctx, at(L.p,L.leaf2,p), ['30004'], fs); }
+      if (step===3){ packet(ctx, at(L.leaf1,L.rcv1,p), [], fs); packet(ctx, at(L.leaf2,L.rcv2,p), [], fs); }
+      if (step===4){
+        var pulse = 0.55 + 0.45*Math.sin(t*4);
+        ['rcv1','rcv2'].forEach(function(n){ pill(ctx, L[n].x, L[n].y - L.bh/2 - 12, '✓ 0%', fs, C.goodSoft, C.good, C.good, REDUCED ? 1 : pulse); });
+      }
+      // action tag under the active node
+      var tag = null;
+      if (step===1) tag = [L.root, 'push'];
+      if (step===2) tag = [L.p, 'swap ×2'];
+      if (tag) pill(ctx, tag[0].x, tag[0].y + L.bh/2 + 13, tag[1], fs, C.amberSoft, C.amber, C.amberInk);
+      if (step===3){
+        pill(ctx, L.leaf1.x, L.leaf1.y + L.bh/2 + 13, 'pop', fs, C.amberSoft, C.amber, C.amberInk);
+        pill(ctx, L.leaf2.x, L.leaf2.y + L.bh/2 + 13, 'pop', fs, C.amberSoft, C.amber, C.amberInk);
+      }
+      fitText(ctx, 'tree (10.0.0.1, 9000) · instance 1 · I-PMSI', 12, h-10, w-24, '500', fs, '"JetBrains Mono", monospace', C.muted);
+    }, 0.9);
+
+    function show(s){
+      step = Math.max(0, Math.min(STEPS.length-1, s));
+      slider.value = step;
+      var S = STEPS[step];
+      nodeEl.textContent = S.node; actEl.textContent = S.act; inEl.textContent = S.inl; outEl.textContent = S.outl;
+      descEl.textContent = S.desc;
+      readout.textContent = 'ขั้น ' + (step+1) + ' / ' + STEPS.length;
+      prevBtn.disabled = step===0; nextBtn.disabled = step===STEPS.length-1;
+      redraw();
+    }
+    slider.addEventListener('input', function(){ show(parseInt(slider.value,10)); });
+    prevBtn.addEventListener('click', function(){ show(step-1); });
+    nextBtn.addEventListener('click', function(){ show(step+1); });
+    show(0);
+  })();
+
+  /* ---------------- 09 · policy > candidate path > instances ---------------- */
+  mount(document.getElementById('c-instance'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), top = 46;
+    var cycle = 10, tt = t % cycle;
+    var active = tt < 6 ? 1 : 2;
+    var built = tt < 2.5 ? 0 : Math.min(4, Math.floor((tt-2.5)/0.8)+1);
+    if (tt >= 6) built = 4;
+
+    var px = w*0.03, pw = w*0.94, py = top, ph = h - top - 10;
+    ctx.fillStyle = C.raised; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.6;
+    ctx.beginPath(); roundRectPath(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.stroke();
+    fitText(ctx, 'P2MP policy "IPMSI-MCAST" ⟨root 10.0.0.1, tree-id 9000⟩', px+12, py+fs+8, pw-24, '700', fs+1, '"JetBrains Mono", monospace', C.ink);
+
+    var cxp = px+10, cw = pw-20, cy = py+fs+18, ch = ph-fs-28;
+    ctx.fillStyle = C.sunk; ctx.strokeStyle = C.line; ctx.lineWidth = 1.4;
+    ctx.beginPath(); roundRectPath(ctx, cxp, cy, cw, ch, 10); ctx.fill(); ctx.stroke();
+    fitText(ctx, 'candidate-path "primary" · preference 100 · active-instance ' + active, cxp+10, cy+fs+7, cw-20, '600', fs, '"JetBrains Mono", monospace', C.good);
+
+    var gap = 10, iw = (cw - 30 - gap)/2, iy = cy + fs + 16, ih = ch - fs - 26;
+    var nodes = ['root','p','leaf1','leaf2'];
+    [1,2].forEach(function(n, k){
+      var ix = cxp + 15 + k*(iw+gap);
+      var isActive = active === n;
+      var exists = n===1 ? (tt < 8.5) : (built > 0);
+      ctx.save();
+      ctx.fillStyle = isActive ? C.goodSoft : C.raised;
+      ctx.strokeStyle = isActive ? C.good : (n===2 && built<4 ? C.amber : C.lineStrong);
+      ctx.lineWidth = isActive ? 2.4 : 1.4;
+      if (!exists || (n===2 && built<4)) ctx.setLineDash([5,4]);
+      if (n===1 && tt >= 8.5) ctx.globalAlpha = 0.45;
+      ctx.beginPath(); roundRectPath(ctx, ix, iy, iw, ih, 9); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      ctx.save(); if (n===1 && tt >= 8.5) ctx.globalAlpha = 0.45;
+      var title = 'instance ' + n + (isActive ? ' · active' : (n===2 && built>0 && built<4 ? ' · กำลังสร้าง' : (n===1 ? ' · ต้นเก่า' : '')));
+      if (n===2 && built===0) title = 'instance 2 · (ยังไม่มี)';
+      fitText(ctx, title, ix+8, iy+fs+6, iw-16, '700', fs, '"Inter", "Sarabun", sans-serif', isActive ? C.good : C.ink);
+      var rowH = Math.min(24, (ih - fs - 16)/4);
+      nodes.forEach(function(nd, j){
+        var show = n===1 ? true : j < built;
+        if (!show) return;
+        var ry = iy + fs + 14 + j*rowH;
+        ctx.fillStyle = C.raised; ctx.strokeStyle = isActive ? C.good : (n===2 ? C.amber : C.lineStrong); ctx.lineWidth = 1.2;
+        ctx.beginPath(); roundRectPath(ctx, ix+8, ry, iw-16, rowH-5, 6); ctx.fill(); ctx.stroke();
+        fitText(ctx, 'replication segment @ ' + nd, ix+14, ry + (rowH-5)/2 + fs*0.36, iw-28, '500', fs-1, '"JetBrains Mono", monospace', C.soft);
+      });
+      ctx.restore();
+    });
+  }, 7);
+
+  /* ---------------- 12 · label plan pairs ---------------- */
+  mount(document.getElementById('c-labelplan'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), top = 50, bottom = 30, H = h-top-bottom;
+    var bw = Math.max(42, Math.min(70, w*0.13)), bh = w<480 ? 28 : 34;
+    function cx(f){ return Math.max(bw/2+3, Math.min(w-bw/2-3, w*f)); }
+    var N = { root:{x:cx(0.1), y:top+H*0.5}, p:{x:cx(0.44), y:top+H*0.5}, leaf1:{x:cx(0.88), y:top+H*0.12}, leaf2:{x:cx(0.88), y:top+H*0.88} };
+    var cycle = 11, tt = t % cycle, typo = tt >= 5.4;
+    var pair = tt < 4.2 ? Math.floor(tt/1.4) : -1;
+    var links = [['root','p','30002','30002'],['p','leaf1','30003','30003'],['p','leaf2', typo ? '30005' : '30004','30004']];
+    links.forEach(function(L2, k){
+      var on = pair === k || (tt >= 4.2 && !typo);
+      var bad = typo && k===2;
+      line(ctx, N[L2[0]], N[L2[1]], bad ? RED : (on ? C.good : C.lineStrong), on||bad ? 2.6 : 1.8, bad ? [6,5] : null);
+    });
+    ['root','p','leaf1','leaf2'].forEach(function(n){
+      box(ctx, N[n].x, N[n].y, bw, bh, n, C.lineStrong, 1.6, fs);
+      // every node keeps reporting Up/Up — even in the typo phase
+      pill(ctx, N[n].x, N[n].y - bh/2 - 10, 'Up/Up', fs-1.5, C.goodSoft, C.good, C.good);
+    });
+    // balls
+    for (var k=0;k<4;k++){
+      var u = ((tt + k*0.7) % 2.8)/1.6;
+      if (u > 1) continue;
+      if (u < 0.5){ var a = at(N.root, N.p, 0.12+0.76*(u*2)); dot(ctx,a.x,a.y,4.5,C.amber,null); }
+      else {
+        var f = (u-0.5)*2;
+        var b1 = at(N.p, N.leaf1, 0.12+0.76*f); dot(ctx,b1.x,b1.y,4.5,C.amber,null);
+        var b2 = at(N.p, N.leaf2, 0.12+0.76*f); dot(ctx,b2.x,b2.y,4.5,C.amber,null, typo ? 1-clamp01((f-0.55)/0.3) : 1);
+      }
+    }
+    links.forEach(function(L2, k){
+      var on = pair === k || (tt >= 4.2 && !typo);
+      var bad = typo && k===2;
+      var o = at(N[L2[0]], N[L2[1]], 0.3), i = at(N[L2[0]], N[L2[1]], 0.74);
+      if (w < 560){ o.y -= fs + 3; i.y += fs + 3; }   // short links on phones: stagger the pair above/below the line
+      var fill = bad ? C.raised : (on ? C.goodSoft : C.raised);
+      var st = bad ? RED : (on ? C.good : C.lineStrong);
+      pill(ctx, o.x, o.y, 'out ' + L2[2], fs-1, fill, st, bad ? RED : (on ? C.good : C.soft));
+      pill(ctx, i.x, i.y, 'in ' + L2[3], fs-1, bad ? C.raised : fill, bad ? C.lineStrong : st, on ? C.good : C.soft);
+    });
+    var msg = typo ? 'สมมติพิมพ์ผิด 1 ตัว: ทุก node ยัง Up/Up แต่กิ่ง leaf2 ไม่มี traffic และไม่มีอะไรเตือน'
+                   : (pair >= 0 ? 'ขาออกของ upstream = ขาเข้าของ downstream: ' + links[pair][2] : '✓ แผน label ตรงกันทั้งต้น');
+    fitText(ctx, msg, 12, h-10, w-24, '600', fs+1, '"Sarabun", "Inter", sans-serif', typo ? RED : C.ink);
+  }, 2.0);
+
+  /* ---------------- 15 · Test 1 counters ---------------- */
+  mount(document.getElementById('c-counter'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), cycle = 8.5, tt = t % cycle, runT = 5.5;
+    var frac = clamp01(tt/runT);
+    var cols = [
+      {name:'src', sub:'Sent', final:1004, col:C.amber},
+      {name:'rcv1', sub:'received', final:1003, col:C.good},
+      {name:'rcv2', sub:'received', final:1003, col:C.good}
+    ];
+    var top = 52, colW = w/3;
+    cols.forEach(function(c, i){
+      var x = colW*i + colW/2;
+      var n = Math.round(c.final*frac);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.soft; ctx.font = '600 '+(fs+1)+'px "Inter", sans-serif';
+      ctx.fillText(c.name, x, top+8);
+      ctx.fillStyle = C.ink; ctx.font = '700 '+(w<480 ? 22 : 30)+'px "JetBrains Mono", monospace';
+      ctx.fillText(String(n), x, top+46);
+      ctx.fillStyle = C.muted; ctx.font = '500 '+fs+'px "Inter", sans-serif';
+      ctx.fillText(c.sub, x, top+64);
+      var bw2 = colW*0.7, bx = x - bw2/2, by = top+76;
+      ctx.fillStyle = C.raised; ctx.strokeStyle = C.lineStrong; ctx.lineWidth = 1.2;
+      ctx.beginPath(); roundRectPath(ctx, bx, by, bw2, 10, 5); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = c.col; ctx.beginPath(); roundRectPath(ctx, bx, by, Math.max(0.1, bw2*frac), 10, 5); ctx.fill();
+      if (frac >= 1 && i > 0){
+        pill(ctx, x, by+32, '0/1003 (0%)', fs, C.goodSoft, C.good, C.good);
+      }
+      if (frac >= 1 && i === 0){
+        pill(ctx, x, by+32, '1004 datagrams', fs, C.amberSoft, C.amber, C.amberInk);
+      }
+    });
+    fitText(ctx, 'เวลา ' + (20*frac).toFixed(1) + ' / 20.0 s · 401 Kbits/sec', 12, h-12, w-24, '500', fs, '"JetBrains Mono", monospace', C.muted);
+  }, 7.5);
+
+  /* ---------------- 15 · Test 2 static S-PMSI still branches to leaf2 ---------------- */
+  mount(document.getElementById('c-spmsi'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), L = labLayout(w,h,56,46);
+    drawLab(ctx, L, fs, {});
+    // bin under leaf2
+    var bin = {x:L.leaf2.x, y:L.leaf2.y + L.bh/2 + 20};
+    ctx.strokeStyle = RED; ctx.lineWidth = 1.6; ctx.fillStyle = C.raised;
+    ctx.beginPath(); roundRectPath(ctx, bin.x-8, bin.y-7, 16, 14, 3); ctx.fill(); ctx.stroke();
+    line(ctx, {x:bin.x-10, y:bin.y-9}, {x:bin.x+10, y:bin.y-9}, RED, 1.6);
+    ctx.fillStyle = RED; ctx.font = '600 '+(fs-1)+'px "Sarabun", sans-serif'; ctx.textAlign='left';
+    ctx.fillText('pop แล้วทิ้ง', bin.x+14, bin.y+4);
+    line(ctx, {x:L.leaf2.x, y:L.leaf2.y+L.bh/2}, {x:bin.x, y:bin.y-9}, C.line, 1.2, [3,3]);
+
+    var seg = 0.6, period = 2.6;
+    function stream(off, col, leaf2Dest){
+      for (var k=0;k<3;k++){
+        var lt = ((t + off + k*period) % (period*3));
+        var s = lt/seg;
+        if (s > 4) continue;
+        var pts = [];
+        if (s < 1) pts.push(at(L.src, L.root, s));
+        else if (s < 2) pts.push(at(L.root, L.p, s-1));
+        else if (s < 3){ pts.push(at(L.p, L.leaf1, s-2)); pts.push(at(L.p, L.leaf2, s-2)); }
+        else { pts.push(at(L.leaf1, L.rcv1, s-3)); pts.push(at(L.leaf2, leaf2Dest, s-3)); }
+        pts.forEach(function(p){ dot(ctx, p.x, p.y, 5, col, null); });
+      }
+    }
+    stream(0, C.amber, L.rcv2);
+    stream(period/2, C.cyan, bin);
+    pill(ctx, L.rcv2.x, L.rcv2.y - L.bh/2 - 12, 'rcv2: 232.2.2.2 = 0', fs-1, C.raised, RED, RED);
+    fitText(ctx, 'P → to-leaf1 +1,737 · to-leaf2 +1,737 แพ็กเก็ต ใน 18 s (~96 pps = 2 สตรีม)', 12, h-26, w-24, '600', fs, '"Sarabun", "Inter", sans-serif', C.ink);
+    fitText(ctx, 'static tree 9001 แตกไป leaf2 เสมอ ไม่ว่าใครจะตอบ Leaf A-D', 12, h-9, w-24, '500', fs, '"Sarabun", "Inter", sans-serif', C.muted);
+  }, 1.0);
+
+  /* ---------------- 16 · link failure: no FRR / with FRR ---------------- */
+  function failScene(ctx,w,h,t,C,frr){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), L = labLayout(w,h,58,30);
+    var cycle = 11, tt = t % cycle, down = tt >= 2 && tt < 8, after = tt >= 8;
+    var dp = clamp01((tt-2)/6);
+    var edges = {};
+    if (down) edges['p-leaf2'] = {color:RED, width:2.2, dash:[5,5]};
+    if (down && frr) edges['leaf1-leaf2'] = {color:C.cyan, width:3};
+    drawLab(ctx, L, fs, {l12:true, edges:edges, after:function(){
+      if (down && frr){ line(ctx, L.p, L.leaf1, C.cyan, 3); }
+      if (down && !frr){
+        // IGP has a new path already: P -> leaf1 -> leaf2, drawn as a dashed overlay
+        var o = 5;
+        line(ctx, {x:L.p.x, y:L.p.y+o}, {x:L.leaf1.x, y:L.leaf1.y+o}, C.cyan, 1.6, [4,4]);
+        line(ctx, {x:L.leaf1.x+o, y:L.leaf1.y}, {x:L.leaf2.x+o, y:L.leaf2.y}, C.cyan, 1.6, [4,4]);
+      }
+    }});
+    if (down){
+      var m = at(L.p, L.leaf2, 0.55), blink = REDUCED ? 1 : (0.5 + 0.5*Math.sin(t*7));
+      ctx.save(); ctx.globalAlpha = blink; ctx.fillStyle = RED; ctx.font = '700 '+(fs+6)+'px "Inter", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('✗', m.x, m.y); ctx.restore();
+    }
+    // root still looks perfectly healthy
+    pill(ctx, L.root.x, L.root.y - L.bh/2 - 12, 'Up/Up · inService', fs-1, C.goodSoft, C.good, C.good);
+    if (down && !frr) pill(ctx, L.p.x, L.p.y + L.bh/2 + 13, 'dn 2: Up/Down', fs-1, C.raised, RED, RED);
+
+    var seg = 0.55;
+    for (var k=0;k<4;k++){
+      var s = (((tt + k*0.7) % 2.8))/seg;
+      if (s > 5 || (s > 4 && !(down && frr))) continue;
+      var pts = [];
+      if (s < 1) pts.push([at(L.src,L.root,s), []]);
+      else if (s < 2) pts.push([at(L.root,L.p,s-1), []]);
+      else if (s < 3){
+        pts.push([at(L.p,L.leaf1,s-2), []]);
+        if (!down) pts.push([at(L.p,L.leaf2,s-2), []]);
+        else if (!frr){ if (s-2 < 0.55) pts.push([at(L.p,L.leaf2,s-2), [], 1-clamp01((s-2-0.35)/0.2)]); }
+        else pts.push([at(L.p,L.leaf1,s-2), ['20003','20004','30004'], 1, 6]);
+      } else {
+        if (s < 4) pts.push([at(L.leaf1,L.rcv1,s-3), []]);
+        if (!down) pts.push([at(L.leaf2,L.rcv2,s-3), []]);
+        else if (frr){
+          if (s < 4) pts.push([at(L.leaf1,L.leaf2,s-3), [], 1, 6]);
+          else pts.push([at(L.leaf2,L.rcv2,s-4), []]);
+        }
+      }
+      pts.forEach(function(q){
+        var a = q[2] === undefined ? 1 : q[2];
+        if (q[3]){ var off = {x:q[0].x + q[3], y:q[0].y + q[3]}; dot(ctx, off.x, off.y, 5, C.cyan, null, a); }
+        else dot(ctx, q[0].x, q[0].y, 5, C.amber, null, a);
+      });
+      // label stack shown once per cycle on the detour, leaving P
+      if (down && frr && s >= 2 && s < 3 && k===0){
+        var lp = at(L.p, L.leaf1, s-2);
+        var y0 = lp.y - 14;
+        ['30004','20004','20003'].forEach(function(lb, j){ pill(ctx, lp.x, y0 - j*(fs+8), lb, fs-1, j===0 ? C.amberSoft : C.cyanSoft, j===0 ? C.amber : C.cyan, j===0 ? C.amberInk : C.cyanInk); });
+      }
+    }
+    // receiver-side readouts
+    if (!frr){
+      var gap = down ? 26.061*dp : (after ? 26.061 : 0);
+      var col = down ? RED : (after ? C.muted : C.good);
+      pill(ctx, L.rcv2.x - (w<480 ? 10 : 0), L.rcv2.y + L.bh/2 + 13, down ? ('ดับ ' + gap.toFixed(1) + ' s') : (after ? 'GAP 26.061 s' : 'ปกติ'), fs-1, C.raised, col, col);
+      if (down) fitText(ctx, 'IS-IS: 10.0.0.4 ผ่าน leaf1 แล้ว (metric 30) แต่ต้นไม้ไม่ขยับ', 12, h-10, w-24, '600', fs, '"Sarabun", "Inter", sans-serif', C.ink);
+      else fitText(ctx, after ? 'เปิดลิงก์คืน: traffic กลับมาทันที · rcv1 ไม่มี gap ตลอดการทดสอบ' : 'ปกติ: ต้นไม้ 9000 ส่งถึงทั้งสอง leaf', 12, h-10, w-24, '600', fs, '"Sarabun", "Inter", sans-serif', C.ink);
+    } else {
+      var cnt = down ? Math.round(1913*dp) : (after ? 1913 : 0);
+      // counter sits in the free gap between the leaves and the receivers
+      pill(ctx, (L.leaf1.x + L.rcv1.x)/2, (L.leaf1.y + L.leaf2.y)/2, 'leaf1→leaf2 ' + cnt.toLocaleString(), fs-1, C.cyanSoft, C.cyan, C.cyanInk);
+      pill(ctx, L.rcv2.x - (w<480 ? 10 : 0), L.rcv2.y + L.bh/2 + 13, 'ไม่มี gap', fs-1, C.goodSoft, C.good, C.good);
+      fitText(ctx, down ? 'protect-nexthop-id 3: P สลับไปทางเบี่ยงผ่าน leaf1 ไม่เห็นช่องว่าง > 100 ms' : (after ? 'สลับกลับทางหลักก็ไม่เห็นช่องว่าง > 100 ms' : 'ปกติ: กิ่ง P-leaf2 มีขาสำรอง downstream-nodes 3 รออยู่'), 12, h-10, w-24, '600', fs, '"Sarabun", "Inter", sans-serif', C.ink);
+    }
+  }
+  mount(document.getElementById('c-fail'), function(ctx,w,h,t,C){ failScene(ctx,w,h,t,C,false); }, 5.5);
+  mount(document.getElementById('c-frr'), function(ctx,w,h,t,C){ failScene(ctx,w,h,t,C,true); }, 4.2);
+
+  /* ---------------- 17 · S-PMSI switchover: MRAI 30 s vs 1 s (real 3-second bins from rcv1) ---------------- */
+  var MRAI30 = [103,14,104,0,0,0,0,0,0,0,61,102,103,104,103];   // 08_spmsi_switchover_gap_rcv1 ("1" = 0 artefact)
+  var MRAI1  = [102,102,102,102,102,102,101,103,101,104,103,104,102,102,102]; // 08b_spmsi_switchover_mrai1_rcv1
+  mount(document.getElementById('c-mrai'), function(ctx,w,h,t,C){
+    ctx.clearRect(0,0,w,h);
+    var fs = fsz(w), top = 50, bottom = 28, H = h-top-bottom;
+    var cycle = 10, tt = t % cycle;
+    var shown = Math.min(15, Math.floor(tt/0.32)+1);
+    var x0 = Math.max(30, w*0.07), x1 = w - 12, bwid = (x1-x0)/15;
+    var rowH = H/2;
+    [[MRAI30, C.amber, C.amberSoft, 'MRAI 30 s'],[MRAI1, C.good, C.goodSoft, 'MRAI 1 s']].forEach(function(r, ri){
+      var base = top + rowH*(ri+1) - 16, maxH = rowH - 34;
+      ctx.fillStyle = C.soft; ctx.font = '600 '+fs+'px "Inter", sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(r[3], x0, top + rowH*ri + fs + 2);
+      line(ctx, {x:x0, y:base}, {x:x1, y:base}, C.lineStrong, 1.2);
+      ctx.fillStyle = C.muted; ctx.font = '500 '+(fs-1)+'px "JetBrains Mono", monospace'; ctx.textAlign='right';
+      ctx.fillText('100', x0-4, base - maxH*100/110 + 3);
+      line(ctx, {x:x0, y:base - maxH*100/110}, {x:x1, y:base - maxH*100/110}, C.line, 1, [3,4]);
+      for (var i=0;i<shown;i++){
+        var v = r[0][i], bh2 = maxH*v/110, bx = x0 + i*bwid + bwid*0.15;
+        if (v === 0){
+          ctx.fillStyle = RED; ctx.fillRect(bx, base-2, bwid*0.7, 2);
+        } else {
+          ctx.fillStyle = r[2]; ctx.strokeStyle = r[1]; ctx.lineWidth = 1.2;
+          ctx.beginPath(); roundRectPath(ctx, bx, base-bh2, bwid*0.7, bh2, 3); ctx.fill(); ctx.stroke();
+        }
+        if (w >= 480 || v < 100){
+          ctx.fillStyle = v===0 ? RED : C.muted; ctx.font = '600 '+(fs-1.5)+'px "JetBrains Mono", monospace'; ctx.textAlign='center';
+          ctx.fillText(String(v), bx + bwid*0.35, v===0 ? base-6 : base-bh2-4);
+        }
+      }
+      if (ri === 0 && shown >= 10){
+        var gx0 = x0 + 3*bwid, gx1 = x0 + 10*bwid, gy = base - maxH*0.55;
+        line(ctx, {x:gx0+2, y:gy}, {x:gx1-2, y:gy}, RED, 1.4);
+        line(ctx, {x:gx0+2, y:gy-4}, {x:gx0+2, y:gy+4}, RED, 1.4);
+        line(ctx, {x:gx1-2, y:gy-4}, {x:gx1-2, y:gy+4}, RED, 1.4);
+        ctx.fillStyle = RED; ctx.font = '700 '+fs+'px "Sarabun", sans-serif'; ctx.textAlign='center';
+        ctx.fillText('เงียบ ~22 s', (gx0+gx1)/2, gy-7);
+      }
+    });
+    fitText(ctx, 'แต่ละแท่ง = แพ็กเก็ตที่ rcv1 ได้ใน 3 วินาที หลังเริ่มสตรีม 232.2.2.2 (50 pps)', 12, h-8, w-24, '500', fs, '"Sarabun", "Inter", sans-serif', C.muted);
+  }, 9.8);
+
+  /* ---------------- Reading progress bar + floating TOC ---------------- */
+  (function(){
+    var bar = document.getElementById('progress-bar');
+    var toggle = document.getElementById('toc-toggle');
+    var panel = document.getElementById('toc-panel');
+    if (!bar) return;
+    var links = panel ? Array.prototype.slice.call(panel.querySelectorAll('a[data-toc]')) : [];
+
+    function updateBar(){
+      var doc = document.documentElement;
+      var scrollTop = window.scrollY || doc.scrollTop;
+      var height = doc.scrollHeight - doc.clientHeight;
+      var pct = height>0 ? clamp01(scrollTop/height)*100 : 0;
+      bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', updateBar, {passive:true});
+    window.addEventListener('resize', updateBar);
+    updateBar();
+
+    if (toggle && panel){
+      toggle.addEventListener('click', function(){
+        var willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+      });
+      document.addEventListener('click', function(e){
+        if (!panel.hidden && !panel.contains(e.target) && e.target!==toggle && !toggle.contains(e.target)){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+      links.forEach(function(a){
+        a.addEventListener('click', function(){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    if (sections.length && links.length){
+      var byId = {};
+      links.forEach(function(a){ byId[a.getAttribute('data-toc')] = a; });
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){
+            links.forEach(function(a){ a.classList.remove('active'); });
+            var a = byId[e.target.id];
+            if (a) a.classList.add('active');
+          }
+        });
+      }, {rootMargin:'-40% 0px -55% 0px', threshold:0});
+      sections.forEach(function(s){ io.observe(s); });
+    }
+  })();
+
+})();
+</script>
+<script src="../assets/theme.js"></script>
+</body>
+</html>
