@@ -90,7 +90,7 @@
 <li>ค่า delay ที่ส่งเข้า IS-IS โดย default เป็น <strong>round trip ÷ 2</strong> (<code>unidirectional-measurement derived</code>) ไม่ใช่ one-way จริง ถ้าต้องการ forward จริงต้องมี PTP แล้วตั้ง <code>actual</code> ส่วน LAG IP Measurement รายงาน round trip เต็ม</li>
 <li>IS-IS ส่งออกไป <strong>ค่าเดียวต่อ adjacency</strong> (ASLA, <code>Delay Min = Max</code>) ไม่มีข้อมูลราย member ออกไปนอกกล่อง</li>
 <li>ถ้าใช้ configuration group ให้ apply group เดียวไว้ที่ <code>router "Base"</code> (template + twamp-light) แล้วใส่ <code>lag-micro-sessions true</code> แบบ <strong>local บรรทัดเดียว</strong> บนทุก interface ที่อยู่บน LAG <strong>อย่าใส่ <code>true</code> ไว้ใน group</strong> เพราะ interface ที่อยู่บน port จะ commit ผ่าน แต่หยุดวัดไปเงียบ ๆ และค่าเก่าจะค้างอยู่ใน LSP</li>
-<li>กับดักใหญ่สุด: <code>lag-micro-sessions</code> + <code>delay min</code> + มี <code>aggregate-sample-window threshold</code> จะทำให้ค่าที่โฆษณา <strong>สลับไปมาระหว่าง 0.4 กับ 2.9 ms ทุก ~15 วินาที</strong></li>
+<li>กับดักใหญ่สุด: <code>lag-micro-sessions</code> + <code>delay min</code> + มี <code>aggregate-sample-window threshold</code> จะทำให้ค่าที่โฆษณา <strong>สลับไปมาระหว่าง 0.4 กับ 2.9 ms ทุก ~15 วินาที</strong> ใน lab (network จริงน่าจะเกิดยาก เพราะต้องมี member ที่ delay ต่างกันมากและแกว่งเกิน threshold ตลอด)</li>
 </ul>
 
   </section>
@@ -1312,7 +1312,7 @@ configure router &quot;Base&quot; apply-groups [&quot;core-if&quot;]
 <li><strong>ไม่มี <code>advertise-delay true</code> หรือไม่มี ASLA</strong> วัดได้ปกติแต่ไม่มี delay ใน LSP (มีแค่ Adj-SID)</li>
 <li><strong>ไม่มี <code>twamp-light reflector prefix</code></strong> ที่ครอบ IP ของฝั่งตรงข้าม session ขึ้น Up แต่ได้ <code>Rcv/Snt 0/5</code></li>
 <li><strong>ค่า ASLA จะขึ้นก็ต่อเมื่อ</strong> เปิด SR และ Flex-Algo <code>participate</code> แล้ว</li>
-<li><strong>aggregate threshold + <code>lag-micro-sessions</code> + <code>delay min</code></strong> ค่าที่โฆษณาสลับระหว่าง ~0.4 กับ ~2.9 ms ทุก ~15 วินาที (รายละเอียดข้างล่าง)</li>
+<li><strong>aggregate threshold + <code>lag-micro-sessions</code> + <code>delay min</code></strong> ค่าที่โฆษณาสลับระหว่าง ~0.4 กับ ~2.9 ms ทุก ~15 วินาที ใน lab ส่วน network จริงน่าจะเกิดยาก (รายละเอียดข้างล่าง)</li>
 <li><strong><code>lag-micro-sessions true</code> บน interface ที่อยู่บน port</strong> commit ผ่าน แต่ <code>Oper Down</code>, <code>InterfaceNotLag</code> และค่าเก่าค้างอยู่ใน LSP</li>
 <li><strong>LAG IP Measurement + link-measurement บน interface เดียวกัน</strong> ใส่ทีละบรรทัดได้ แต่จะตกตอน validate/commit:</li>
 </ul>
@@ -1357,20 +1357,97 @@ configure router &quot;Base&quot; apply-groups [&quot;core-if&quot;]
 13:30:51 r2-adv-lag23: Delay Min : 522 | r3-local: Delay Measure Last Reported: 2914us Triggered By : AggregateThresholdAbsolute Measurement Source : 1/1/c4/1
 13:31:06 r2-adv-lag23: Delay Min : 2924 | r3-local: Delay Measure Last Reported: 418us Triggered By : SampleThresholdAbsolute Measurement Source : 1/1/c3/1
 </code></pre></div>
-<p>กลไกที่เห็นจาก <code>lag-micro-sessions detail</code>:</p>
-<p><strong>1.</strong> member ที่เร็ว (c3) มี jitter มากกว่า threshold 20 us ทำให้ sample window ของ c3 trigger report แทบทุก window และตามเอกสาร การ report จาก sample window จะ restart aggregate window ทุกครั้ง aggregate window ของ c3 จึงไม่เคยครบ (<code>SwReported</code>, Count 1–2, <code>I = N</code>)</p>
-<p><strong>2.</strong> member ที่ช้า (c4) ค่านิ่ง (~2.9 ms ±50 us) ไม่ trigger sample threshold aggregate window ของ c4 จึงครบ 30 วินาที:</p>
+<p><strong>ทำไมถึงแกว่ง (อธิบายทีละขั้น)</strong></p>
+<p><strong>1. แต่ละ member มีหน้าต่างวัด 2 ชั้น</strong></p>
+<ul>
+<li><strong>sample window</strong>: test packet 5 ตัว ตัวละ 1 วินาที ปิดทุก <strong>5 วินาที</strong></li>
+<li><strong>aggregate window</strong>: sample window 6 อันต่อกัน ปิดทุก <strong>30 วินาที</strong> เป็นค่าระยะยาวที่นิ่งกว่า</li>
+</ul>
+<p><strong>2. threshold คือเงื่อนไขว่าเมื่อไหร่จะ report ค่าใหม่ให้ routing</strong> ถ้าไม่เกิน ค่าเดิมจะค้างไว้ IGP จะได้ไม่ flood บ่อย</p>
+<ul>
+<li><code>sample-window threshold absolute 20 relative 10</code>: sample window ปิดแล้วค่าต่างจากค่าเดิมเกินเกณฑ์ ก็ report ทันที</li>
+<li><code>aggregate-sample-window threshold absolute 10</code>: aggregate window ปิดแล้วค่าต่างจากค่าเดิมเกิน 10 us ก็ report</li>
+<li>ตามเอกสาร ทุกครั้งที่ sample window ทำให้เกิด report จะ <strong>เริ่มนับ aggregate window ใหม่จากศูนย์</strong></li>
+</ul>
+<p><strong>3. สองเส้นใน lag-23 ต่างกันแบบนี้</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>member</th>
+<th>delay</th>
+<th>ลักษณะ</th>
+<th>sample threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="member"><span>c3</span></td>
+<td data-label="delay"><span>~0.45 ms</span></td>
+<td data-label="ลักษณะ"><span>เร็ว แต่แกว่ง ±50–90 us</span></td>
+<td data-label="sample threshold"><span>เกินแทบทุก window (10% ของ 450 us = 45 us)</span></td>
+</tr>
+<tr>
+<td data-label="member"><span>c4 (netem)</span></td>
+<td data-label="delay"><span>~2.9 ms</span></td>
+<td data-label="ลักษณะ"><span>ช้า แต่นิ่ง ±50 us</span></td>
+<td data-label="sample threshold"><span>ไม่เคยเกิน (10% ของ 2.9 ms = 290 us)</span></td>
+</tr>
+</tbody>
+</table></div>
+<p>จากผลใน lab ดูเหมือนต้องเกินทั้ง absolute และ relative ถึงจะ trigger ข้อนี้อนุมานจากพฤติกรรม ยังไม่ได้ยืนยันกับเอกสาร</p>
+<figure class="diagram"><svg viewBox="0 0 720 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="เส้นเวลา sample และ aggregate window ของ c3 และ c4">
+<rect x="0" y="0" width="720" height="270" fill="none"/>
+<text x="20" y="62" font-size="14" font-weight="600" style="fill:var(--ink)">c3 (เร็ว)</text>
+<text x="20" y="132" font-size="14" font-weight="600" style="fill:var(--ink)">c4 (ช้า)</text>
+<text x="20" y="212" font-size="14" font-weight="600" style="fill:var(--ink)">ค่าที่ report</text>
+<g style="fill:var(--bg-sunk);stroke:var(--line-strong)" stroke-width="1">
+<rect x="130" y="44" width="90" height="26"/><rect x="220" y="44" width="90" height="26"/><rect x="310" y="44" width="90" height="26"/><rect x="400" y="44" width="90" height="26"/><rect x="490" y="44" width="90" height="26"/><rect x="580" y="44" width="90" height="26"/>
+</g>
+<g font-size="12" text-anchor="middle" style="fill:var(--cyan)">
+<text x="175" y="62">S → report</text><text x="265" y="62">S → report</text><text x="355" y="62">S → report</text><text x="445" y="62">S → report</text><text x="535" y="62">S → report</text><text x="625" y="62">S → report</text>
+</g>
+<text x="400" y="90" text-anchor="middle" font-size="12" style="fill:var(--muted)">aggregate ของ c3 ถูกเริ่มใหม่ทุก 5 วินาที จึงไม่เคยครบ 30 วินาที</text>
+<rect x="130" y="114" width="540" height="26" style="fill:var(--bg-sunk);stroke:var(--line-strong)" stroke-width="1"/>
+<text x="400" y="132" text-anchor="middle" font-size="12" style="fill:var(--ink-soft)">sample window ไม่เกิน threshold · aggregate window นับครบ 30 วินาที</text>
+<line x1="670" y1="104" x2="670" y2="150" stroke-width="2.5" style="stroke:var(--amber)"/>
+<text x="664" y="164" text-anchor="end" font-size="12" style="fill:var(--amber)">aggregate ปิด → min จาก c4 อย่างเดียว = 2.9 ms → report</text>
+<line x1="130" y1="230" x2="690" y2="230" stroke-width="1" style="stroke:var(--line-strong)"/>
+<polyline points="130,215 670,215 670,190 690,190" fill="none" stroke-width="2.5" style="stroke:var(--ink)"/>
+<text x="400" y="208" text-anchor="middle" font-size="12" style="fill:var(--ink-soft)">0.45 ms (ถูกต้อง)</text>
+<text x="684" y="184" text-anchor="end" font-size="12" style="fill:var(--amber)">2.9 ms</text>
+<text x="400" y="256" text-anchor="middle" font-size="12" style="fill:var(--muted)">จากนั้น sample window ถัดไปของ c3 ที่เกิน threshold ดึงค่ากลับเป็น 0.45 ms แล้ววนซ้ำ</text>
+</svg><figcaption>c3 report บ่อยจน aggregate ของตัวเองไม่เคยครบ พอ aggregate ของ c4 ปิด "min" จึงคิดจาก c4 ตัวเดียว</figcaption></figure>
+<p><strong>4. ลำดับเหตุการณ์</strong></p>
+<ol>
+<li>sample window ของ c3 ปิด ค่าเกิน threshold ระบบ report: min = <strong>0.45 ms</strong> ถูกต้อง</li>
+<li>report นั้นทำให้ aggregate window ของ c3 เริ่มนับใหม่ ซึ่งเกิดแทบทุก 5 วินาที aggregate ของ c3 จึง<strong>ไม่เคยครบ</strong> (<code>SwReported</code>, Count 1–2, <code>I = N</code>)</li>
+<li>c4 ไม่เคย trigger ที่ sample window aggregate window ของ c4 จึงครบ 30 วินาทีตามปกติ</li>
+<li>aggregate ของ c4 ปิด ระบบคิด "min" ฝั่ง aggregate แต่ฝั่งนั้นมีค่าของ c4 ค่าเดียว ผลจึงเป็น <strong>2.9 ms</strong> ซึ่งต่างจากค่าเดิมเกิน 10 us จึง report และ IS-IS ประกาศ 2.9 ms ทั้งที่ c3 ยังเร็วอยู่</li>
+<li>sample window ถัดไปของ c3 ที่เกิน threshold ดึงค่ากลับเป็น <strong>0.45 ms</strong> แล้ววนกลับไปข้อ 2</li>
+</ol>
+<p>หลักฐานว่า aggregate ของ c4 ครบจริง:</p>
 <div class="code-block"><pre><code>LAG Member Port: 1/1/c4/1                              Currently Reporting: Min
 End Timestamp (UTC)               State Count Min(us) Max(us) Avg(us) I  Result
 2026/10/07 13:28:24         AswReported     6    2910    3020    2946 Y    2910
 </code></pre></div>
-<p><strong>3.</strong> ตอน aggregate window ของ c4 ปิด ฝั่ง aggregate มีค่าที่ promote อยู่ค่าเดียวคือของ c4 ผล "min" จึงเป็น 2.9 ms ซึ่งเกิน threshold และ report ทันที</p>
-<p><strong>4.</strong> sample window ถัดไปของ c3 ดึงค่ากลับมาที่ ~0.45 ms แล้ววนแบบนี้ไปเรื่อย ๆ Flex-Algo ต้องคำนวณใหม่ทุกรอบ</p>
+<p><strong>สรุปปัญหา</strong>: ตอน aggregate window ปิด ระบบคิด min จากเฉพาะ member ที่มี aggregate ครบ ไม่ได้คิดจากทุก member member ที่ report บ่อยจึงหลุดจากการคิดทุกครั้ง ดูเหมือนเป็นพฤติกรรมที่ไม่ได้ตั้งใจ ลบ aggregate threshold ออกแล้วค่านิ่งที่ ~0.45 ms ทันที (กราฟฝั่งขวา)</p>
+<p><strong>โอกาสเกิดใน network จริง</strong></p>
+<p>ต้องเกิดสองเงื่อนไขพร้อมกัน ซึ่งใน lab เราสร้างขึ้นเองทั้งคู่ บน network จริงจึงน่าจะเกิดยาก</p>
+<ul>
+<li><strong>member ที่เร็วต้องแกว่งเกิน threshold แทบทุก sample window</strong>: SR-SIM ใส่ timestamp ด้วย software จึงแกว่งหลายสิบ us บนฮาร์ดแวร์จริง jitter ของลิงก์ปกติน่าจะเล็กกว่านี้มาก (ยังไม่ได้ยืนยันว่าแต่ละรุ่นใส่ timestamp ในฮาร์ดแวร์หรือไม่)</li>
+<li><strong>member ต้องมี delay ต่างกันชัด</strong>: ใน lab ใส่ netem ให้เส้นหนึ่งช้ากว่า 2.5 ms แต่ member ของ LAG ส่วนใหญ่วิ่งเส้นทางเดียวกัน ต่อให้กลไกนี้ทำงาน ค่าที่สลับไปมาก็ต่างกันไม่กี่ us จนไม่มีผลกับ routing</li>
+</ul>
+<p>กรณีที่ควรระวัง:</p>
+<ul>
+<li>LAG ที่ member วิ่งคนละเส้นทาง เช่น fiber หรือ DWDM คนละ route จน delay ต่างกันชัด</li>
+<li>member ที่ delay ไม่นิ่ง เช่น ผ่าน transport ที่มี protection switch หรือ buffering</li>
+</ul>
+<p>ที่ยังต้องรู้ไว้เพราะถ้าเกิดจะไม่มี error เตือนเลย เห็นแค่ Flex-Algo คำนวณเส้นทางใหม่บ่อย ๆ</p>
 <p>คำแนะนำ:</p>
 <ul>
-<li>ถ้าใช้ <code>lag-micro-sessions</code> ให้ใช้ threshold แค่ฝั่ง sample window หรือถ้าจำเป็นต้องใช้ทั้งสองแบบ ให้ทดสอบกับ member ที่ค่าต่างกันจริงก่อนเสมอ</li>
+<li>ถ้าใช้ <code>lag-micro-sessions</code> ให้ใช้ threshold แค่ฝั่ง sample window</li>
 <li>ถ้า template เดิมที่ใช้อยู่มี aggregate threshold ให้แยก template สำหรับ LAG ออกมา (เป็นอีกบรรทัด local จุดเดียวกัน: <code>link-measurement-template "lm-stamp-lag"</code>)</li>
-<li>ดูเหมือนเป็นพฤติกรรมที่ไม่ได้ตั้งใจของการรวมค่าใน aggregate window ควรถาม Nokia ก่อนเอาไปใช้ใน production</li>
+<li>ก่อนใช้ใน production ควรลองบนฮาร์ดแวร์จริงกับ member ที่ delay ต่างกัน หรือถาม Nokia ว่าตั้งใจให้ทำงานแบบนี้หรือไม่</li>
 <li>ถ้าค่าที่ report แกว่ง ลองใช้ <code>isis interface delay-normalization</code> ช่วย (มีตั้งแต่ 24.10 ตาม RN)</li>
 </ul>
 
