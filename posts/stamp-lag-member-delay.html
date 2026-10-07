@@ -87,6 +87,7 @@
 <li><strong>LAG IP Measurement</strong> ได้ค่าละเอียดราย member (RT delay, IFDV, FLR) แต่ใช้เป็น <strong>telemetry อย่างเดียว</strong> routing ไม่เห็นค่านี้ และลิงก์นั้นจะหลุดออกจาก Flex-Algo แบบ delay</li>
 </ol>
 </li>
+<li>ค่า delay ที่ส่งเข้า IS-IS โดย default เป็น <strong>round trip ÷ 2</strong> (<code>unidirectional-measurement derived</code>) ไม่ใช่ one-way จริง ถ้าต้องการ forward จริงต้องมี PTP แล้วตั้ง <code>actual</code> ส่วน LAG IP Measurement รายงาน round trip เต็ม</li>
 <li>IS-IS ส่งออกไป <strong>ค่าเดียวต่อ adjacency</strong> (ASLA, <code>Delay Min = Max</code>) ไม่มีข้อมูลราย member ออกไปนอกกล่อง</li>
 <li>ถ้าใช้ configuration group ให้ apply group เดียวไว้ที่ <code>router "Base"</code> (template + twamp-light) แล้วใส่ <code>lag-micro-sessions true</code> แบบ <strong>local บรรทัดเดียว</strong> บนทุก interface ที่อยู่บน LAG <strong>อย่าใส่ <code>true</code> ไว้ใน group</strong> เพราะ interface ที่อยู่บน port จะ commit ผ่าน แต่หยุดวัดไปเงียบ ๆ และค่าเก่าจะค้างอยู่ใน LSP</li>
 <li>กับดักใหญ่สุด: <code>lag-micro-sessions</code> + <code>delay min</code> + มี <code>aggregate-sample-window threshold</code> จะทำให้ค่าที่โฆษณา <strong>สลับไปมาระหว่าง 0.4 กับ 2.9 ms ทุก ~15 วินาที</strong></li>
@@ -167,6 +168,119 @@
 </tbody>
 </table></div>
 <p>ตัวอย่างจาก lab: ตอนที่ STAMP วัดได้แล้วแต่ยังไม่ได้เปิด <code>advertise-delay</code> LSP ของ r1 มีแค่ Adj-SID ไม่มี delay เลย พอเปิด <code>advertise-delay true</code> + ASLA + Flex-Algo 128 ค่า delay จึงขึ้นมาใน <code>TE APP LINK ATTR</code> และมี flag <code>X</code></p>
+<h3>ค่า delay เป็นทิศไหน: one-way หรือ round trip</h3>
+<p>STAMP เก็บ timestamp 4 จุดต่อ 1 test packet</p>
+<figure class="diagram"><svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="STAMP timestamps T1 ถึง T4">
+<rect x="0" y="0" width="720" height="300" fill="none"/>
+<text x="150" y="28" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">r1 (sender)</text>
+<text x="570" y="28" text-anchor="middle" font-size="15" font-weight="600" style="fill:var(--ink)">r2 (reflector)</text>
+<line x1="150" y1="40" x2="150" y2="280" stroke-width="2" style="stroke:var(--line-strong)"/>
+<line x1="570" y1="40" x2="570" y2="280" stroke-width="2" style="stroke:var(--line-strong)"/>
+<line x1="150" y1="70" x2="562" y2="130" stroke-width="2.2" style="stroke:var(--cyan)"/>
+<polygon points="570,131 558,124 556,136" style="fill:var(--cyan)"/>
+<line x1="570" y1="180" x2="158" y2="240" stroke-width="2.2" style="stroke:var(--amber)"/>
+<polygon points="150,241 162,232 164,244" style="fill:var(--amber)"/>
+<circle cx="150" cy="70" r="5" style="fill:var(--ink)"/><text x="138" y="75" text-anchor="end" font-size="14" style="fill:var(--ink)">T1 ส่ง</text>
+<circle cx="570" cy="131" r="5" style="fill:var(--ink)"/><text x="582" y="136" font-size="14" style="fill:var(--ink)">T2 รับ</text>
+<circle cx="570" cy="180" r="5" style="fill:var(--ink)"/><text x="582" y="185" font-size="14" style="fill:var(--ink)">T3 ตอบกลับ</text>
+<circle cx="150" cy="241" r="5" style="fill:var(--ink)"/><text x="138" y="246" text-anchor="end" font-size="14" style="fill:var(--ink)">T4 รับคืน</text>
+<text x="360" y="88" text-anchor="middle" font-size="13" style="fill:var(--cyan)">forward = T2 − T1</text>
+<text x="360" y="232" text-anchor="middle" font-size="13" style="fill:var(--amber)">backward = T4 − T3</text>
+<line x1="582" y1="140" x2="582" y2="170" stroke-width="1.5" stroke-dasharray="3 3" style="stroke:var(--muted)"/>
+<text x="556" y="160" text-anchor="end" font-size="12" style="fill:var(--muted)">เวลาประมวลผลที่ r2 (T3 − T2)</text>
+<text x="360" y="285" text-anchor="middle" font-size="13" style="fill:var(--ink-soft)">round trip = (T4 − T1) − (T3 − T2) · ใช้นาฬิกาเครื่องเดียวต่อการลบ ไม่ต้อง sync</text>
+</svg><figcaption>forward / backward ต้องใช้นาฬิกาสองเครื่องที่ sync กัน ส่วน round trip ไม่ต้อง</figcaption></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ค่า</th>
+<th>สูตร</th>
+<th>ต้อง sync นาฬิกา</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="ค่า"><span>forward (r1 → r2)</span></td>
+<td data-label="สูตร"><span>T2 − T1</span></td>
+<td data-label="ต้อง sync นาฬิกา"><span>ต้อง (PTP หรือแม่นระดับเดียวกัน)</span></td>
+</tr>
+<tr>
+<td data-label="ค่า"><span>backward (r2 → r1)</span></td>
+<td data-label="สูตร"><span>T4 − T3</span></td>
+<td data-label="ต้อง sync นาฬิกา"><span>ต้อง</span></td>
+</tr>
+<tr>
+<td data-label="ค่า"><span>round trip</span></td>
+<td data-label="สูตร"><span>(T4 − T1) − (T3 − T2)</span></td>
+<td data-label="ต้อง sync นาฬิกา"><span>ไม่ต้อง</span></td>
+</tr>
+</tbody>
+</table></div>
+<p>ค่าที่ link measurement ส่งเข้า routing engine กำหนดด้วย <code>unidirectional-measurement</code> ใน template</p>
+<div class="code-block"><pre><code>/configure test-oam link-measurement measurement-template &quot;lm-stamp&quot; unidirectional-measurement derived
+</code></pre></div>
+<ul>
+<li><strong><code>derived</code> (default):</strong> round trip ÷ 2 ไม่ต้องมี PTP</li>
+<li><strong><code>actual</code>:</strong> forward จริง (T2 − T1) ต้องมีนาฬิกา sync แม่นมาก ถ้าไม่ sync ค่าจะเพี้ยนตาม clock offset</li>
+<li>ไม่มีตัวเลือก backward</li>
+<li><strong>forward</strong> คือทิศจาก node ที่เป็นเจ้าของ interface ไปหาเพื่อนบ้าน r1 วัด r1 → r2 แล้วโฆษณาเป็น delay ของ adjacency ตัวเอง ตามหลักของ RFC 8570 ที่แต่ละฝั่งโฆษณา delay ขาออกของตัวเอง</li>
+<li><code>delay min | max | avg | ...</code> ใน template เป็นคนละเรื่อง ใช้เลือกค่าสถิติจาก sample window ไม่ได้เปลี่ยนทิศ</li>
+<li>อ้างอิง: OAM and Diagnostics Guide 26.7 หัวข้อ 5.1.2.1 และ 5.1.2.3, MD-CLI Command Reference 26.7 (<code>unidirectional-measurement</code>)</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>โหมด</th>
+<th>ทิศของค่า</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="โหมด"><span>link measurement (โหมด 1)</span></td>
+<td data-label="ทิศของค่า"><span>unidirectional: <code>derived</code> = RTT/2 (default) หรือ <code>actual</code> = T2 − T1</span></td>
+</tr>
+<tr>
+<td data-label="โหมด"><span><code>lag-micro-sessions</code> (โหมด 2)</span></td>
+<td data-label="ทิศของค่า"><span>เหมือนโหมด 1 แต่คิดราย member</span></td>
+</tr>
+<tr>
+<td data-label="โหมด"><span>LAG IP Measurement (โหมด 3)</span></td>
+<td data-label="ทิศของค่า"><span><strong>round trip เต็ม</strong> ไม่หาร 2</span></td>
+</tr>
+</tbody>
+</table></div>
+<p>ผลใน lab ยืนยันว่า default เป็น RTT/2: ใส่ netem 5 ms ไว้ทิศเดียว (r2 → r1) บน member c1 ของ lag-12</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>node</th>
+<th>ก่อนใส่</th>
+<th>หลังใส่</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="node"><span>r1 (<code>to-r2</code>)</span></td>
+<td data-label="ก่อนใส่"><span>~0.5 ms</span></td>
+<td data-label="หลังใส่"><span>3012 us</span></td>
+</tr>
+<tr>
+<td data-label="node"><span>r2 (<code>to-r1</code>)</span></td>
+<td data-label="ก่อนใส่"><span>~0.5 ms</span></td>
+<td data-label="หลังใส่"><span>2906 us</span></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>ทั้งสองฝั่งเพิ่มขึ้นราว 2.5 ms เท่ากัน เพราะ round trip ของทั้งสองฝั่งผ่านขาที่ช้าครั้งเดียวพอดี r1 ช้าตอนขากลับ ส่วน r2 ช้าตอนขาไป</li>
+<li>ถ้าใช้ <code>actual</code> และนาฬิกา sync จริง r1 ควรยังได้ ~0.5 ms ส่วน r2 ได้ ~5.5 ms และ IS-IS จะเห็น delay สองทิศไม่เท่ากัน ข้อนี้มาจากเอกสาร <strong>ยังไม่ได้ทดสอบ</strong> เพราะ SR-SIM ไม่มี PTP</li>
+<li>โหมด 3 บนลิงก์ปกติวัดได้ราว 0.8–1.1 ms ประมาณ 2 เท่าของโหมด 1–2 (~0.45 ms) ตรงกับที่เป็น round trip เต็ม ส่วนจะหักเวลาประมวลผล (T3 − T2) ออกหรือไม่ เอกสารไม่ได้เขียนไว้ตรง ๆ</li>
+</ul>
+<p>ผลในทางปฏิบัติ</p>
+<ul>
+<li>ลิงก์ที่ delay สองทิศไม่เท่ากัน ค่า default จะถูกเฉลี่ยจนสองฝั่งเท่ากัน ถ้าต้องการ one-way จริงให้ Flex-Algo ใช้ ต้องมี PTP แล้วตั้ง <code>actual</code></li>
+<li>อย่าเอาค่าของโหมด 3 ไปเทียบกับค่าใน IS-IS ตรง ๆ เพราะค่าหนึ่งเป็น round trip อีกค่าเป็น round trip ÷ 2</li>
+</ul>
 <h3>ปัญหาของ LAG</h3>
 <ul>
 <li>link measurement เดิมสร้าง test session <strong>1 ตัวต่อ IP interface</strong> เอกสาร (OAM and Diagnostics Guide 26.7.R1, 5.1.1) เขียนไว้ว่า <em>"If the IP interface is configured over a LAG, the test session is hashed to a single Ethernet port"</em></li>
