@@ -199,26 +199,11 @@ th,td{ padding:.65rem .9rem; text-align:left; border-bottom:1px solid var(--line
 thead th{ font-family:"Inter",sans-serif; font-size:.76rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); background:var(--bg-sunk); }
 tbody tr:last-child td{ border-bottom:none; }
 
-/* On narrow screens, stop forcing sideways scroll — stack each row into its own labeled card instead */
+/* On narrow screens keep a normal table: tighter cells, text wraps, sideways scroll only if a table truly can't fit */
 @media (max-width:600px){
-  .table-wrap{ overflow-x:visible; border:none; box-shadow:none; border-radius:0; }
-  table{ min-width:0; display:block; }
-  thead{ display:none; }
-  tbody{ display:grid; gap:.7rem; }
-  tbody tr{
-    display:block; background:var(--bg-raised); border:1px solid var(--line);
-    border-radius:var(--radius); box-shadow:var(--shadow); padding:.2rem .95rem;
-  }
-  tbody tr td{
-    display:grid; grid-template-columns:9.2rem 1fr; gap:.8rem; align-items:baseline;
-    padding:.55rem 0; border-bottom:1px solid var(--line);
-  }
-  tbody tr td:last-child{ border-bottom:none; }
-  tbody tr td::before{
-    content:attr(data-label);
-    font-family:"Inter",sans-serif; font-size:.72rem; font-weight:600;
-    text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
-  }
+  table{ min-width:0; font-size:.82rem; }
+  th,td{ padding:.5rem .6rem; vertical-align:top; }
+  thead th{ font-size:.7rem; letter-spacing:.03em; }
 }
 
 /* ---------------- Hierarchy SVG ---------------- */
