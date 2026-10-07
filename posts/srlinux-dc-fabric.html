@@ -25,6 +25,10 @@
   .mermaid-wrap{ margin:1.6rem 0; padding:1.2rem; overflow-x:auto; background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius); }
   .mermaid-wrap pre.mermaid{ background:none; border:0; margin:0; text-align:center; }
   .hero{ padding-bottom:3rem; }
+  @media (max-width:600px){
+    tbody tr td[data-label=""]{ grid-template-columns:1fr; font-weight:600; }
+    tbody tr td[data-label=""]::before{ display:none; }
+  }
 </style>
 </head>
 <body>
@@ -133,24 +137,24 @@
 </thead>
 <tbody>
 <tr>
-<td>Leaf</td>
-<td><strong>แต่ละ leaf ASN ไม่ซ้ำกัน</strong></td>
-<td>65101…65106, 65201…65206</td>
+<td data-label="ชั้น"><span>Leaf</span></td>
+<td data-label="กฎ"><span><strong>แต่ละ leaf ASN ไม่ซ้ำกัน</strong></span></td>
+<td data-label="ตัวอย่าง"><span>65101…65106, 65201…65206</span></td>
 </tr>
 <tr>
-<td>Spine ใน cluster เดียวกัน</td>
-<td><strong>ASN เดียวกันทั้ง cluster</strong></td>
-<td>cluster1 = 65100</td>
+<td data-label="ชั้น"><span>Spine ใน cluster เดียวกัน</span></td>
+<td data-label="กฎ"><span><strong>ASN เดียวกันทั้ง cluster</strong></span></td>
+<td data-label="ตัวอย่าง"><span>cluster1 = 65100</span></td>
 </tr>
 <tr>
-<td>Spine ต่าง cluster</td>
-<td>ASN ต่างกัน</td>
-<td>cluster2 = 65200</td>
+<td data-label="ชั้น"><span>Spine ต่าง cluster</span></td>
+<td data-label="กฎ"><span>ASN ต่างกัน</span></td>
+<td data-label="ตัวอย่าง"><span>cluster2 = 65200</span></td>
 </tr>
 <tr>
-<td>Super-spine</td>
-<td><strong>ASN เดียวกันทั้งหมด</strong> (แต่ต่างจาก spine)</td>
-<td>65000</td>
+<td data-label="ชั้น"><span>Super-spine</span></td>
+<td data-label="กฎ"><span><strong>ASN เดียวกันทั้งหมด</strong> (แต่ต่างจาก spine)</span></td>
+<td data-label="ตัวอย่าง"><span>65000</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -366,36 +370,36 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>app_mgr</strong></td>
-<td>start/monitor/restart app, อ่าน <code>/opt/srlinux/appmgr/</code>, โหลด YANG ให้ mgmt_svr</td>
+<td data-label="Component"><span><strong>app_mgr</strong></span></td>
+<td data-label="หน้าที่"><span>start/monitor/restart app, อ่าน <code>/opt/srlinux/appmgr/</code>, โหลด YANG ให้ mgmt_svr</span></td>
 </tr>
 <tr>
-<td><strong>mgmt_svr</strong></td>
-<td>own YANG, validate, <strong>แปลง config เป็น protobuf ลง IDB</strong></td>
+<td data-label="Component"><span><strong>mgmt_svr</strong></span></td>
+<td data-label="หน้าที่"><span>own YANG, validate, <strong>แปลง config เป็น protobuf ลง IDB</strong></span></td>
 </tr>
 <tr>
-<td><strong>IDB</strong></td>
-<td><strong>messaging/exchange ระหว่าง app</strong> (pub/sub, topic)</td>
+<td data-label="Component"><span><strong>IDB</strong></span></td>
+<td data-label="หน้าที่"><span><strong>messaging/exchange ระหว่าง app</strong> (pub/sub, topic)</span></td>
 </tr>
 <tr>
-<td><strong>YANG</strong></td>
-<td><strong>นิยาม config + state</strong> ของแต่ละ app</td>
+<td data-label="Component"><span><strong>YANG</strong></span></td>
+<td data-label="หน้าที่"><span><strong>นิยาม config + state</strong> ของแต่ละ app</span></td>
 </tr>
 <tr>
-<td><strong>CLI plugin</strong></td>
-<td><strong>customize CLI</strong> (สร้าง command เอง)</td>
+<td data-label="Component"><span><strong>CLI plugin</strong></span></td>
+<td data-label="หน้าที่"><span><strong>customize CLI</strong> (สร้าง command เอง)</span></td>
 </tr>
 <tr>
-<td><strong>NDK</strong></td>
-<td>library ให้ app 3rd-party คุยกับ SR Linux/IDB ตรง ๆ</td>
+<td data-label="Component"><span><strong>NDK</strong></span></td>
+<td data-label="หน้าที่"><span>library ให้ app 3rd-party คุยกับ SR Linux/IDB ตรง ๆ</span></td>
 </tr>
 <tr>
-<td><strong>XDP</strong></td>
-<td>abstraction ของ hardware datapath</td>
+<td data-label="Component"><span><strong>XDP</strong></span></td>
+<td data-label="หน้าที่"><span>abstraction ของ hardware datapath</span></td>
 </tr>
 <tr>
-<td><strong>EDA</strong></td>
-<td><strong>intent-based automation ของทุกด้านของ DC operation</strong></td>
+<td data-label="Component"><span><strong>EDA</strong></span></td>
+<td data-label="หน้าที่"><span><strong>intent-based automation ของทุกด้านของ DC operation</strong></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -493,28 +497,28 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>running</strong> (default ตอน login)</td>
-<td>ดู config ปัจจุบัน</td>
-<td>running (config อย่างเดียว)</td>
-<td><strong>ไม่ได้ (read-only)</strong></td>
+<td data-label="Mode"><span><strong>running</strong> (default ตอน login)</span></td>
+<td data-label="ทำอะไร"><span>ดู config ปัจจุบัน</span></td>
+<td data-label="Datastore"><span>running (config อย่างเดียว)</span></td>
+<td data-label="แก้ config ได้?"><span><strong>ไม่ได้ (read-only)</strong></span></td>
 </tr>
 <tr>
-<td><strong>state</strong></td>
-<td>ดู config <strong>+ operational state</strong> (oper-state, counters, BGP state)</td>
-<td>state (config + non-config)</td>
-<td>ไม่ได้</td>
+<td data-label="Mode"><span><strong>state</strong></span></td>
+<td data-label="ทำอะไร"><span>ดู config <strong>+ operational state</strong> (oper-state, counters, BGP state)</span></td>
+<td data-label="Datastore"><span>state (config + non-config)</span></td>
+<td data-label="แก้ config ได้?"><span>ไม่ได้</span></td>
 </tr>
 <tr>
-<td><strong>show</strong></td>
-<td>ดู <strong>report สำเร็จรูป</strong> (Python) ที่อ่านง่าย</td>
-<td>ไม่มี datastore ของตัวเอง</td>
-<td>ไม่ได้</td>
+<td data-label="Mode"><span><strong>show</strong></span></td>
+<td data-label="ทำอะไร"><span>ดู <strong>report สำเร็จรูป</strong> (Python) ที่อ่านง่าย</span></td>
+<td data-label="Datastore"><span>ไม่มี datastore ของตัวเอง</span></td>
+<td data-label="แก้ config ได้?"><span>ไม่ได้</span></td>
 </tr>
 <tr>
-<td><strong>candidate</strong></td>
-<td><strong>โหมดเดียวที่แก้ config ได้</strong></td>
-<td>candidate</td>
-<td><strong>ได้</strong></td>
+<td data-label="Mode"><span><strong>candidate</strong></span></td>
+<td data-label="ทำอะไร"><span><strong>โหมดเดียวที่แก้ config ได้</strong></span></td>
+<td data-label="Datastore"><span>candidate</span></td>
+<td data-label="แก้ config ได้?"><span><strong>ได้</strong></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -629,19 +633,19 @@ A:spine1# commit stay
 </thead>
 <tbody>
 <tr>
-<td><strong>shared</strong> (default)</td>
-<td><code>enter candidate</code></td>
-<td>candidate <strong>เดียว</strong> ชื่อ <code>default</code> ใช้ร่วมกันทุกคน → ใคร commit ก็ <strong>commit ของทุกคน</strong>; คนที่เข้ามาทีหลังเห็น <code>Candidate 'default' is not empty</code></td>
+<td data-label="Mode"><span><strong>shared</strong> (default)</span></td>
+<td data-label="คำสั่ง"><span><code>enter candidate</code></span></td>
+<td data-label="พฤติกรรม"><span>candidate <strong>เดียว</strong> ชื่อ <code>default</code> ใช้ร่วมกันทุกคน → ใคร commit ก็ <strong>commit ของทุกคน</strong>; คนที่เข้ามาทีหลังเห็น <code>Candidate 'default' is not empty</code></span></td>
 </tr>
 <tr>
-<td><strong>exclusive</strong></td>
-<td><code>enter candidate exclusive</code></td>
-<td><strong>บล็อกคนอื่นไม่ให้เข้า config mode</strong> (ทั้ง shared และ exclusive) จนกว่าจะ commit/discard — ปลอดภัยสุด; prompt แสดง <code>candidate shared-exclusive default</code>; ถ้ามีคนอยู่ shared อยู่แล้ว จะเข้า exclusive <strong>ไม่ได้</strong></td>
+<td data-label="Mode"><span><strong>exclusive</strong></span></td>
+<td data-label="คำสั่ง"><span><code>enter candidate exclusive</code></span></td>
+<td data-label="พฤติกรรม"><span><strong>บล็อกคนอื่นไม่ให้เข้า config mode</strong> (ทั้ง shared และ exclusive) จนกว่าจะ commit/discard — ปลอดภัยสุด; prompt แสดง <code>candidate shared-exclusive default</code>; ถ้ามีคนอยู่ shared อยู่แล้ว จะเข้า exclusive <strong>ไม่ได้</strong></span></td>
 </tr>
 <tr>
-<td><strong>private</strong></td>
-<td><code>enter candidate private</code></td>
-<td>candidate แยกต่อ user (ชื่อ <code>private-&lt;user&gt;</code>) → commit <strong>เฉพาะของตัวเอง</strong>; <strong>เป็นวิธีที่ gNMI และ JSON-RPC ใช้</strong></td>
+<td data-label="Mode"><span><strong>private</strong></span></td>
+<td data-label="คำสั่ง"><span><code>enter candidate private</code></span></td>
+<td data-label="พฤติกรรม"><span>candidate แยกต่อ user (ชื่อ <code>private-&lt;user&gt;</code>) → commit <strong>เฉพาะของตัวเอง</strong>; <strong>เป็นวิธีที่ gNMI และ JSON-RPC ใช้</strong></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -787,34 +791,34 @@ Saved configuration to /home/admin/.srlinuxrc
 </thead>
 <tbody>
 <tr>
-<td>Loopback</td>
-<td><code>lo&lt;0..255&gt;</code> (max 256)</td>
-<td>virtual, always up, ใช้กับ BGP</td>
+<td data-label="ประเภท"><span>Loopback</span></td>
+<td data-label="ชื่อ"><span><code>lo&lt;0..255&gt;</code> (max 256)</span></td>
+<td data-label="หมายเหตุ"><span>virtual, always up, ใช้กับ BGP</span></td>
 </tr>
 <tr>
-<td>System</td>
-<td><code>system0</code> (มีได้ subinterface เดียว <code>system0.0</code>)</td>
-<td>always up, <strong>จำเป็นสำหรับ VXLAN tunnel (VTEP address)</strong></td>
+<td data-label="ประเภท"><span>System</span></td>
+<td data-label="ชื่อ"><span><code>system0</code> (มีได้ subinterface เดียว <code>system0.0</code>)</span></td>
+<td data-label="หมายเหตุ"><span>always up, <strong>จำเป็นสำหรับ VXLAN tunnel (VTEP address)</strong></span></td>
 </tr>
 <tr>
-<td>Management</td>
-<td><code>mgmt0</code></td>
-<td><strong>มีได้ 1 ต่อเครื่อง</strong>, physical OOB, active/standby บน chassis (2 CPM)</td>
+<td data-label="ประเภท"><span>Management</span></td>
+<td data-label="ชื่อ"><span><code>mgmt0</code></span></td>
+<td data-label="หมายเหตุ"><span><strong>มีได้ 1 ต่อเครื่อง</strong>, physical OOB, active/standby บน chassis (2 CPM)</span></td>
 </tr>
 <tr>
-<td>Network</td>
-<td><code>ethernet-&lt;slot&gt;/&lt;port&gt;[/&lt;breakout&gt;]</code></td>
-<td>7220 แบบ fixed: slot = 1 เสมอ; IXR-6/10 มี 4/8 linecard</td>
+<td data-label="ประเภท"><span>Network</span></td>
+<td data-label="ชื่อ"><span><code>ethernet-&lt;slot&gt;/&lt;port&gt;[/&lt;breakout&gt;]</code></span></td>
+<td data-label="หมายเหตุ"><span>7220 แบบ fixed: slot = 1 เสมอ; IXR-6/10 มี 4/8 linecard</span></td>
 </tr>
 <tr>
-<td>LAG</td>
-<td><code>lag&lt;N&gt;</code></td>
-<td></td>
+<td data-label="ประเภท"><span>LAG</span></td>
+<td data-label="ชื่อ"><span><code>lag&lt;N&gt;</code></span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>IRB</td>
-<td><code>irb&lt;0..255&gt;</code></td>
-<td>L3 internal interface เชื่อม mac-vrf ↔ ip-vrf</td>
+<td data-label="ประเภท"><span>IRB</span></td>
+<td data-label="ชื่อ"><span><code>irb&lt;0..255&gt;</code></span></td>
+<td data-label="หมายเหตุ"><span>L3 internal interface เชื่อม mac-vrf ↔ ip-vrf</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -982,24 +986,24 @@ A:dc-leaf-2# show lag lag100 lacp-state
 </thead>
 <tbody>
 <tr>
-<td>Direct/local</td>
-<td><strong>0</strong> (แก้ไม่ได้)</td>
+<td data-label="Route"><span>Direct/local</span></td>
+<td data-label="Pref"><span><strong>0</strong> (แก้ไม่ได้)</span></td>
 </tr>
 <tr>
-<td>Static</td>
-<td><strong>5</strong></td>
+<td data-label="Route"><span>Static</span></td>
+<td data-label="Pref"><span><strong>5</strong></span></td>
 </tr>
 <tr>
-<td>OSPF</td>
-<td><strong>10</strong></td>
+<td data-label="Route"><span>OSPF</span></td>
+<td data-label="Pref"><span><strong>10</strong></span></td>
 </tr>
 <tr>
-<td>IS-IS L1 / L2</td>
-<td><strong>15 / 18</strong></td>
+<td data-label="Route"><span>IS-IS L1 / L2</span></td>
+<td data-label="Pref"><span><strong>15 / 18</strong></span></td>
 </tr>
 <tr>
-<td>BGP (eBGP และ iBGP)</td>
-<td><strong>170</strong></td>
+<td data-label="Route"><span>BGP (eBGP และ iBGP)</span></td>
+<td data-label="Pref"><span><strong>170</strong></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1141,22 +1145,22 @@ A:leaf1# network-instance layer2 interface irb0.0
 </thead>
 <tbody>
 <tr>
-<td><strong>stop-learning</strong> (default)</td>
-<td><strong>ยัง up</strong>, หยุด learn MAC ใด ๆ บน interface นั้น</td>
-<td><strong>drop</strong></td>
-<td>ยัง forward ไป interface เดิม</td>
+<td data-label="Action"><span><strong>stop-learning</strong> (default)</span></td>
+<td data-label="subinterface ที่ detect"><span><strong>ยัง up</strong>, หยุด learn MAC ใด ๆ บน interface นั้น</span></td>
+<td data-label="frame ที่ src = dup MAC (จาก interface อื่น)"><span><strong>drop</strong></span></td>
+<td data-label="frame ที่ dst = dup MAC"><span>ยัง forward ไป interface เดิม</span></td>
 </tr>
 <tr>
-<td><strong>oper-down</strong></td>
-<td><strong>ถูก oper-down</strong> (<code>mac-dup-detected</code>)</td>
-<td>ไม่ drop แต่ไม่ learn</td>
-<td><strong>drop</strong></td>
+<td data-label="Action"><span><strong>oper-down</strong></span></td>
+<td data-label="subinterface ที่ detect"><span><strong>ถูก oper-down</strong> (<code>mac-dup-detected</code>)</span></td>
+<td data-label="frame ที่ src = dup MAC (จาก interface อื่น)"><span>ไม่ drop แต่ไม่ learn</span></td>
+<td data-label="frame ที่ dst = dup MAC"><span><strong>drop</strong></span></td>
 </tr>
 <tr>
-<td><strong>blackhole</strong></td>
-<td><strong>ยัง up</strong></td>
-<td><strong>drop</strong></td>
-<td><strong>drop</strong> (แต่ src MAC ของ frame นั้นยัง learn)</td>
+<td data-label="Action"><span><strong>blackhole</strong></span></td>
+<td data-label="subinterface ที่ detect"><span><strong>ยัง up</strong></span></td>
+<td data-label="frame ที่ src = dup MAC (จาก interface อื่น)"><span><strong>drop</strong></span></td>
+<td data-label="frame ที่ dst = dup MAC"><span><strong>drop</strong> (แต่ src MAC ของ frame นั้นยัง learn)</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1222,34 +1226,34 @@ A:leaf1# network-instance layer2 interface irb0.0
 </thead>
 <tbody>
 <tr>
-<td>admin-state</td>
-<td>route / NHG / nexthop</td>
-<td>enable</td>
+<td data-label="Parameter"><span>admin-state</span></td>
+<td data-label="อยู่ที่"><span>route / NHG / nexthop</span></td>
+<td data-label="Default"><span>enable</span></td>
 </tr>
 <tr>
-<td><strong>metric</strong></td>
-<td>static-routes route</td>
-<td><strong>1</strong></td>
+<td data-label="Parameter"><span><strong>metric</strong></span></td>
+<td data-label="อยู่ที่"><span>static-routes route</span></td>
+<td data-label="Default"><span><strong>1</strong></span></td>
 </tr>
 <tr>
-<td><strong>preference</strong></td>
-<td>static-routes route</td>
-<td><strong>5</strong></td>
+<td data-label="Parameter"><span><strong>preference</strong></span></td>
+<td data-label="อยู่ที่"><span>static-routes route</span></td>
+<td data-label="Default"><span><strong>5</strong></span></td>
 </tr>
 <tr>
-<td><strong>blackhole</strong></td>
-<td><strong>next-hop-group</strong> (exclusive กับ nexthop list)</td>
-<td>—</td>
+<td data-label="Parameter"><span><strong>blackhole</strong></span></td>
+<td data-label="อยู่ที่"><span><strong>next-hop-group</strong> (exclusive กับ nexthop list)</span></td>
+<td data-label="Default"><span>—</span></td>
 </tr>
 <tr>
-<td>generate-icmp</td>
-<td>NHG blackhole</td>
-<td><strong>false</strong></td>
+<td data-label="Parameter"><span>generate-icmp</span></td>
+<td data-label="อยู่ที่"><span>NHG blackhole</span></td>
+<td data-label="Default"><span><strong>false</strong></span></td>
 </tr>
 <tr>
-<td><strong>resolve</strong></td>
-<td>NHG nexthop</td>
-<td><strong>true</strong> (false = ต้อง resolve ด้วย local route เท่านั้น)</td>
+<td data-label="Parameter"><span><strong>resolve</strong></span></td>
+<td data-label="อยู่ที่"><span>NHG nexthop</span></td>
+<td data-label="Default"><span><strong>true</strong> (false = ต้อง resolve ด้วย local route เท่านั้น)</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1466,84 +1470,84 @@ A:leaf1# afi-safi ipv4-unicast ebgp maximum-paths 2      ← ECMP
 </thead>
 <tbody>
 <tr>
-<td><strong>ebgp-default-policy</strong> import-reject-all / export-reject-all</td>
-<td><strong>true / true</strong></td>
-<td><strong>RFC 8212</strong>: eBGP ไม่รับ ไม่ส่งอะไรเลยถ้าไม่มี policy (เฉพาะ eBGP)</td>
+<td data-label="Parameter"><span><strong>ebgp-default-policy</strong> import-reject-all / export-reject-all</span></td>
+<td data-label="Default"><span><strong>true / true</strong></span></td>
+<td data-label="หมายเหตุ"><span><strong>RFC 8212</strong>: eBGP ไม่รับ ไม่ส่งอะไรเลยถ้าไม่มี policy (เฉพาะ eBGP)</span></td>
 </tr>
 <tr>
-<td>multipath (max-paths)</td>
-<td><strong>1</strong> (ไม่มี ECMP)</td>
-<td>allow-multiple-as true; level-1 = next-hop ต่อตรง, level-2 = BGP resolved next-hop</td>
+<td data-label="Parameter"><span>multipath (max-paths)</span></td>
+<td data-label="Default"><span><strong>1</strong> (ไม่มี ECMP)</span></td>
+<td data-label="หมายเหตุ"><span>allow-multiple-as true; level-1 = next-hop ต่อตรง, level-2 = BGP resolved next-hop</span></td>
 </tr>
 <tr>
-<td>local-preference</td>
-<td><strong>100</strong></td>
-<td>สูงกว่าชนะ</td>
+<td data-label="Parameter"><span>local-preference</span></td>
+<td data-label="Default"><span><strong>100</strong></span></td>
+<td data-label="หมายเหตุ"><span>สูงกว่าชนะ</span></td>
 </tr>
 <tr>
-<td>preference (route table)</td>
-<td>ebgp <strong>170</strong> / ibgp <strong>170</strong></td>
-<td></td>
+<td data-label="Parameter"><span>preference (route table)</span></td>
+<td data-label="Default"><span>ebgp <strong>170</strong> / ibgp <strong>170</strong></span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>timers connect-retry / hold-time / keepalive / MAI</td>
-<td><strong>120 / 90 / 30 (=hold/3) / 5 วินาที</strong></td>
-<td>MAI ตั้งได้ 1–255</td>
+<td data-label="Parameter"><span>timers connect-retry / hold-time / keepalive / MAI</span></td>
+<td data-label="Default"><span><strong>120 / 90 / 30 (=hold/3) / 5 วินาที</strong></span></td>
+<td data-label="หมายเหตุ"><span>MAI ตั้งได้ 1–255</span></td>
 </tr>
 <tr>
-<td>failure-detection enable-bfd / fast-failover</td>
-<td><strong>false / true</strong></td>
-<td></td>
+<td data-label="Parameter"><span>failure-detection enable-bfd / fast-failover</span></td>
+<td data-label="Default"><span><strong>false / true</strong></span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>rapid-withdrawal</td>
-<td><strong>false</strong></td>
-<td></td>
+<td data-label="Parameter"><span>rapid-withdrawal</span></td>
+<td data-label="Default"><span><strong>false</strong></span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>wait-for-fib-install</td>
-<td>true</td>
-<td></td>
+<td data-label="Parameter"><span>wait-for-fib-install</span></td>
+<td data-label="Default"><span>true</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>min-wait-to-advertise</td>
-<td>0</td>
-<td></td>
+<td data-label="Parameter"><span>min-wait-to-advertise</span></td>
+<td data-label="Default"><span>0</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>graceful-restart</td>
-<td>disable</td>
-<td></td>
+<td data-label="Parameter"><span>graceful-restart</span></td>
+<td data-label="Default"><span>disable</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>as-path-options allow-own-as</td>
-<td>0</td>
-<td></td>
+<td data-label="Parameter"><span>as-path-options allow-own-as</span></td>
+<td data-label="Default"><span>0</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>send-community standard / large</td>
-<td>true / true</td>
-<td></td>
+<td data-label="Parameter"><span>send-community standard / large</span></td>
+<td data-label="Default"><span>true / true</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>tcp-mss</td>
-<td>1024</td>
-<td></td>
+<td data-label="Parameter"><span>tcp-mss</span></td>
+<td data-label="Default"><span>1024</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>passive-mode</td>
-<td>false</td>
-<td></td>
+<td data-label="Parameter"><span>passive-mode</span></td>
+<td data-label="Default"><span>false</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>prefix-limit</td>
-<td>4294967295, warning 90%</td>
-<td></td>
+<td data-label="Parameter"><span>prefix-limit</span></td>
+<td data-label="Default"><span>4294967295, warning 90%</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 <tr>
-<td>afi-safi</td>
-<td>ipv4-unicast enable, ipv6-unicast disable</td>
-<td></td>
+<td data-label="Parameter"><span>afi-safi</span></td>
+<td data-label="Default"><span>ipv4-unicast enable, ipv6-unicast disable</span></td>
+<td data-label="หมายเหตุ"><span></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1672,34 +1676,34 @@ A:leaf1# network-instance default protocols bgp group spines failure-detection e
 </thead>
 <tbody>
 <tr>
-<td><strong>RT1</strong></td>
-<td>Ethernet Auto-Discovery (A-D)</td>
-<td>multi-homing: <strong>aliasing + mass withdraw (fast convergence)</strong>; มี per-ES และ per-EVI</td>
-<td>MH</td>
+<td data-label="Type"><span><strong>RT1</strong></span></td>
+<td data-label="ชื่อ"><span>Ethernet Auto-Discovery (A-D)</span></td>
+<td data-label="ใช้ทำอะไร"><span>multi-homing: <strong>aliasing + mass withdraw (fast convergence)</strong>; มี per-ES และ per-EVI</span></td>
+<td data-label="ใช้ใน"><span>MH</span></td>
 </tr>
 <tr>
-<td><strong>RT2</strong></td>
-<td>MAC/IP Advertisement</td>
-<td>ประกาศ <strong>MAC</strong> (หรือ MAC+IP) ของ host/IRB → สร้าง bridge table (+ARP/ND)</td>
-<td>L2, asymmetric L3</td>
+<td data-label="Type"><span><strong>RT2</strong></span></td>
+<td data-label="ชื่อ"><span>MAC/IP Advertisement</span></td>
+<td data-label="ใช้ทำอะไร"><span>ประกาศ <strong>MAC</strong> (หรือ MAC+IP) ของ host/IRB → สร้าง bridge table (+ARP/ND)</span></td>
+<td data-label="ใช้ใน"><span>L2, asymmetric L3</span></td>
 </tr>
 <tr>
-<td><strong>RT3</strong></td>
-<td>Inclusive Multicast Ethernet Tag (<strong>IMET</strong>)</td>
-<td><strong>discover VTEP ใน service เดียวกัน + สร้าง flooding list สำหรับ BUM</strong></td>
-<td>L2 (ทุก mac-vrf ที่มี vxlan)</td>
+<td data-label="Type"><span><strong>RT3</strong></span></td>
+<td data-label="ชื่อ"><span>Inclusive Multicast Ethernet Tag (<strong>IMET</strong>)</span></td>
+<td data-label="ใช้ทำอะไร"><span><strong>discover VTEP ใน service เดียวกัน + สร้าง flooding list สำหรับ BUM</strong></span></td>
+<td data-label="ใช้ใน"><span>L2 (ทุก mac-vrf ที่มี vxlan)</span></td>
 </tr>
 <tr>
-<td><strong>RT4</strong></td>
-<td>Ethernet Segment (ES)</td>
-<td>MH: discover leaf ใน ES เดียวกัน + <strong>DF election</strong></td>
-<td>MH</td>
+<td data-label="Type"><span><strong>RT4</strong></span></td>
+<td data-label="ชื่อ"><span>Ethernet Segment (ES)</span></td>
+<td data-label="ใช้ทำอะไร"><span>MH: discover leaf ใน ES เดียวกัน + <strong>DF election</strong></span></td>
+<td data-label="ใช้ใน"><span>MH</span></td>
 </tr>
 <tr>
-<td><strong>RT5</strong></td>
-<td>IP-Prefix</td>
-<td>ประกาศ <strong>IP prefix</strong> (inter-subnet, L3) แยกจาก MAC</td>
-<td><strong>symmetric L3</strong></td>
+<td data-label="Type"><span><strong>RT5</strong></span></td>
+<td data-label="ชื่อ"><span>IP-Prefix</span></td>
+<td data-label="ใช้ทำอะไร"><span>ประกาศ <strong>IP prefix</strong> (inter-subnet, L3) แยกจาก MAC</span></td>
+<td data-label="ใช้ใน"><span><strong>symmetric L3</strong></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1778,59 +1782,59 @@ A:leaf1# / network-instance mac-vrf-100 vxlan-interface vxlan1.100
 </thead>
 <tbody>
 <tr>
-<td>mac-vrf</td>
-<td><strong>ต้องมีทุก leaf ทุก subnet</strong> แม้ไม่มี host local</td>
-<td>มีเฉพาะ leaf ที่มี host local</td>
+<td data-label=""><span>mac-vrf</span></td>
+<td data-label="Asymmetric IRB"><span><strong>ต้องมีทุก leaf ทุก subnet</strong> แม้ไม่มี host local</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>มีเฉพาะ leaf ที่มี host local</span></td>
 </tr>
 <tr>
-<td>route ที่ใช้</td>
-<td><strong>RT2 + RT3</strong> เท่านั้น (เหมือน L2)</td>
-<td><strong>RT5</strong> (+RT2/RT3 ถ้า subnet กระจายหลาย leaf)</td>
+<td data-label=""><span>route ที่ใช้</span></td>
+<td data-label="Asymmetric IRB"><span><strong>RT2 + RT3</strong> เท่านั้น (เหมือน L2)</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span><strong>RT5</strong> (+RT2/RT3 ถ้า subnet กระจายหลาย leaf)</span></td>
 </tr>
 <tr>
-<td>vxlan-interface</td>
-<td>อยู่ที่ <strong>mac-vrf</strong> (type <strong>bridged</strong>) ทุกตัว</td>
-<td><strong>routed</strong> vxlan-interface อยู่ที่ <strong>ip-vrf</strong> (+ bgp-evpn/bgp-vpn ที่ ip-vrf)</td>
+<td data-label=""><span>vxlan-interface</span></td>
+<td data-label="Asymmetric IRB"><span>อยู่ที่ <strong>mac-vrf</strong> (type <strong>bridged</strong>) ทุกตัว</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span><strong>routed</strong> vxlan-interface อยู่ที่ <strong>ip-vrf</strong> (+ bgp-evpn/bgp-vpn ที่ ip-vrf)</span></td>
 </tr>
 <tr>
-<td>ip-vrf</td>
-<td>แค่ "กอง IRB" ไม่มี EVPN config</td>
-<td>มี EVPN/VXLAN config, VNI ของ L3 (เช่น 1000)</td>
+<td data-label=""><span>ip-vrf</span></td>
+<td data-label="Asymmetric IRB"><span>แค่ "กอง IRB" ไม่มี EVPN config</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>มี EVPN/VXLAN config, VNI ของ L3 (เช่น 1000)</span></td>
 </tr>
 <tr>
-<td>lookup ingress</td>
-<td><strong>L2 + L3 + ARP + L2</strong> (หลายครั้ง)</td>
-<td>L2 + L3 (route ไป VXLAN tunnel)</td>
+<td data-label=""><span>lookup ingress</span></td>
+<td data-label="Asymmetric IRB"><span><strong>L2 + L3 + ARP + L2</strong> (หลายครั้ง)</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>L2 + L3 (route ไป VXLAN tunnel)</span></td>
 </tr>
 <tr>
-<td>lookup egress</td>
-<td><strong>L2 อย่างเดียว</strong></td>
-<td>L3 + ARP + L2</td>
+<td data-label=""><span>lookup egress</span></td>
+<td data-label="Asymmetric IRB"><span><strong>L2 อย่างเดียว</strong></span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>L3 + ARP + L2</span></td>
 </tr>
 <tr>
-<td>ARP/FDB</td>
-<td>ทุก leaf เก็บ ARP/MAC ของทุก host → <strong>ไม่ scale</strong></td>
-<td>ARP เฉพาะ host local → <strong>scale ดีกว่า</strong></td>
+<td data-label=""><span>ARP/FDB</span></td>
+<td data-label="Asymmetric IRB"><span>ทุก leaf เก็บ ARP/MAC ของทุก host → <strong>ไม่ scale</strong></span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>ARP เฉพาะ host local → <strong>scale ดีกว่า</strong></span></td>
 </tr>
 <tr>
-<td>IRB option</td>
-<td>ต้อง <code>arp evpn advertise dynamic</code> ให้ RT2 มี IP (ไปเติม ARP ฝั่งไกล)</td>
-<td>—</td>
+<td data-label=""><span>IRB option</span></td>
+<td data-label="Asymmetric IRB"><span>ต้อง <code>arp evpn advertise dynamic</code> ให้ RT2 มี IP (ไปเติม ARP ฝั่งไกล)</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>—</span></td>
 </tr>
 <tr>
-<td>VNI ที่ใช้ข้าม</td>
-<td>VNI ของ <strong>subnet ปลายทาง</strong> (bridged)</td>
-<td>VNI ของ <strong>ip-vrf</strong> (routed)</td>
+<td data-label=""><span>VNI ที่ใช้ข้าม</span></td>
+<td data-label="Asymmetric IRB"><span>VNI ของ <strong>subnet ปลายทาง</strong> (bridged)</span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span>VNI ของ <strong>ip-vrf</strong> (routed)</span></td>
 </tr>
 <tr>
-<td>- <strong>RT5 มี</strong>: prefix + prefix-len, RD/RT ของ ip-vrf, <strong>label = VNI ของ ip-vrf</strong>, gateway IP 0.0.0.0, community <strong>mac-nh</strong> (= chassis MAC ของ leaf ไกล ใช้เป็น <strong>inner dst MAC</strong>) + bgp-tunnel-encap:VXLAN; route ใน ip-vrf แสดง owner <strong>bgp-evpn</strong>, next-hop <code>2.2.2.2/32 (indirect/vxlan)</code></td>
-<td></td>
-<td></td>
+<td data-label=""><span>- <strong>RT5 มี</strong>: prefix + prefix-len, RD/RT ของ ip-vrf, <strong>label = VNI ของ ip-vrf</strong>, gateway IP 0.0.0.0, community <strong>mac-nh</strong> (= chassis MAC ของ leaf ไกล ใช้เป็น <strong>inner dst MAC</strong>) + bgp-tunnel-encap:VXLAN; route ใน ip-vrf แสดง owner <strong>bgp-evpn</strong>, next-hop <code>2.2.2.2/32 (indirect/vxlan)</code></span></td>
+<td data-label="Asymmetric IRB"><span></span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span></span></td>
 </tr>
 <tr>
-<td>- symmetric: ถ้ามี host เดียวต่อ ip-vrf ตรงได้โดยไม่ต้องมี mac-vrf; traffic subnet เดียวกันใช้ bridged VNI, ข้าม subnet ใช้ routed VNI</td>
-<td></td>
-<td></td>
+<td data-label=""><span>- symmetric: ถ้ามี host เดียวต่อ ip-vrf ตรงได้โดยไม่ต้องมี mac-vrf; traffic subnet เดียวกันใช้ bridged VNI, ข้าม subnet ใช้ routed VNI</span></td>
+<td data-label="Asymmetric IRB"><span></span></td>
+<td data-label="Symmetric IRB (SR Linux = interface-less (IFL) VRF-to-VRF)"><span></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1919,36 +1923,36 @@ A:leaf1# info tunnel-interface vxlan2
 </thead>
 <tbody>
 <tr>
-<td><strong>Destinations (4)</strong></td>
-<td><strong>file</strong> (persistent, default dir <code>/var/log/srlinux/file</code>), <strong>buffer</strong> (<strong>RAM/tmpfs</strong> <code>/var/log/srlinux/buffer</code>, หายตอน reboot, ทำ persist ได้), <strong>console</strong> (<code>/dev/console</code> = serial port, ไม่เก็บ), <strong>remote-server</strong> (UDP/TCP, <strong>default port 514</strong>, ต้องระบุ <code>network-instance</code> ที่ใช้ route ไป)</td>
+<td data-label=""><span><strong>Destinations (4)</strong></span></td>
+<td data-label="ตัวเลือก"><span><strong>file</strong> (persistent, default dir <code>/var/log/srlinux/file</code>), <strong>buffer</strong> (<strong>RAM/tmpfs</strong> <code>/var/log/srlinux/buffer</code>, หายตอน reboot, ทำ persist ได้), <strong>console</strong> (<code>/dev/console</code> = serial port, ไม่เก็บ), <strong>remote-server</strong> (UDP/TCP, <strong>default port 514</strong>, ต้องระบุ <code>network-instance</code> ที่ใช้ route ไป)</span></td>
 </tr>
 <tr>
-<td><strong>Sources (3)</strong></td>
-<td><strong>facility + priority</strong> (Linux native: kern, auth, cron, daemon, local0–7 …), <strong>subsystem + priority</strong> (SR Linux app: aaa, accounting, acl, bgp, chassis, lldp, netinst, …), <strong>filter</strong> (syslog filter ที่สร้างไว้)</td>
+<td data-label=""><span><strong>Sources (3)</strong></span></td>
+<td data-label="ตัวเลือก"><span><strong>facility + priority</strong> (Linux native: kern, auth, cron, daemon, local0–7 …), <strong>subsystem + priority</strong> (SR Linux app: aaa, accounting, acl, bgp, chassis, lldp, netinst, …), <strong>filter</strong> (syslog filter ที่สร้างไว้)</span></td>
 </tr>
 <tr>
-<td><strong>ไม่ใช่ source</strong></td>
-<td><strong>console</strong> (console เป็น destination เท่านั้น)</td>
+<td data-label=""><span><strong>ไม่ใช่ source</strong></span></td>
+<td data-label="ตัวเลือก"><span><strong>console</strong> (console เป็น destination เท่านั้น)</span></td>
 </tr>
 <tr>
-<td>- <strong>SR Linux app ทั้งหมดถูก report เป็น Linux facility <code>local6</code></strong></td>
-<td></td>
+<td data-label=""><span>- <strong>SR Linux app ทั้งหมดถูก report เป็น Linux facility <code>local6</code></strong></span></td>
+<td data-label="ตัวเลือก"><span></span></td>
 </tr>
 <tr>
-<td>- <strong>Priority (severity)</strong> 0–7: <strong>0 emergency, 1 alert, 2 critical, 3 error, 4 warning, 5 notice, 6 informational, 7 debug</strong> (0 = รุนแรงสุด); <code>match-above X</code> (X และรุนแรงกว่า) vs <code>match-exact X</code></td>
-<td></td>
+<td data-label=""><span>- <strong>Priority (severity)</strong> 0–7: <strong>0 emergency, 1 alert, 2 critical, 3 error, 4 warning, 5 notice, 6 informational, 7 debug</strong> (0 = รุนแรงสุด); <code>match-above X</code> (X และรุนแรงกว่า) vs <code>match-exact X</code></span></td>
+<td data-label="ตัวเลือก"><span></span></td>
 </tr>
 <tr>
-<td>- <strong>filter</strong> (<code>system logging filter &lt;name&gt;</code>): match ด้วย <strong>contains</strong>, <strong>prefix</strong>, <strong>regex</strong>, <strong>tag</strong> (เช่น <code>sr_bgp_mgr</code>, chassis), <strong>facility+priority</strong>; หลายเงื่อนไขใน filter = AND; แล้วอ้างใน destination <code>filter [ name ]</code></td>
-<td></td>
+<td data-label=""><span>- <strong>filter</strong> (<code>system logging filter &lt;name&gt;</code>): match ด้วย <strong>contains</strong>, <strong>prefix</strong>, <strong>regex</strong>, <strong>tag</strong> (เช่น <code>sr_bgp_mgr</code>, chassis), <strong>facility+priority</strong>; หลายเงื่อนไขใน filter = AND; แล้วอ้างใน destination <code>filter [ name ]</code></span></td>
+<td data-label="ตัวเลือก"><span></span></td>
 </tr>
 <tr>
-<td>- file params: <strong>directory</strong> (default <code>/var/log/srlinux/file</code>), <strong>format</strong> (RSYSLOG_FileFormat), <strong>rotate default 4</strong>, <strong>size default 10M</strong>; หลาย subsystem/facility/filter ใน destination เดียว = log ทุกอันที่ match (OR)</td>
-<td></td>
+<td data-label=""><span>- file params: <strong>directory</strong> (default <code>/var/log/srlinux/file</code>), <strong>format</strong> (RSYSLOG_FileFormat), <strong>rotate default 4</strong>, <strong>size default 10M</strong>; หลาย subsystem/facility/filter ใน destination เดียว = log ทุกอันที่ match (OR)</span></td>
+<td data-label="ตัวเลือก"><span></span></td>
 </tr>
 <tr>
-<td>- ใช้ <strong>severity</strong> เพื่อลดปริมาณ log ให้เหลือเฉพาะที่สำคัญ</td>
-<td></td>
+<td data-label=""><span>- ใช้ <strong>severity</strong> เพื่อลดปริมาณ log ให้เหลือเฉพาะที่สำคัญ</span></td>
+<td data-label="ตัวเลือก"><span></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -1963,19 +1967,19 @@ A:leaf1# info tunnel-interface vxlan2
 </thead>
 <tbody>
 <tr>
-<td><code>buffer messages</code></td>
-<td>buffer</td>
-<td><strong>local6 (SR Linux) match-above informational</strong> (ทุกอย่างยกเว้น debug)</td>
+<td data-label="ชื่อ"><span><code>buffer messages</code></span></td>
+<td data-label="ชนิด"><span>buffer</span></td>
+<td data-label="source"><span><strong>local6 (SR Linux) match-above informational</strong> (ทุกอย่างยกเว้น debug)</span></td>
 </tr>
 <tr>
-<td><code>buffer system</code></td>
-<td>buffer</td>
-<td>Linux facility อื่นทั้งหมด (<strong>ไม่รวม local6</strong>) match-above <strong>warning</strong></td>
+<td data-label="ชื่อ"><span><code>buffer system</code></span></td>
+<td data-label="ชนิด"><span>buffer</span></td>
+<td data-label="source"><span>Linux facility อื่นทั้งหมด (<strong>ไม่รวม local6</strong>) match-above <strong>warning</strong></span></td>
 </tr>
 <tr>
-<td><code>file messages</code></td>
-<td>file</td>
-<td><strong>local6 match-above warning</strong> (log สำคัญของ SR Linux เก็บถาวร)</td>
+<td data-label="ชื่อ"><span><code>file messages</code></span></td>
+<td data-label="ชนิด"><span>file</span></td>
+<td data-label="source"><span><strong>local6 match-above warning</strong> (log สำคัญของ SR Linux เก็บถาวร)</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -2024,46 +2028,46 @@ A:leaf1# show system logging file bgp-log-file | grep ESTABLISHED
 </thead>
 <tbody>
 <tr>
-<td><strong>System ACL</strong></td>
-<td>ทุก line card, <strong>ทุก interface, ingress</strong> — ก่อนทุกอย่าง (ก่อน tunnel termination)</td>
-<td>accept/drop/log; <strong>ตัวเดียวที่ match outer header ของ VXLAN ที่ terminate บนตัวเอง</strong> (7220 IXR-D เท่านั้น)</td>
-<td>1 IPv4 + 1 IPv6 (ชื่อ <code>system</code>)</td>
+<td data-label="ACL"><span><strong>System ACL</strong></span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span>ทุก line card, <strong>ทุก interface, ingress</strong> — ก่อนทุกอย่าง (ก่อน tunnel termination)</span></td>
+<td data-label="ทำอะไร"><span>accept/drop/log; <strong>ตัวเดียวที่ match outer header ของ VXLAN ที่ terminate บนตัวเอง</strong> (7220 IXR-D เท่านั้น)</span></td>
+<td data-label="จำนวน"><span>1 IPv4 + 1 IPv6 (ชื่อ <code>system</code>)</span></td>
 </tr>
 <tr>
-<td><strong>Ingress (input) ACL</strong></td>
-<td><strong>subinterface</strong> เฉพาะ, line card นั้น</td>
-<td>accept/drop/log</td>
-<td>หลายอัน</td>
+<td data-label="ACL"><span><strong>Ingress (input) ACL</strong></span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span><strong>subinterface</strong> เฉพาะ, line card นั้น</span></td>
+<td data-label="ทำอะไร"><span>accept/drop/log</span></td>
+<td data-label="จำนวน"><span>หลายอัน</span></td>
 </tr>
 <tr>
-<td><strong>Capture ACL</strong></td>
-<td>ทุก line card, <strong>ทุก subinterface ingress รวม mgmt</strong></td>
-<td><strong>copy</strong> packet ขึ้น CPM ให้ <strong>traffic-monitor</strong> (tcpdump-like)</td>
-<td>1 IPv4 + 1 IPv6 (ชื่อ <code>capture</code>)</td>
+<td data-label="ACL"><span><strong>Capture ACL</strong></span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span>ทุก line card, <strong>ทุก subinterface ingress รวม mgmt</strong></span></td>
+<td data-label="ทำอะไร"><span><strong>copy</strong> packet ขึ้น CPM ให้ <strong>traffic-monitor</strong> (tcpdump-like)</span></td>
+<td data-label="จำนวน"><span>1 IPv4 + 1 IPv6 (ชื่อ <code>capture</code>)</span></td>
 </tr>
 <tr>
-<td><strong>CPM ACL (cpm-filter)</strong></td>
-<td>ทุก line card (เมื่อ apply ที่ control plane), เฉพาะ traffic ที่ <strong>terminate บน CPM</strong> รวม <strong>OOB mgmt</strong></td>
-<td><strong>control-plane protection / กัน DoS</strong>: accept/drop, <strong>rate-limit ด้วย policer</strong></td>
-<td>1 IPv4 + 1 IPv6 (ชื่อ <code>cpm</code>)</td>
+<td data-label="ACL"><span><strong>CPM ACL (cpm-filter)</strong></span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span>ทุก line card (เมื่อ apply ที่ control plane), เฉพาะ traffic ที่ <strong>terminate บน CPM</strong> รวม <strong>OOB mgmt</strong></span></td>
+<td data-label="ทำอะไร"><span><strong>control-plane protection / กัน DoS</strong>: accept/drop, <strong>rate-limit ด้วย policer</strong></span></td>
+<td data-label="จำนวน"><span>1 IPv4 + 1 IPv6 (ชื่อ <code>cpm</code>)</span></td>
 </tr>
 <tr>
-<td><strong>Egress (output) ACL</strong></td>
-<td>subinterface, ขาออก</td>
-<td>accept/drop (7220-D: egress ไม่มี log)</td>
-<td>หลายอัน</td>
+<td data-label="ACL"><span><strong>Egress (output) ACL</strong></span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span>subinterface, ขาออก</span></td>
+<td data-label="ทำอะไร"><span>accept/drop (7220-D: egress ไม่มี log)</span></td>
+<td data-label="จำนวน"><span>หลายอัน</span></td>
 </tr>
 <tr>
-<td>- <strong>ลำดับ: 1) System → 2) Ingress → 3) Capture → 4) CPM → 5) Egress</strong>; ถ้า ingress ACL drop control traffic ไปแล้ว cpm-filter ไม่เห็น</td>
-<td></td>
-<td></td>
-<td></td>
+<td data-label="ACL"><span>- <strong>ลำดับ: 1) System → 2) Ingress → 3) Capture → 4) CPM → 5) Egress</strong>; ถ้า ingress ACL drop control traffic ไปแล้ว cpm-filter ไม่เห็น</span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span></span></td>
+<td data-label="ทำอะไร"><span></span></td>
+<td data-label="จำนวน"><span></span></td>
 </tr>
 <tr>
-<td>- (คำว่า ACL กับ filter ใช้แทนกันได้: cpm-filter = CPM ACL, capture-filter = capture ACL)</td>
-<td></td>
-<td></td>
-<td></td>
+<td data-label="ACL"><span>- (คำว่า ACL กับ filter ใช้แทนกันได้: cpm-filter = CPM ACL, capture-filter = capture ACL)</span></td>
+<td data-label="ติดตั้งที่ไหน / ทิศทาง"><span></span></td>
+<td data-label="ทำอะไร"><span></span></td>
+<td data-label="จำนวน"><span></span></td>
 </tr>
 </tbody>
 </table></div>
@@ -2422,16 +2426,16 @@ $ gnmic get --path &quot;/system/name/host-name&quot; --tls-ca CA.pem --tls-cert
 </thead>
 <tbody>
 <tr>
-<td><strong>Day 0 – Design</strong></td>
-<td>เขียน <strong>fabric intent (YAML)</strong> แบบ abstract/minimal (selector ของ leaf/spine/super-spine/border-leaf + ISL, pool ของ IP/system IP/ASN, underlay protocol) → EDA generate config ทุก node → <strong>validate บน digital sandbox</strong></td>
+<td data-label="Phase"><span><strong>Day 0 – Design</strong></span></td>
+<td data-label="ทำอะไร"><span>เขียน <strong>fabric intent (YAML)</strong> แบบ abstract/minimal (selector ของ leaf/spine/super-spine/border-leaf + ISL, pool ของ IP/system IP/ASN, underlay protocol) → EDA generate config ทุก node → <strong>validate บน digital sandbox</strong></span></td>
 </tr>
 <tr>
-<td><strong>Day 1 – Deploy</strong></td>
-<td><strong>ZTP</strong>: node ส่ง DHCP → EDA (DHCP) ตอบ IP + path → node ดึง <strong>OS image + upgrade</strong> → ดึง config ที่ EDA generate → พร้อม provision service; <strong>intent-based service provisioning</strong> (เช่น "ต่อ leaf2-eth1 เข้า L2 service bd4") → EDA generate EVI/VNI/EVPN param ให้เอง, ทดสอบบน digital twin แล้ว push config เดียวกันลง production</td>
+<td data-label="Phase"><span><strong>Day 1 – Deploy</strong></span></td>
+<td data-label="ทำอะไร"><span><strong>ZTP</strong>: node ส่ง DHCP → EDA (DHCP) ตอบ IP + path → node ดึง <strong>OS image + upgrade</strong> → ดึง config ที่ EDA generate → พร้อม provision service; <strong>intent-based service provisioning</strong> (เช่น "ต่อ leaf2-eth1 เข้า L2 service bd4") → EDA generate EVI/VNI/EVPN param ให้เอง, ทดสอบบน digital twin แล้ว push config เดียวกันลง production</span></td>
 </tr>
 <tr>
-<td><strong>Day 2+ – Operate</strong></td>
-<td><strong>monitor ด้วย model-driven telemetry</strong>, flag <strong>intent vs config deviation</strong>, health/proactive ops, ทดสอบ change/upgrade บน sandbox ก่อน — แบบ <strong>CI/CD</strong>: Test (twin) → Approve (เก็บใน <strong>git</strong>) → Deploy (ถ้า node ไหน error <strong>rollback ทั้งก้อน</strong>) → Monitor → Verify deviation</td>
+<td data-label="Phase"><span><strong>Day 2+ – Operate</strong></span></td>
+<td data-label="ทำอะไร"><span><strong>monitor ด้วย model-driven telemetry</strong>, flag <strong>intent vs config deviation</strong>, health/proactive ops, ทดสอบ change/upgrade บน sandbox ก่อน — แบบ <strong>CI/CD</strong>: Test (twin) → Approve (เก็บใน <strong>git</strong>) → Deploy (ถ้า node ไหน error <strong>rollback ทั้งก้อน</strong>) → Monitor → Verify deviation</span></td>
 </tr>
 </tbody>
 </table></div>
@@ -2703,120 +2707,120 @@ $ gnmic get --path &quot;/system/name/host-name&quot; --tls-ca CA.pem --tls-cert
 </thead>
 <tbody>
 <tr>
-<td><strong>capture-filter vs cpm-filter</strong></td>
-<td>capture = <strong>copy</strong> packet ขึ้น CPM ให้ traffic-monitor (troubleshoot) ไม่ drop/ไม่ policer; cpm = <strong>protect CPM</strong> (accept/drop/log + rate-limit policer) — ทั้งคู่ติดทุก LC, 1 v4 + 1 v6</td>
+<td data-label="คู่ที่สับสน"><span><strong>capture-filter vs cpm-filter</strong></span></td>
+<td data-label="จำแบบนี้"><span>capture = <strong>copy</strong> packet ขึ้น CPM ให้ traffic-monitor (troubleshoot) ไม่ drop/ไม่ policer; cpm = <strong>protect CPM</strong> (accept/drop/log + rate-limit policer) — ทั้งคู่ติดทุก LC, 1 v4 + 1 v6</span></td>
 </tr>
 <tr>
-<td><strong>policer vs system-cpu-policer</strong></td>
-<td>policer = per line card, <strong>HW</strong>, kbps/bytes; system-cpu = บน <strong>CPM, SW</strong>, รวมทุก LC, pps/packets</td>
+<td data-label="คู่ที่สับสน"><span><strong>policer vs system-cpu-policer</strong></span></td>
+<td data-label="จำแบบนี้"><span>policer = per line card, <strong>HW</strong>, kbps/bytes; system-cpu = บน <strong>CPM, SW</strong>, รวมทุก LC, pps/packets</span></td>
 </tr>
 <tr>
-<td><strong>system ACL vs subinterface ACL</strong></td>
-<td>system = ทุก interface, ก่อนทุกอย่าง, เห็น outer VXLAN; subif = เฉพาะ subif, หลัง decap</td>
+<td data-label="คู่ที่สับสน"><span><strong>system ACL vs subinterface ACL</strong></span></td>
+<td data-label="จำแบบนี้"><span>system = ทุก interface, ก่อนทุกอย่าง, เห็น outer VXLAN; subif = เฉพาะ subif, หลัง decap</span></td>
 </tr>
 <tr>
-<td><strong>show vs state vs running vs candidate</strong></td>
-<td>show = Python report อ่านง่าย; state = YANG ครบ config+oper; running = config ที่ active (read-only); candidate = ที่เดียวที่แก้ได้</td>
+<td data-label="คู่ที่สับสน"><span><strong>show vs state vs running vs candidate</strong></span></td>
+<td data-label="จำแบบนี้"><span>show = Python report อ่านง่าย; state = YANG ครบ config+oper; running = config ที่ active (read-only); candidate = ที่เดียวที่แก้ได้</span></td>
 </tr>
 <tr>
-<td><strong>info vs info from state vs info detail</strong></td>
-<td><code>info</code> = datastore ของ mode ปัจจุบัน; <code>from state</code> = ดู oper โดยไม่ต้องเปลี่ยน mode; <code>detail</code> = รวม default</td>
+<td data-label="คู่ที่สับสน"><span><strong>info vs info from state vs info detail</strong></span></td>
+<td data-label="จำแบบนี้"><span><code>info</code> = datastore ของ mode ปัจจุบัน; <code>from state</code> = ดู oper โดยไม่ต้องเปลี่ยน mode; <code>detail</code> = รวม default</span></td>
 </tr>
 <tr>
-<td><strong>watch vs monitor</strong></td>
-<td>watch = รัน CLI command ซ้ำทุก N วินาที (default 2) ทับจอ; monitor = YANG path on-change/sample (≈ gNMI subscribe)</td>
+<td data-label="คู่ที่สับสน"><span><strong>watch vs monitor</strong></span></td>
+<td data-label="จำแบบนี้"><span>watch = รัน CLI command ซ้ำทุก N วินาที (default 2) ทับจอ; monitor = YANG path on-change/sample (≈ gNMI subscribe)</span></td>
 </tr>
 <tr>
-<td><strong>shared vs exclusive vs private</strong></td>
-<td>shared commit ของทุกคน; exclusive บล็อกคนอื่น; private commit เฉพาะของตัวเอง + baseline</td>
+<td data-label="คู่ที่สับสน"><span><strong>shared vs exclusive vs private</strong></span></td>
+<td data-label="จำแบบนี้"><span>shared commit ของทุกคน; exclusive บล็อกคนอื่น; private commit เฉพาะของตัวเอง + baseline</span></td>
 </tr>
 <tr>
-<td><strong>baseline diff vs diff</strong></td>
-<td><code>baseline diff</code> = <strong>running ปัจจุบัน vs baseline</strong> (ดูว่าคนอื่นเปลี่ยนอะไร); <code>diff</code> = candidate vs running (สิ่งที่เราแก้)</td>
+<td data-label="คู่ที่สับสน"><span><strong>baseline diff vs diff</strong></span></td>
+<td data-label="จำแบบนี้"><span><code>baseline diff</code> = <strong>running ปัจจุบัน vs baseline</strong> (ดูว่าคนอื่นเปลี่ยนอะไร); <code>diff</code> = candidate vs running (สิ่งที่เราแก้)</span></td>
 </tr>
 <tr>
-<td><strong><code>+</code> vs <code>*</code> vs <code>!</code></strong></td>
-<td><code>*</code> candidate มีของค้าง; <code>+</code> running ≠ startup; <code>!</code> running ≠ baseline</td>
+<td data-label="คู่ที่สับสน"><span><strong><code>+</code> vs <code>*</code> vs <code>!</code></strong></span></td>
+<td data-label="จำแบบนี้"><span><code>*</code> candidate มีของค้าง; <code>+</code> running ≠ startup; <code>!</code> running ≠ baseline</span></td>
 </tr>
 <tr>
-<td><strong>checkpoint vs rescue vs startup</strong></td>
-<td>checkpoint = JSON ย้อนกลับได้ (0 ใหม่สุด); startup = config.json ตอน boot; rescue = ใช้เมื่อ startup fail</td>
+<td data-label="คู่ที่สับสน"><span><strong>checkpoint vs rescue vs startup</strong></span></td>
+<td data-label="จำแบบนี้"><span>checkpoint = JSON ย้อนกลับได้ (0 ใหม่สุด); startup = config.json ตอน boot; rescue = ใช้เมื่อ startup fail</span></td>
 </tr>
 <tr>
-<td><strong>asymmetric vs symmetric IRB</strong></td>
-<td>asym: mac-vrf ทุก leaf, RT2+RT3, ingress หนัก, ไม่ scale, VNI ของ L2 ปลายทาง; sym (IFL): RT5, routed VNI ที่ ip-vrf, ARP เฉพาะ local, scale ดี</td>
+<td data-label="คู่ที่สับสน"><span><strong>asymmetric vs symmetric IRB</strong></span></td>
+<td data-label="จำแบบนี้"><span>asym: mac-vrf ทุก leaf, RT2+RT3, ingress หนัก, ไม่ scale, VNI ของ L2 ปลายทาง; sym (IFL): RT5, routed VNI ที่ ip-vrf, ARP เฉพาะ local, scale ดี</span></td>
 </tr>
 <tr>
-<td><strong>RT2 vs RT3 vs RT5</strong></td>
-<td>RT2 = MAC(/IP) → bridge table/ARP; RT3 = IMET → flood list (BUM); RT5 = IP prefix → ip-vrf route table</td>
+<td data-label="คู่ที่สับสน"><span><strong>RT2 vs RT3 vs RT5</strong></span></td>
+<td data-label="จำแบบนี้"><span>RT2 = MAC(/IP) → bridge table/ARP; RT3 = IMET → flood list (BUM); RT5 = IP prefix → ip-vrf route table</span></td>
 </tr>
 <tr>
-<td><strong>IMET contents</strong></td>
-<td>RD, originating router IP (VTEP), RT, PMSI tunnel type = ingress replication, VNI (label) + encap VXLAN — <strong>ไม่มี flooding list</strong></td>
+<td data-label="คู่ที่สับสน"><span><strong>IMET contents</strong></span></td>
+<td data-label="จำแบบนี้"><span>RD, originating router IP (VTEP), RT, PMSI tunnel type = ingress replication, VNI (label) + encap VXLAN — <strong>ไม่มี flooding list</strong></span></td>
 </tr>
 <tr>
-<td><strong>RD vs RT</strong></td>
-<td>RD = ทำ route ให้ unique (system-IP:EVI); RT = ตัดสินว่า import เข้า NI ไหน (AS:EVI แต่ควรตั้งเอง)</td>
+<td data-label="คู่ที่สับสน"><span><strong>RD vs RT</strong></span></td>
+<td data-label="จำแบบนี้"><span>RD = ทำ route ให้ unique (system-IP:EVI); RT = ตัดสินว่า import เข้า NI ไหน (AS:EVI แต่ควรตั้งเอง)</span></td>
 </tr>
 <tr>
-<td><strong>local vs global ESI</strong></td>
-<td>ESI = <strong>global unique</strong>, ทุก leaf ใน ES เดียวกันใช้ ESI เดียวกัน (ไม่ใช่ local significance); 0 = single-homed, 0xFF = max</td>
+<td data-label="คู่ที่สับสน"><span><strong>local vs global ESI</strong></span></td>
+<td data-label="จำแบบนี้"><span>ESI = <strong>global unique</strong>, ทุก leaf ใน ES เดียวกันใช้ ESI เดียวกัน (ไม่ใช่ local significance); 0 = single-homed, 0xFF = max</span></td>
 </tr>
 <tr>
-<td><strong>ESI vs EVI vs VNI</strong></td>
-<td>ESI = Ethernet Segment (multi-homing); EVI = EVPN instance (auto RD/RT, DF); VNI = VXLAN segment ID ใน data plane</td>
+<td data-label="คู่ที่สับสน"><span><strong>ESI vs EVI vs VNI</strong></span></td>
+<td data-label="จำแบบนี้"><span>ESI = Ethernet Segment (multi-homing); EVI = EVPN instance (auto RD/RT, DF); VNI = VXLAN segment ID ใน data plane</span></td>
 </tr>
 <tr>
-<td><strong>bridged vs routed vxlan-interface</strong></td>
-<td>bridged → ผูก mac-vrf (L2 / asymmetric); routed → ผูก ip-vrf (symmetric RT5)</td>
+<td data-label="คู่ที่สับสน"><span><strong>bridged vs routed vxlan-interface</strong></span></td>
+<td data-label="จำแบบนี้"><span>bridged → ผูก mac-vrf (L2 / asymmetric); routed → ผูก ip-vrf (symmetric RT5)</span></td>
 </tr>
 <tr>
-<td><strong>underlay BGP vs overlay EVPN BGP</strong></td>
-<td>underlay = eBGP leaf↔spine, ASN ต่าง, ipv4-unicast; overlay = iBGP group แยก, <code>local-as</code> เดียวกัน, afi-safi evpn, ใช้ RR, multihop จาก system0</td>
+<td data-label="คู่ที่สับสน"><span><strong>underlay BGP vs overlay EVPN BGP</strong></span></td>
+<td data-label="จำแบบนี้"><span>underlay = eBGP leaf↔spine, ASN ต่าง, ipv4-unicast; overlay = iBGP group แยก, <code>local-as</code> เดียวกัน, afi-safi evpn, ใช้ RR, multihop จาก system0</span></td>
 </tr>
 <tr>
-<td><strong>ECMP static vs BGP</strong></td>
-<td>static: NHG หลาย next-hop ใช้ ECMP ได้ทันที; BGP: ต้องตั้ง multipath (default 1)</td>
+<td data-label="คู่ที่สับสน"><span><strong>ECMP static vs BGP</strong></span></td>
+<td data-label="จำแบบนี้"><span>static: NHG หลาย next-hop ใช้ ECMP ได้ทันที; BGP: ต้องตั้ง multipath (default 1)</span></td>
 </tr>
 <tr>
-<td><strong>LLDP vs LACP vs BFD</strong></td>
-<td>LLDP = discovery (ไม่ใช่ fail detection); LACP = ตรวจ miswire ใน LAG; BFD = ตรวจ link/path fail เร็ว</td>
+<td data-label="คู่ที่สับสน"><span><strong>LLDP vs LACP vs BFD</strong></span></td>
+<td data-label="จำแบบนี้"><span>LLDP = discovery (ไม่ใช่ fail detection); LACP = ตรวจ miswire ใน LAG; BFD = ตรวจ link/path fail เร็ว</span></td>
 </tr>
 <tr>
-<td><strong>fast-failover vs BFD</strong></td>
-<td>fast-failover = session ลงทันทีเมื่อ local interface down (เฉพาะ directly connected); BFD = ตรวจได้แม้ link ยัง up แต่ path ตาย</td>
+<td data-label="คู่ที่สับสน"><span><strong>fast-failover vs BFD</strong></span></td>
+<td data-label="จำแบบนี้"><span>fast-failover = session ลงทันทีเมื่อ local interface down (เฉพาะ directly connected); BFD = ตรวจได้แม้ link ยัง up แต่ path ตาย</span></td>
 </tr>
 <tr>
-<td><strong>logging source vs destination</strong></td>
-<td>source = facility / subsystem / filter; destination = file / buffer / console / remote; <strong>console เป็น destination เท่านั้น</strong></td>
+<td data-label="คู่ที่สับสน"><span><strong>logging source vs destination</strong></span></td>
+<td data-label="จำแบบนี้"><span>source = facility / subsystem / filter; destination = file / buffer / console / remote; <strong>console เป็น destination เท่านั้น</strong></span></td>
 </tr>
 <tr>
-<td><strong>file vs buffer</strong></td>
-<td>file = <code>/var/log/srlinux/file</code> persistent; buffer = <code>/var/log/srlinux/buffer</code> RAM หายเมื่อ reboot</td>
+<td data-label="คู่ที่สับสน"><span><strong>file vs buffer</strong></span></td>
+<td data-label="จำแบบนี้"><span>file = <code>/var/log/srlinux/file</code> persistent; buffer = <code>/var/log/srlinux/buffer</code> RAM หายเมื่อ reboot</span></td>
 </tr>
 <tr>
-<td><strong>app_mgr vs mgmt_svr vs IDB</strong></td>
-<td>app_mgr = start/monitor app; mgmt_svr = own YANG, validate, แปลงเป็น protobuf; IDB = pub/sub ระหว่าง app</td>
+<td data-label="คู่ที่สับสน"><span><strong>app_mgr vs mgmt_svr vs IDB</strong></span></td>
+<td data-label="จำแบบนี้"><span>app_mgr = start/monitor app; mgmt_svr = own YANG, validate, แปลงเป็น protobuf; IDB = pub/sub ระหว่าง app</span></td>
 </tr>
 <tr>
-<td><strong>IRB vs bridged subinterface</strong></td>
-<td>IRB = L3 ไม่มี VLAN, เชื่อม mac-vrf↔ip-vrf; bridged = L2 port ใน mac-vrf มี VLAN/bridge-table</td>
+<td data-label="คู่ที่สับสน"><span><strong>IRB vs bridged subinterface</strong></span></td>
+<td data-label="จำแบบนี้"><span>IRB = L3 ไม่มี VLAN, เชื่อม mac-vrf↔ip-vrf; bridged = L2 port ใน mac-vrf มี VLAN/bridge-table</span></td>
 </tr>
 <tr>
-<td><strong>resolve true vs false</strong></td>
-<td>true = next-hop resolve ผ่าน route อะไรก็ได้ (recursive); false = ต้องเป็น local/direct</td>
+<td data-label="คู่ที่สับสน"><span><strong>resolve true vs false</strong></span></td>
+<td data-label="จำแบบนี้"><span>true = next-hop resolve ผ่าน route อะไรก็ได้ (recursive); false = ต้องเป็น local/direct</span></td>
 </tr>
 <tr>
-<td><strong>ZTP พื้นฐาน vs sZTP/BootZ (ตั้งแต่ 26.3)</strong></td>
-<td>พื้นฐาน: DHCP 66/67/43 + script ไม่มี PKI; ตั้งแต่ 26.3 เพิ่ม sZTP (DHCP opt 143/136) และ BootZ ที่ใช้ certificate</td>
+<td data-label="คู่ที่สับสน"><span><strong>ZTP พื้นฐาน vs sZTP/BootZ (ตั้งแต่ 26.3)</strong></span></td>
+<td data-label="จำแบบนี้"><span>พื้นฐาน: DHCP 66/67/43 + script ไม่มี PKI; ตั้งแต่ 26.3 เพิ่ม sZTP (DHCP opt 143/136) และ BootZ ที่ใช้ certificate</span></td>
 </tr>
 <tr>
-<td><strong>Revert vs Restore (EDA)</strong></td>
-<td>revert = undo transaction เดียว; restore = คืนทุก resource ไปสถานะ ณ transaction นั้น</td>
+<td data-label="คู่ที่สับสน"><span><strong>Revert vs Restore (EDA)</strong></span></td>
+<td data-label="จำแบบนี้"><span>revert = undo transaction เดียว; restore = คืนทุก resource ไปสถานะ ณ transaction นั้น</span></td>
 </tr>
 <tr>
-<td><strong>deviation accept vs reject</strong></td>
-<td>accept = อัปเดต intent ตาม node; reject = revert node กลับเป็น intent</td>
+<td data-label="คู่ที่สับสน"><span><strong>deviation accept vs reject</strong></span></td>
+<td data-label="จำแบบนี้"><span>accept = อัปเดต intent ตาม node; reject = revert node กลับเป็น intent</span></td>
 </tr>
 </tbody>
 </table></div>
