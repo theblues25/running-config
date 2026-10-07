@@ -24,6 +24,9 @@
   figure.diagram figcaption, .mermaid-wrap + p.caption{ margin-top:.8rem; font-size:.9rem; color:var(--ink-soft); text-align:center; }
   .mermaid-wrap{ margin:1.6rem 0; padding:1.2rem; overflow-x:auto; background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius); }
   .mermaid-wrap pre.mermaid{ background:none; border:0; margin:0; text-align:center; }
+  .code-block{ background:var(--bg-sunk); border:1px solid var(--line-strong); border-radius:var(--radius); padding:1rem 1.2rem; margin:1.3rem 0; overflow-x:auto; box-shadow:var(--shadow); }
+  .code-block pre{ margin:0; background:none; border:0; padding:0; font-family:"JetBrains Mono",monospace; font-size:.84rem; line-height:1.6; color:var(--ink); white-space:pre; }
+  main :not(pre) > code{ font-family:"JetBrains Mono",monospace; font-size:.88em; background:var(--bg-sunk); padding:.08em .35em; border-radius:4px; overflow-wrap:anywhere; }
   .hero{ padding-bottom:3rem; }
 </style>
 </head>
@@ -579,7 +582,7 @@
 </svg>
 <figcaption>CLI mode ทั้งสี่สลับกันด้วย <code>enter</code>; ออกจาก candidate ด้วย <code>commit</code> หรือ <code>discard</code> แล้วกลับ running</figcaption>
 </figure>
-<pre><code>--{ running }--[ interface ethernet-1/1 ]--
+<div class="code-block"><pre><code>--{ running }--[ interface ethernet-1/1 ]--
 A:spine1# description &quot;Interface to leaf1&quot;
 Error: ... In 'running' mode, configuration allowed only in 'candidate' mode
 A:spine1# enter candidate
@@ -589,7 +592,7 @@ A:spine1# description &quot;Interface to leaf1&quot;
 A:spine1# diff
 +     description &quot;Interface to leaf1&quot;
 A:spine1# commit stay
-</code></pre>
+</code></pre></div>
 <p><strong>Candidate / transaction</strong></p>
 <ul>
 <li>แก้ใน candidate → <strong>ไม่ต้องเรียงลำดับ config</strong> → <code>commit</code> → validate 3 ขั้น:<ul>
@@ -709,11 +712,11 @@ A:spine1# commit stay
 <li>ดู: <code>info from state detail system configuration checkpoint * | as table</code></li>
 <li>revert/clear:</li>
 </ul>
-<pre><code>A:spine1# enter candidate
+<div class="code-block"><pre><code>A:spine1# enter candidate
 A:spine1# tools system configuration checkpoint 0 revert
     Successfully reverted configuration
 A:dc-leaf-1# tools system configuration checkpoint 2 clear
-</code></pre>
+</code></pre></div>
 <p><strong>สรุปที่ควรจำ — ไฟล์ config / startup / rescue</strong></p>
 <ul>
 <li><code>source &lt;file&gt; [auto-commit]</code> = รันคำสั่งจากไฟล์ทีละบรรทัด (default จาก home dir; ใช้รูปแบบ <strong>flat</strong> จะรันได้จากทุก context)</li>
@@ -759,11 +762,11 @@ A:dc-leaf-1# tools system configuration checkpoint 2 clear
 </ul>
 </li>
 </ul>
-<pre><code>A:spine1# environment alias &quot;display subinterface&quot; &quot;info from state / interface {} subinterface {subint} | as table&quot;
+<div class="code-block"><pre><code>A:spine1# environment alias &quot;display subinterface&quot; &quot;info from state / interface {} subinterface {subint} | as table&quot;
 A:spine1# display subinterface ethernet-1/1 subint 0
 A:spine1# environment save home
 Saved configuration to /home/admin/.srlinuxrc
-</code></pre>
+</code></pre></div>
 <p><strong>Platform status</strong>:</p>
 <ul>
 <li><code>show version</code> (chassis type, SW version, <strong>system MAC</strong> ใช้ใน LLDP)</li>
@@ -848,10 +851,10 @@ Saved configuration to /home/admin/.srlinuxrc
 </li>
 <li><strong>ผิด prefix length</strong>: /32 บน ethernet subinterface → commit fail "ipv4 prefix length 32 not supported on this interface type" (ต้องลบอันผิดก่อน เพราะมีหลาย IP ได้)</li>
 </ul>
-<pre><code>A:leaf1# interface ethernet-1/10 vlan-tagging true subinterface 0 type bridged vlan encap untagged
+<div class="code-block"><pre><code>A:leaf1# interface ethernet-1/10 vlan-tagging true subinterface 0 type bridged vlan encap untagged
 A:leaf1# interface lo0 subinterface 0 ipv4 address 100.0.2.1/32
 A:leaf1# interface lo0 subinterface 0 ipv4 admin-state enable
-</code></pre>
+</code></pre></div>
 <ul>
 <li>ระวัง: ต้อง <code>ipv4 admin-state enable</code> ที่ subinterface ด้วย</li>
 </ul>
@@ -890,7 +893,7 @@ A:leaf1# interface lo0 subinterface 0 ipv4 admin-state enable
 </ul>
 </li>
 </ul>
-<pre><code>A:dc-leaf-2# info interface lag100
+<div class="code-block"><pre><code>A:dc-leaf-2# info interface lag100
     lag {
         lacp {
             interval SLOW
@@ -901,7 +904,7 @@ A:leaf1# interface lo0 subinterface 0 ipv4 admin-state enable
         }
     }
 A:dc-leaf-2# show lag lag100 lacp-state
-</code></pre>
+</code></pre></div>
 <figure class="diagram">
 <svg viewBox="0 0 720 290" role="img" aria-label="Leaf-2 ต่อ lag100 โดย e1/3 และ e1/4 ไป Spine-2 แต่ e1/5 ต่อผิดไป Spine-1; static LAG ใช้ e1/5 ทันที ส่วน LACP block e1/5">
 <rect x="40" y="20" width="110" height="44" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
@@ -1103,13 +1106,13 @@ A:dc-leaf-2# show lag lag100 lacp-state
 </svg>
 <figcaption>subinterface ของ IRB ต้องถูกใส่ทั้งใน mac-vrf และ ip-vrf (หรือ default) จึงจะเป็นตัวเชื่อมสองฝั่ง ส่วน ethernet subinterface ใน mac-vrf ต้องเป็น type bridged</figcaption>
 </figure>
-<pre><code>A:leaf1# interface irb0 subinterface 0 ipv4 address 192.168.101.1/28
+<div class="code-block"><pre><code>A:leaf1# interface irb0 subinterface 0 ipv4 address 192.168.101.1/28
 A:leaf1# interface irb0 subinterface 0 ipv4 admin-state enable
 A:leaf1# network-instance default interface irb0.0
 A:leaf1# network-instance layer2 type mac-vrf
 A:leaf1# network-instance layer2 interface ethernet-1/10.0
 A:leaf1# network-instance layer2 interface irb0.0
-</code></pre>
+</code></pre></div>
 <p><strong>สรุปที่ควรจำ — MAC table</strong></p>
 <ul>
 <li>learn source MAC / flood unknown dest; type: <strong>irb-interface, learnt, static, duplicate</strong></li>
@@ -1258,7 +1261,7 @@ A:leaf1# network-instance layer2 interface irb0.0
 <li>route จะถูก install ถ้า: admin enable + next-hop reachable อย่างน้อย 1 + preference ต่ำสุด + (pref เท่ากัน) metric ต่ำสุด</li>
 <li>ไม่มี routing policy ผูกกับ next-hop ใน NHG</li>
 </ul>
-<pre><code>network-instance default {
+<div class="code-block"><pre><code>network-instance default {
     static-routes {
         route 192.168.20.0/30 {
             next-hop-group NHG-leaf-2
@@ -1271,7 +1274,7 @@ A:leaf1# network-instance layer2 interface irb0.0
         }
     }
 }
-</code></pre>
+</code></pre></div>
 <ul>
 <li>ตัวอย่างนี้มี 2 next-hop = ECMP</li>
 <li><strong>[ตั้งแต่ 26.3]</strong> มี static route 2 แบบ:<ul>
@@ -1442,7 +1445,7 @@ A:leaf1# network-instance layer2 interface irb0.0
 <li>ต้องมี: <strong>ASN + router-id + afi-safi (admin-state enable) + peer-as + neighbor (+group)</strong></li>
 <li>multipath ไม่ใช่ส่วนที่บังคับ</li>
 </ul>
-<pre><code>A:leaf1# network-instance default protocols bgp
+<div class="code-block"><pre><code>A:leaf1# network-instance default protocols bgp
 A:leaf1# autonomous-system 65001
 A:leaf1# router-id 100.0.2.1
 A:leaf1# afi-safi ipv4-unicast admin-state enable
@@ -1451,7 +1454,7 @@ A:leaf1# neighbor 10.1.1.0 peer-group spines
 A:leaf1# neighbor 10.2.1.0 peer-group spines
 A:leaf1# ebgp-default-policy import-reject-all false
 A:leaf1# afi-safi ipv4-unicast ebgp maximum-paths 2      ← ECMP
-</code></pre>
+</code></pre></div>
 <ul>
 <li>parameter ตั้งได้ 3 ระดับ <strong>global → group → neighbor; ระดับที่เจาะจงสุดชนะ</strong> (ASN, peer-as, policy, failure-detection ฯลฯ)</li>
 </ul>
@@ -1599,7 +1602,7 @@ A:leaf1# afi-safi ipv4-unicast ebgp maximum-paths 2      ← ECMP
 </ul>
 </li>
 </ul>
-<pre><code>routing-policy {
+<div class="code-block"><pre><code>routing-policy {
     prefix-set hosts {
         prefix 192.168.101.0/28 mask-length-range exact { }
     }
@@ -1613,7 +1616,7 @@ A:leaf1# afi-safi ipv4-unicast ebgp maximum-paths 2      ← ECMP
 }
 A:leaf1# network-instance default protocols bgp neighbor 10.1.1.0 export-policy export-hosts
 A:leaf1# routing-policy policy export-hosts statement 20 action policy-result accept bgp communities add no-export
-</code></pre>
+</code></pre></div>
 <p><strong>BFD for BGP</strong></p>
 <ul>
 <li>BFD = lightweight, <strong>asynchronous mode</strong>, ตกลง tx/rx rate กัน, พลาดหลาย packet (detection-multiplier) → <strong>แจ้ง BGP</strong></li>
@@ -1632,10 +1635,10 @@ A:leaf1# routing-policy policy export-hosts statement 20 action policy-result ac
 </li>
 <li>BFD <strong>ไม่ได้</strong> ช่วยลด advertisement interval (นั่นคือ MAI/rapid-withdrawal)</li>
 </ul>
-<pre><code>A:leaf1# bfd subinterface ethernet-1/1.0 admin-state enable
+<div class="code-block"><pre><code>A:leaf1# bfd subinterface ethernet-1/1.0 admin-state enable
 A:leaf1# bfd subinterface ethernet-1/2.0 admin-state enable
 A:leaf1# network-instance default protocols bgp group spines failure-detection enable-bfd true
-</code></pre>
+</code></pre></div>
 <p><strong>เทียบ SR OS</strong>: SR OS ไม่มี RFC 8212 default reject (ส่ง/รับหมดถ้าไม่มี policy — ยกเว้นตั้ง); <code>multipath</code> / <code>ebgp-ibgp</code> ใน SR OS = <code>multipath max-paths</code>; BFD ของ SR OS ตั้งที่ router interface (<code>bfd</code>) + <code>bfd-liveness</code> ใน BGP — แนวคิด 2 ที่เหมือนกัน; <code>rapid-withdrawal</code>, <code>min-route-advertisement</code> คล้ายกัน; policy ของ SR OS เป็น <code>policy-options</code> แบบ entry/from/action — SR Linux ใช้ statement/match/action</p>
 <hr />
 <h3>2.6 EVPN-VXLAN: L2 และ L3</h3>
@@ -1742,7 +1745,7 @@ A:leaf1# network-instance default protocols bgp group spines failure-detection e
 </li>
 <li>verify: <code>show network-instance mac-vrf-100 vxlan-interface vxlan1.100</code>, <code>show tunnel-interface vxlan-interface brief</code>, <code>show network-instance mac-vrf-100 bridge-table mac-table all</code> (remote = type <code>evpn</code>, destination <code>vtep:2.2.2.2 vni:100</code>), <code>show network-instance default protocols bgp routes evpn route-type 3|2 detail</code></li>
 </ul>
-<pre><code>A:leaf1# / interface system0 subinterface 0 ipv4 address 1.1.1.1/32
+<div class="code-block"><pre><code>A:leaf1# / interface system0 subinterface 0 ipv4 address 1.1.1.1/32
 A:leaf1# / network-instance default interface system0.0
 A:leaf1# / network-instance default protocols bgp group evpn
     peer-as 65000
@@ -1757,7 +1760,7 @@ A:leaf1# / network-instance mac-vrf-100 interface ethernet-1/10.100
 A:leaf1# / network-instance mac-vrf-100 vxlan-interface vxlan1.100
     protocols bgp-evpn bgp-instance 1 { admin-state enable vxlan-interface vxlan1.100 evi 100 ecmp 2 }
     protocols bgp-vpn bgp-instance 1 route-target { export-rt target:65000:100 import-rt target:65000:100 }
-</code></pre>
+</code></pre></div>
 <figure class="diagram">
 <svg viewBox="0 0 720 114" role="img" aria-label="ลำดับการ config L2 EVPN"><defs><marker id="c3f13" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="72.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">1. system0.0</text><text x="72.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">source IP / RD</text><line x1="135" y1="62" x2="153" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="154" y="30" width="124" height="64" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="216.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">2. BGP EVPN peering</text><text x="216.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">group evpn</text><line x1="279" y1="62" x2="297" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="298" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="360.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">3. Local interface</text><text x="360.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">bridged subif</text><line x1="423" y1="62" x2="441" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="442" y="30" width="124" height="64" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="504.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">4. vxlan-interface</text><text x="504.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ingress vni</text><line x1="567" y1="62" x2="585" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="586" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="648.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">5. mac-vrf</text><text x="648.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">bgp-evpn / bgp-vpn</text></svg>
 <figcaption>ลำดับการ config L2 EVPN-VXLAN: system0 → BGP EVPN → interface ฝั่ง host → vxlan-interface → mac-vrf</figcaption>
@@ -1834,7 +1837,7 @@ A:leaf1# / network-instance mac-vrf-100 vxlan-interface vxlan1.100
 </tr>
 </tbody>
 </table></div>
-<pre><code>Asymmetric (Client1 100.1.1.10 @Leaf1 → Client2 101.1.1.21 @Leaf2)
+<div class="code-block"><pre><code>Asymmetric (Client1 100.1.1.10 @Leaf1 → Client2 101.1.1.21 @Leaf2)
 Leaf1: [mac-vrf-100] dstMAC=IRB1.100 → [ip-vrf] dstIP→IRB1.101 → [ARP] 101.1.1.21→MAC..21
        → [mac-vrf-101] MAC..21 → VXLAN VNI 101 ─────► Leaf2: [mac-vrf-101] MAC..21 → eth-1/11.101
        (ingress = หลาย lookup, egress = L2 lookup เดียว)
@@ -1843,7 +1846,7 @@ Symmetric (VNI L3 = 1000 ที่ ip-vrf)
 Leaf1: [mac-vrf1] dstMAC=IRB → [ip-vrf] 101.1.1.0/24 (RT5) → VXLAN VNI 1000 (inner dMAC = mac-nh)
        ─────► Leaf2: [ip-vrf] dstIP → IRB → [ARP] → [mac-vrf2] MAC → eth-1/11.100
        (ingress L2+L3, egress L3+L2 = สมมาตร)
-</code></pre>
+</code></pre></div>
 <figure class="diagram">
 <svg viewBox="0 0 720 276" role="img" aria-label="Asymmetric IRB traffic flow"><defs><marker id="c3f14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="60.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Client1</text><text x="60.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">100.1.1.10</text><rect x="610" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="660.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Client2</text><text x="660.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">101.1.1.21</text><rect x="130" y="10" width="230" height="230" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="245.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf1 (ingress)</text><rect x="145" y="42" width="200" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="245.0" y="59.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">1. L2 lookup</text><text x="245.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-100: dst MAC = IRB</text><rect x="145" y="90" width="200" height="40" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="245.0" y="107.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">2. L3 lookup</text><text x="245.0" y="124.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ip-vrf: dst IP → IRB .101</text><rect x="145" y="138" width="200" height="40" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="245.0" y="155.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">3. ARP lookup</text><text x="245.0" y="172.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">101.1.1.21 → MAC</text><rect x="145" y="186" width="200" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="245.0" y="203.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">4. L2 lookup</text><text x="245.0" y="220.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-101 → VNI 101</text><rect x="440" y="10" width="170" height="230" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="525.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf2 (egress)</text><rect x="450" y="42" width="150" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="525.0" y="59.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">5. L2 lookup</text><text x="525.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-101 → port</text><line x1="110" y1="45" x2="144" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f14)"/><line x1="345" y1="210" x2="449" y2="75" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#c3f14)"/><line x1="601" y1="62" x2="610" y2="45" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f14)"/><text x="400" y="172" text-anchor="middle" font-size="12" fill="var(--amber)" font-weight="600" font-family="inherit">VXLAN VNI 101</text><text x="360" y="262" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">ingress ทำหลาย lookup, egress ทำ L2 lookup เดียว (VNI = ของ subnet ปลายทาง)</text></svg>
 <figcaption>Asymmetric IRB: ingress leaf ทำ L2 + L3 + ARP + L2 แล้วส่งใน VNI ของ subnet ปลายทาง; egress leaf ทำ L2 lookup เดียว</figcaption>
@@ -1852,7 +1855,7 @@ Leaf1: [mac-vrf1] dstMAC=IRB → [ip-vrf] 101.1.1.0/24 (RT5) → VXLAN VNI 1000 
 <svg viewBox="0 0 720 240" role="img" aria-label="Symmetric IRB traffic flow"><defs><marker id="c3f15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="60.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Host A</text><text x="60.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">subnet 100</text><rect x="610" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="660.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Host B</text><text x="660.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">subnet 101</text><rect x="130" y="10" width="200" height="150" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="230.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf1 (ingress)</text><rect x="145" y="42" width="170" height="42" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="230.0" y="60.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">1. L2 lookup</text><text x="230.0" y="77.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf: dst MAC = IRB</text><rect x="145" y="98" width="170" height="42" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="230.0" y="116.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">2. L3 lookup</text><text x="230.0" y="133.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ip-vrf: RT5 → VNI 1000</text><rect x="390" y="10" width="220" height="150" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="500.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf2 (egress)</text><rect x="405" y="42" width="190" height="32" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="500.0" y="63.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">3. L3 lookup (ip-vrf)</text><rect x="405" y="80" width="190" height="32" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="500.0" y="101.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">4. ARP → IRB</text><rect x="405" y="118" width="190" height="32" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="500.0" y="139.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">5. L2 lookup (mac-vrf)</text><line x1="110" y1="45" x2="144" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="230" y1="141" x2="230" y2="180" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="230" y1="180" x2="389" y2="180" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="595" y1="134" x2="610" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><text x="310" y="198" text-anchor="middle" font-size="12" fill="var(--amber)" font-weight="600" font-family="inherit">VXLAN VNI 1000 (routed, inner dst MAC = mac-nh)</text><text x="360" y="226" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">ingress: L2 + L3  |  egress: L3 + ARP + L2  (สมมาตร)</text></svg>
 <figcaption>Symmetric IRB: route ผ่าน VXLAN VNI ของ ip-vrf (routed) แล้วให้ leaf ปลายทางทำ L3 lookup ต่อ</figcaption>
 </figure>
-<pre><code>A:leaf1# info interface irb1
+<div class="code-block"><pre><code>A:leaf1# info interface irb1
     subinterface 100 {
         ipv4 {
             address 100.1.1.254/24 { }
@@ -1867,7 +1870,7 @@ A:leaf1# info network-instance ip-vrf-symmetric
     protocols bgp-vpn bgp-instance 1 route-target { export-rt target:65000:1000 import-rt target:65000:1000 }
 A:leaf1# info tunnel-interface vxlan2
     vxlan-interface 1000 { type routed ingress { vni 1000 } }
-</code></pre>
+</code></pre></div>
 <p><strong>เทียบ SR OS</strong>: SR OS EVPN-VXLAN = VPLS + <code>vxlan instance 1 vni X</code> + <code>bgp-evpn</code> (RT2/RT3) ส่วน L3 = R-VPLS เข้า VPRN; SR OS ใช้ <code>evpn-tunnel</code> ใน R-VPLS สำหรับ symmetric/IFL RT5 คล้ายกัน; source ของ VXLAN ใน SR OS คือ system IP เหมือน system0; RD/RT auto ของ SR OS ก็ derive จาก system-ip/AS แบบเดียวกัน</p>
 <p><strong>ทวนสั้น ๆ — EVPN-VXLAN และหัวข้อก่อนหน้า</strong></p>
 <ul>
@@ -1986,14 +1989,14 @@ A:leaf1# info tunnel-interface vxlan2
 <li>trace-options มีใน: system LLDP, interface DHCP, BGP (global/group/neighbor), IS-IS, gNMI server, JSON-RPC server</li>
 <li>ทดสอบด้วย <code>bash logger -p mail.error "msg"</code> (format <code>facility.priority</code>)</li>
 </ul>
-<pre><code>A:leaf1# system logging filter interface-e-1-1 contains &quot;Interface ethernet-1/1&quot; tag chassis
+<div class="code-block"><pre><code>A:leaf1# system logging filter interface-e-1-1 contains &quot;Interface ethernet-1/1&quot; tag chassis
 A:leaf1# system logging file interfaces filter [ interface-e-1-1 ]
 A:leaf1# system logging network-instance mgmt
 A:leaf1# system logging remote-server 172.20.20.1 subsystem bgp
 A:leaf1# system logging buffer bgp-debug subsystem bgp priority match-exact [ debug ]
 A:leaf1# network-instance default protocols bgp trace-options flag keepalive modifier detail
 A:leaf1# show system logging file bgp-log-file | grep ESTABLISHED
-</code></pre>
+</code></pre></div>
 <div class="mermaid-wrap"><pre class="mermaid">flowchart LR
   subgraph SRC[&quot;Sources&quot;]
     F[&quot;facility+priority (Linux: kern, auth, local0-7)&quot;]
@@ -2080,8 +2083,8 @@ A:leaf1# show system logging file bgp-log-file | grep ESTABLISHED
 <li>7220 IXR-D: ingress ไม่รองรับ log กับ accept, egress ไม่รองรับ log เลย; cpm-filter log ได้เฉพาะ <strong>drop</strong></li>
 <li>apply interface ACL:</li>
 </ul>
-<pre><code>A:leaf1# acl interface ethernet-1/10.0 input acl-filter block-v4-infrastructure type ipv4
-</code></pre>
+<div class="code-block"><pre><code>A:leaf1# acl interface ethernet-1/10.0 input acl-filter block-v4-infrastructure type ipv4
+</code></pre></div>
 <p>หมายเหตุ: ตั้งแต่ 25.3 ไวยากรณ์อยู่ใต้ <code>acl interface &lt;subif&gt; input|output</code></p>
 <ul>
 <li><strong>TCAM</strong>: ACL อยู่ใน TCAM บน line card เพื่อ <strong>line rate</strong>; default <strong>subinterface-specific disabled</strong> = หลาย subinterface ใช้ TCAM entry ร่วม (stats รวม); <code>input-only | output-only | input-and-output</code> = แยก entry/สถิติต่อ subinterface; commit ACL <strong>ถูกเช็กว่า TCAM พอทุก line card</strong> ไม่พอ = commit fail; threshold <code>platform acl/tcam resource ... rising-threshold-log / falling-threshold-log</code> (default 90/70%), <code>show platform linecard 1 detail</code>, <code>show resource-monitoring</code></li>
@@ -2100,7 +2103,7 @@ A:leaf1# show system logging file bgp-log-file | grep ESTABLISHED
 </ul>
 </li>
 </ul>
-<pre><code>acl acl-filter cpm type ipv4 {
+<div class="code-block"><pre><code>acl acl-filter cpm type ipv4 {
     entry 10 { match { ipv4 { protocol tcp source-ip { prefix 10.2.1.0/32 } } transport { destination-port { value 179 } } } action { accept { } } }
     entry 20 { match { ipv4 { protocol tcp source-ip { prefix 172.18.18.0/24 } } transport { destination-port { value ssh } } } action { accept { } } }
     entry 100 { match { ipv4 { protocol icmp } } action { accept { rate-limit { system-cpu-policer pol-1 policer pol-1 } } } }
@@ -2110,7 +2113,7 @@ acl policers {
     system-cpu-policer pol-1 { entry-specific true peak-rate-pps 5000 maximum-burst-packet 500 }
     policer pol-1 { entry-specific true peak-rate-kbps 1000 maximum-burst-size 1000 }
 }
-</code></pre>
+</code></pre></div>
 <figure class="diagram">
 <svg viewBox="0 0 720 252" role="img" aria-label="Hierarchical policing"><defs><marker id="c3f17" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="20" y="20" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="50.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 1</text><rect x="200" y="20" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="42.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="45" x2="199" y2="45" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="45" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="20" y="90" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="120.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 2</text><rect x="200" y="90" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="112.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="129.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="115" x2="199" y2="115" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="115" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="20" y="160" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="190.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 3</text><rect x="200" y="160" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="182.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="199.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="185" x2="199" y2="185" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="185" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="430" y="60" width="160" height="80" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="510.0" y="92.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">system-cpu-policer</text><text x="510.0" y="109.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">บน CPM, SW</text><text x="510.0" y="124.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">รวมทุก line card (pps)</text><rect x="630" y="70" width="80" height="60" rx="8" fill="var(--good-soft)" stroke="var(--line-strong)"/><text x="670.0" y="105.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">CPU</text><line x1="591" y1="100" x2="629" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><text x="360" y="238" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">เฉพาะ cpm-filter ที่ rate-limit ได้; non-conforming = drop</text></svg>
 <figcaption>Hierarchical policing: policer ต่อ line card (hardware) แล้วรวมที่ system-cpu-policer บน CPM (software)</figcaption>
@@ -2167,14 +2170,14 @@ acl policers {
 </li>
 <li><strong>CPM filter บล็อกตาม source IP/protocol ได้ แต่ไม่ได้ "บล็อก unauthorized user"</strong> — การยืนยันตัวตน user เป็นงานของ AAA</li>
 </ul>
-<pre><code>A:dc-leaf-1# system aaa authorization role user-role
+<div class="code-block"><pre><code>A:dc-leaf-1# system aaa authorization role user-role
 A:dc-leaf-1# system configuration role user-role rule / action write
 A:dc-leaf-1# system configuration role user-role rule /acl action read
 A:dc-leaf-1# system aaa authentication user bob-user password 123aad role [ user-role ]
 A:leaf1# system aaa accounting accounting-method [ local ]
 A:leaf1# system aaa accounting event command record stop
 A:leaf1# system logging file accounting rotate 4 size 10M subsystem accounting
-</code></pre>
+</code></pre></div>
 <p><strong>เทียบ SR OS</strong>: SR OS ใช้ <code>system security user</code> + <code>profile</code> (entry match command → permit/deny) + <code>user-template</code> สำหรับ TACACS+/RADIUS; SR Linux role ≈ profile ของ SR OS แต่อิง YANG path; SR OS ไม่มีแนวคิด "Linux user"</p>
 <h3>4.2 TLS, PKI, gNMI/JSON-RPC server</h3>
 <p><strong>สาระสำคัญ</strong></p>
@@ -2235,7 +2238,7 @@ A:leaf1# system logging file accounting rotate 4 size 10M subsystem accounting
 </ul>
 </li>
 </ul>
-<pre><code>A:leaf1# system tls server-profile lab
+<div class="code-block"><pre><code>A:leaf1# system tls server-profile lab
     key &quot;-----BEGIN RSA PRIVATE KEY----- ...&quot;
     certificate &quot;-----BEGIN CERTIFICATE----- ...&quot;
     trust-anchor &quot;-----BEGIN CERTIFICATE----- ...&quot;
@@ -2250,7 +2253,7 @@ A:leaf1# system grpc-server lab
     metadata-authentication true
 $ gnmic get --path &quot;/system/name/host-name&quot; --tls-ca CA.pem --tls-cert client.pem \
     --tls-key client_key.pem -a 172.20.20.101:57400 -u admin -p ... -e ascii
-</code></pre>
+</code></pre></div>
 <ul>
 <li><strong>gNMI</strong> = gRPC Network Management Interface: Get / Set / Subscribe (streaming telemetry) / Capabilities<ul>
 <li>ใช้ <strong>gRPC (HTTP/2 + protobuf)</strong> เหมาะกับ automation/telemetry หลายเครื่อง</li>
