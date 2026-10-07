@@ -1,0 +1,2902 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SR Linux และ Data Center Fabric · running config</title>
+<meta name="description" content="สรุปพื้นฐาน Nokia SR Linux และ Data Center Fabric: leaf-spine, BGP underlay, EVPN-VXLAN, CLI, network-instance, ACL, logging, AAA, ZTP และ EDA พร้อมเทียบกับ SR OS">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  /* Post-only: long-form notes (lists, sub-headings, diagrams) */
+  main section{ padding:3.5rem 0; }
+  main h3{ margin:2.6rem 0 1rem; }
+  main ul, main ol{ padding-left:1.3rem; margin:.6rem 0 1.2rem; }
+  main li{ margin:.35rem 0; line-height:1.7; }
+  main li > ul, main li > ol{ margin:.3rem 0 .4rem; }
+  main p{ max-width:none; }
+  main blockquote{ margin:1rem 0; padding:.8rem 1.1rem; border-left:3px solid var(--amber); background:var(--bg-sunk); border-radius:0 var(--radius) var(--radius) 0; }
+  main blockquote p{ margin:.2rem 0; }
+  figure.diagram{ margin:1.6rem 0; padding:1.2rem; background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+  figure.diagram svg{ display:block; width:100%; height:auto; max-width:760px; margin:0 auto; font-family:"Sarabun","Inter",sans-serif; }
+  figure.diagram figcaption, .mermaid-wrap + p.caption{ margin-top:.8rem; font-size:.9rem; color:var(--ink-soft); text-align:center; }
+  .mermaid-wrap{ margin:1.6rem 0; padding:1.2rem; overflow-x:auto; background:var(--bg-raised); border:1px solid var(--line); border-radius:var(--radius); }
+  .mermaid-wrap pre.mermaid{ background:none; border:0; margin:0; text-align:center; }
+  .hero{ padding-bottom:3rem; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress-bar"></div>
+<nav class="toc-widget" id="toc-widget">
+  <button type="button" class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-panel">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    <span class="toc-toggle-label">สารบัญ</span>
+  </button>
+  <div class="toc-panel" id="toc-panel" hidden>
+    <ol>
+      <li><a href="#s1" data-toc="s1">1. Nokia Data Center Fabric Solution</a></li>
+      <li><a href="#s2" data-toc="s2">2. SR Linux Configuration and Routing</a></li>
+      <li><a href="#s3" data-toc="s3">3. Logging, Monitoring and Filtering</a></li>
+      <li><a href="#s4" data-toc="s4">4. User and System Management</a></li>
+      <li><a href="#s5" data-toc="s5">5. EDA (Event Driven Automation)</a></li>
+      <li><a href="#s6" data-toc="s6">ภาคผนวก — แนวคิดทั่วไปที่ควรรู้</a></li>
+      <li><a href="#s7" data-toc="s7">สรุปย่อหน้าเดียว</a></li>
+      <li><a href="#s8" data-toc="s8">เรื่องที่มักสับสน</a></li>
+    </ol>
+  </div>
+</nav>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
+    <div class="links">
+      <a class="back" href="../index.html">← กลับหน้าแรก</a>
+      <a class="tool-link" href="../tools/ip-calculator/index.html">Tools</a>
+      <button id="theme-toggle" aria-label="Toggle theme"><span id="theme-icon">🌙</span></button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <span class="kicker"><span class="dot"></span>Nokia SR Linux ฉบับสรุป · 2026-10-07</span>
+    <h1>SR Linux และ<br><span class="amber-text">Data Center Fabric</span></h1>
+    <p class="lede">สรุปพื้นฐานที่ต้องรู้ก่อนลงมือกับ DC fabric ของ Nokia ตั้งแต่ leaf-spine, BGP underlay, EVPN-VXLAN ไปจนถึง CLI, ACL, logging, AAA, ZTP และ EDA เขียนเป็นข้อ ๆ ไว้เปิดทวน และมีหมายเหตุเทียบกับ SR OS สำหรับคนที่มาจากฝั่ง SP</p>
+    <p class="caption">เนื้อหาหลักอิง SR Linux 25.3 จุดที่ 26.3 เปลี่ยนไปมีป้ายกำกับไว้</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="s1">
+    <h2>1. Nokia Data Center Fabric Solution</h2>
+
+<h3>1.1 Modern DC Architecture</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>DC แบบเดิม (3-tier)</strong>: Core (L3) / Aggregation + Access (L2) ออกแบบมาเพื่อ client-server → traffic ส่วนใหญ่เป็น <strong>north-south</strong></li>
+<li>ปัญหาของ 3-tier:<ul>
+<li>scale ยาก (ต้องซื้อ aggregation ตัวใหญ่ขึ้น)</li>
+<li>ใช้ <strong>STP</strong> → link สำรองถูก block</li>
+<li>east-west วิ่งอ้อม (hairpin ผ่าน aggregation)</li>
+<li>กระจาย traffic ไม่สม่ำเสมอ</li>
+<li>troubleshoot ยาก</li>
+</ul>
+</li>
+<li><strong>Leaf-Spine (Clos)</strong>: leaf ทุกตัวต่อกับ spine <strong>ทุกตัว</strong><ul>
+<li>ใช้ <strong>L3 + ECMP</strong> กระจาย traffic บน link ที่ขนานกัน</li>
+<li>path ของ east-west <strong>คงที่/คาดเดาได้</strong> (จำนวน hop เท่ากันเสมอ) → troubleshoot ง่าย</li>
+<li>เพิ่ม uplink capacity ได้โดยเพิ่ม spine</li>
+</ul>
+</li>
+<li>Scale ต่อ: เพิ่มชั้น <strong>super-spine</strong><ul>
+<li>leaf+spine full mesh 1 ชุด = 1 <strong>cluster</strong> แล้ว super-spine เชื่อมหลาย cluster</li>
+<li>ข้อเสียคือ cabling เยอะ</li>
+</ul>
+</li>
+<li><strong>Underlay vs Overlay</strong>:<ul>
+<li>underlay = เครือข่าย IP กายภาพ (leaf-spine)</li>
+<li>overlay = VPN เสมือนบน underlay เพื่อแยก tenant (multi-tenant DC)</li>
+</ul>
+</li>
+<li><strong>Routing ของ underlay</strong>: OSPF/IS-IS ใช้ได้ แต่ <strong>BGP เป็นที่นิยม</strong> เพราะ<ul>
+<li>อาจ efficient กว่า link-state (topology change ไม่ flood ไปทั้ง domain)</li>
+<li>mature/เข้าใจกันดี</li>
+<li>รองรับ IPv4+IPv6</li>
+<li>ข้อเสียคือ config เยอะ → ต้อง automate</li>
+</ul>
+</li>
+<li>แนวทาง BGP-only DC (RFC 7938):<ul>
+<li><strong>ไม่มี IGP</strong></li>
+<li><strong>eBGP ดีกว่า iBGP</strong></li>
+<li>ใช้ <strong>private ASN</strong></li>
+<li>ลด timer ให้ converge เร็ว (default ของ SP เน้นเสถียร)</li>
+<li><strong>RFC 8950</strong> = BGP บน unnumbered interface (IPv4 NLRI + IPv6 next-hop)</li>
+</ul>
+</li>
+<li>ถ้าเป็น multi-tenant (EVPN-VXLAN): BGP ทำ 2 หน้าที่ คือ underlay routing <strong>และ</strong> EVPN control plane<ul>
+<li>session EVPN แยกจาก underlay (มักใช้ <strong>route reflector</strong>)</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — ASN design</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ชั้น</th>
+<th>กฎ</th>
+<th>ตัวอย่าง</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leaf</td>
+<td><strong>แต่ละ leaf ASN ไม่ซ้ำกัน</strong></td>
+<td>65101…65106, 65201…65206</td>
+</tr>
+<tr>
+<td>Spine ใน cluster เดียวกัน</td>
+<td><strong>ASN เดียวกันทั้ง cluster</strong></td>
+<td>cluster1 = 65100</td>
+</tr>
+<tr>
+<td>Spine ต่าง cluster</td>
+<td>ASN ต่างกัน</td>
+<td>cluster2 = 65200</td>
+</tr>
+<tr>
+<td>Super-spine</td>
+<td><strong>ASN เดียวกันทั้งหมด</strong> (แต่ต่างจาก spine)</td>
+<td>65000</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>เหตุผล: กำหนด ASN ผิดแบบ → <strong>sub-optimal routing ตอน link/node fail</strong><ul>
+<li>spine ใน cluster ใช้ ASN เดียวกัน → AS-path loop prevention ทำให้ route ไม่วิ่ง leaf→spine→leaf→spine อ้อม</li>
+<li>leaf ใช้ ASN ต่างกัน → leaf ไม่ทิ้ง route ของ leaf อื่น</li>
+</ul>
+</li>
+<li>Private ASN: <strong>2-byte 64512–65534</strong>, <strong>4-byte 4,200,000,000–4,294,967,294</strong></li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-label="ผังการกำหนด ASN ใน leaf-spine: super-spine ASN 65000 เหมือนกันทั้งหมด, spine แต่ละ cluster ใช้ ASN เดียวกัน (65100, 65200), leaf แต่ละตัวมี ASN ไม่ซ้ำ">
+<g stroke="var(--line-strong)" stroke-width="1">
+<path d="M360 80 L185 100 M360 80 L535 100 M283 80 L95 100 M283 80 L275 100 M283 80 L445 100 M360 80 L275 100 M360 80 L445 100 M437 80 L275 100 M437 80 L445 100 M437 80 L625 100 M437 80 L535 100 M360 80 L625 100"/>
+<path d="M185 170 L72 235 M185 170 L148 235 M185 170 L224 235 M185 170 L300 235"/>
+<path d="M535 170 L422 235 M535 170 L498 235 M535 170 L574 235 M535 170 L650 235"/>
+</g>
+<rect x="240" y="25" width="240" height="55" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-dasharray="5 4"/>
+<text x="360" y="41" text-anchor="middle" font-family="inherit" font-size="13" fill="var(--ink)">Super-spine · ASN 65000 ทุกตัว</text>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="252" y="48" width="62" height="26" rx="8"/><rect x="329" y="48" width="62" height="26" rx="8"/><rect x="406" y="48" width="62" height="26" rx="8"/>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)" text-anchor="middle">
+<text x="283" y="65">SS1</text><text x="360" y="65">SS2</text><text x="437" y="65">SS3</text>
+</g>
+<rect x="40" y="100" width="290" height="70" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)" stroke-dasharray="5 4"/>
+<rect x="390" y="100" width="290" height="70" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)" stroke-dasharray="5 4"/>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<text x="185" y="116">Cluster 1 · spine ASN 65100 ทุกตัว</text>
+<text x="535" y="116">Cluster 2 · spine ASN 65200 ทุกตัว</text>
+</g>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="55" y="126" width="80" height="34" rx="8"/><rect x="145" y="126" width="80" height="34" rx="8"/><rect x="235" y="126" width="80" height="34" rx="8"/>
+<rect x="405" y="126" width="80" height="34" rx="8"/><rect x="495" y="126" width="80" height="34" rx="8"/><rect x="585" y="126" width="80" height="34" rx="8"/>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)" text-anchor="middle">
+<text x="95" y="148">spine</text><text x="185" y="148">spine</text><text x="275" y="148">spine</text>
+<text x="445" y="148">spine</text><text x="535" y="148">spine</text><text x="625" y="148">spine</text>
+</g>
+<g fill="var(--good-soft)" stroke="var(--good)">
+<rect x="40" y="235" width="64" height="40" rx="8"/><rect x="116" y="235" width="64" height="40" rx="8"/><rect x="192" y="235" width="64" height="40" rx="8"/><rect x="268" y="235" width="64" height="40" rx="8"/>
+<rect x="390" y="235" width="64" height="40" rx="8"/><rect x="466" y="235" width="64" height="40" rx="8"/><rect x="542" y="235" width="64" height="40" rx="8"/><rect x="618" y="235" width="64" height="40" rx="8"/>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--ink)" text-anchor="middle">
+<text x="72" y="259">65101</text><text x="148" y="259">65102</text><text x="224" y="259">…</text><text x="300" y="259">65106</text>
+<text x="422" y="259">65201</text><text x="498" y="259">65202</text><text x="574" y="259">…</text><text x="650" y="259">65206</text>
+</g>
+<text x="360" y="292" text-anchor="middle" font-family="inherit" font-size="12" fill="var(--muted)">leaf (ToR) ทุกตัว ASN ไม่ซ้ำกัน</text>
+</svg>
+<figcaption>การกำหนด ASN: leaf ไม่ซ้ำ, spine ใน cluster เดียวกันใช้ ASN เดียวกัน, super-spine ใช้ ASN เดียวกันทั้งหมด</figcaption>
+</figure>
+<ul>
+<li><strong>VXLAN</strong>: tunnel ที่ใช้มากที่สุดใน DC (RFC 7348)<ul>
+<li><strong>VTEP</strong> = จุด encap/decap มักเป็น leaf หรือ DC gateway (หรือ hypervisor ก็ได้)</li>
+</ul>
+</li>
+<li><strong>EVPN</strong> (RFC 8365): control plane มาตรฐานสำหรับสร้าง/ลบ VXLAN tunnel แบบ dynamic (static ก็ได้แต่ไม่ scale)<ul>
+<li>ทำ <strong>auto-discovery ของ remote VTEP</strong></li>
+<li><strong>เรียนรู้/กระจาย MAC/IP</strong></li>
+<li>ต้องการ BGP full-mesh ระหว่าง VTEP → ใช้ <strong>RR</strong> (บน spine หรือเป็น app บน server)</li>
+</ul>
+</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 340" role="img" aria-label="EVPN control plane: VTEP ทุกตัวคุย BGP EVPN กับ route reflector ส่วน data plane เป็น VXLAN tunnel ระหว่าง VTEP">
+<defs>
+<marker id="fig2-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--cyan)"/></marker>
+</defs>
+<rect x="275" y="15" width="170" height="46" rx="8" fill="var(--bg-raised)" stroke="var(--cyan)" stroke-width="2"/>
+<text x="360" y="42" text-anchor="middle" font-family="inherit" font-size="14" fill="var(--ink)">EVPN Route Reflector</text>
+<rect x="20" y="105" width="680" height="135" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)" stroke-dasharray="5 4"/>
+<text x="34" y="230" font-family="inherit" font-size="12" fill="var(--muted)">Underlay: IP fabric (leaf-spine)</text>
+<g stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="6 4" fill="none">
+<path d="M330 61 L125 145" marker-end="url(#fig2-a)"/>
+<path d="M360 61 L360 145" marker-end="url(#fig2-a)"/>
+<path d="M390 61 L595 145" marker-end="url(#fig2-a)"/>
+</g>
+<g stroke="var(--amber)" stroke-width="3" fill="none">
+<path d="M190 175 L285 175"/><path d="M435 175 L530 175"/>
+</g>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="40" y="150" width="150" height="50" rx="8"/><rect x="285" y="150" width="150" height="50" rx="8"/><rect x="530" y="150" width="150" height="50" rx="8"/>
+</g>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<text x="115" y="170">DC Gateway</text><text x="360" y="170">Leaf 1</text><text x="605" y="170">Leaf 2</text>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)" text-anchor="middle">
+<text x="115" y="188">VTEP</text><text x="360" y="188">VTEP</text><text x="605" y="188">VTEP</text>
+<text x="237" y="167" fill="var(--amber)">VXLAN</text><text x="482" y="167" fill="var(--amber)">VXLAN</text>
+</g>
+<g stroke="var(--line-strong)"><path d="M360 200 L360 265"/><path d="M605 200 L605 265"/></g>
+<g fill="var(--good-soft)" stroke="var(--good)">
+<rect x="310" y="265" width="100" height="32" rx="8"/><rect x="555" y="265" width="100" height="32" rx="8"/>
+</g>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle"><text x="360" y="286">Host</text><text x="605" y="286">Host</text></g>
+<path d="M40 322 L80 322" stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="88" y="326" font-family="inherit" font-size="12" fill="var(--ink)">BGP EVPN session (overlay control plane)</text>
+<path d="M380 322 L420 322" stroke="var(--amber)" stroke-width="3"/>
+<text x="428" y="326" font-family="inherit" font-size="12" fill="var(--ink)">VXLAN tunnel (data plane)</text>
+</svg>
+<figcaption>EVPN ใช้ BGP ผ่าน route reflector แลกเปลี่ยน VTEP/MAC/IP ส่วน traffic จริงวิ่งใน VXLAN tunnel ระหว่าง VTEP</figcaption>
+</figure>
+<ul>
+<li><strong>Nokia DCF solution = 3 ส่วน</strong>:<ul>
+<li>hardware <strong>7220/7250 IXR</strong> (merchant silicon)</li>
+<li><strong>SR Linux</strong> NOS</li>
+<li><strong>EDA</strong> (automation)</li>
+</ul>
+</li>
+</ul>
+<p><strong>เทียบ SR OS</strong>: SP core ปกติใช้ IGP (IS-IS) + iBGP/RR; DC แบบ RFC 7938 กลับกัน — eBGP ทุก hop ไม่มี IGP, ASN ต่อ leaf คล้ายใช้ ASN เป็น "router-id" ของ path</p>
+<h3>1.2 Introduction to SR Linux</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>คุณสมบัติหลัก:<ul>
+<li><strong>unmodified Linux kernel</strong> (ง่ายต่อ app 3rd-party)</li>
+<li>open + <strong>model-driven</strong> (YANG)</li>
+<li><strong>modular state-driven</strong> NOS</li>
+<li>protocol stack มาจาก <strong>SR OS</strong> (เช่น BGP)</li>
+<li><strong>CLI plugin</strong> (Python) ปรับ CLI ได้ทั้งหมด</li>
+<li><strong>NDK</strong> (NetOps Development Kit) สำหรับ app 3rd-party</li>
+<li><strong>streaming telemetry</strong></li>
+</ul>
+</li>
+<li>สถาปัตยกรรม:<ul>
+<li>ทุก function (BGP, IS-IS, LLDP, …) = <strong>Linux application แยกกัน</strong></li>
+<li>แต่ละ app มี <strong>YANG model</strong> ของ config+state</li>
+<li>เข้าถึงผ่าน <strong>CLI, JSON-RPC, gNMI/gRPC</strong></li>
+<li>app คุยกันผ่าน <strong>IDB (impart database)</strong> แบบ <strong>pub/sub</strong>, ข้อมูลเป็น <strong>protobuf</strong> (name:value pair, language/platform neutral)</li>
+<li>app 3rd-party ใช้ API/IDB ได้ <strong>เท่ากับ</strong> app ของ Nokia</li>
+</ul>
+</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 325" role="img" aria-label="สถาปัตยกรรม SR Linux แบบชั้น: management interface, network application, IDB แบบ pub/sub และ XDP ที่คุม hardware">
+<defs>
+<marker id="fig3-a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+</defs>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="15" y="15" width="690" height="75" rx="8"/><rect x="15" y="110" width="690" height="75" rx="8"/>
+<rect x="15" y="205" width="690" height="50" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<rect x="15" y="275" width="690" height="40" rx="8"/>
+</g>
+<g font-family="inherit" font-size="13" fill="var(--ink)">
+<text x="28" y="40">Management</text><text x="28" y="135">Network apps</text><text x="28" y="235">IDB</text><text x="28" y="300">Hardware</text>
+</g>
+<g fill="var(--cyan-soft)" stroke="var(--cyan)">
+<rect x="145" y="24" width="120" height="26" rx="8"/><rect x="275" y="24" width="110" height="26" rx="8"/><rect x="395" y="24" width="150" height="26" rx="8"/><rect x="555" y="24" width="135" height="26" rx="8"/>
+<rect x="145" y="119" width="80" height="26" rx="8"/><rect x="235" y="119" width="80" height="26" rx="8"/><rect x="325" y="119" width="80" height="26" rx="8"/><rect x="415" y="119" width="80" height="26" rx="8"/>
+</g>
+<g fill="var(--good-soft)" stroke="var(--good)"><rect x="555" y="119" width="135" height="26" rx="8"/></g>
+<g font-family="inherit" font-size="12" fill="var(--ink)" text-anchor="middle">
+<text x="205" y="41">gNMI / gRPC</text><text x="330" y="41">JSON-RPC</text><text x="470" y="41">CLI (Python plugin)</text><text x="622" y="41">mgmt_svr</text>
+<text x="185" y="136">BGP</text><text x="275" y="136">OSPF</text><text x="365" y="136">EVPN</text><text x="455" y="136">LLDP …</text><text x="622" y="136">app 3rd-party</text>
+<text x="417" y="73">YANG model ต่อ app (Nokia + customer)</text>
+<text x="417" y="168">แต่ละ function = Linux application แยกกัน</text>
+<text x="417" y="235">publish/subscribe ข้อมูลเป็น protobuf</text>
+<text x="417" y="300">XDP — abstraction ของ datapath/chipset</text>
+</g>
+<g stroke="var(--muted)" stroke-width="1.5">
+<path d="M417 90 L417 110" marker-start="url(#fig3-a)" marker-end="url(#fig3-a)"/>
+<path d="M417 185 L417 205" marker-start="url(#fig3-a)" marker-end="url(#fig3-a)"/>
+<path d="M417 255 L417 275" marker-start="url(#fig3-a)" marker-end="url(#fig3-a)"/>
+</g>
+</svg>
+<figcaption>SR Linux แบ่งเป็นชั้น: management, network application, IDB (pub/sub) และ XDP — app ของ Nokia กับ 3rd-party ใช้ API/IDB เดียวกัน</figcaption>
+</figure>
+<ul>
+<li><strong>YANG</strong>: RFC 6020 (เดิมทำเพื่อ NETCONF), เป็น tree แปลงเป็น JSON/XML ได้<ul>
+<li><strong>container = branch, leaf = data</strong></li>
+<li>จุดที่มักสับสน: อย่าสลับ container กับ leaf</li>
+</ul>
+</li>
+<li><strong>app_mgr</strong>:<ul>
+<li>อ่าน config (YAML) ใน <code>/opt/srlinux/appmgr/</code> แล้ว <strong>start ทุก app</strong></li>
+<li>จัดการ app 3rd-party ที่วางไว้ใน directory เดียวกันด้วย</li>
+<li><strong>monitor health + restart</strong></li>
+<li><strong>โหลด YANG model เข้า mgmt_svr</strong></li>
+</ul>
+</li>
+<li><strong>IDB</strong>: ศูนย์กลางการสื่อสารระหว่าง app, <strong>application-independent / protocol-neutral</strong><ul>
+<li>แบ่งเป็น <strong>topic</strong> — <strong>แต่ละ topic มีเจ้าของ app เดียว</strong></li>
+<li>app publish เป็น protobuf, app อื่น subscribe และถูก notify เมื่อเปลี่ยน</li>
+</ul>
+</li>
+<li><strong>mgmt_svr</strong>: เป็นเจ้าของ YANG ของทุก app<ul>
+<li><strong>validate config แล้วแปลง YANG → protobuf ลง IDB</strong></li>
+<li>(หน้าที่นี้เป็นของ mgmt_svr ไม่ใช่ app_mgr)</li>
+</ul>
+</li>
+<li><strong>CLI</strong>: เป็น app หนึ่ง เขียนด้วย <strong>Python (open source)</strong><ul>
+<li>รองรับ <strong>plugin</strong> สร้าง show/tools command เองจาก YANG</li>
+<li>มี alias, env var, autocompletion, range, wildcard</li>
+</ul>
+</li>
+<li><strong>Hardware</strong>:<ul>
+<li>7220 IXR-D1/D2/D2L/D3/D3L → leaf/ToR (D3 ใช้เป็น spine ได้)</li>
+<li>7220 IXR-H2 (128x100G) / H3 (32x400G) → spine</li>
+<li>7250 IXR-6/10 → spine/super-spine (chassis, control/fabric redundant)</li>
+<li><strong>MPLS/SR = 7250 IXR เท่านั้น</strong>, <strong>EVPN-VXLAN = 7220 IXR-D2/D2L/D3/D3L</strong></li>
+<li><strong>XDP (eXtensible Data Path)</strong> = abstraction ของ chipset ให้ IDB/app → เพิ่ม hardware ใหม่ได้โดยไม่กระทบ NOS</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — ใครทำอะไร</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>หน้าที่</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>app_mgr</strong></td>
+<td>start/monitor/restart app, อ่าน <code>/opt/srlinux/appmgr/</code>, โหลด YANG ให้ mgmt_svr</td>
+</tr>
+<tr>
+<td><strong>mgmt_svr</strong></td>
+<td>own YANG, validate, <strong>แปลง config เป็น protobuf ลง IDB</strong></td>
+</tr>
+<tr>
+<td><strong>IDB</strong></td>
+<td><strong>messaging/exchange ระหว่าง app</strong> (pub/sub, topic)</td>
+</tr>
+<tr>
+<td><strong>YANG</strong></td>
+<td><strong>นิยาม config + state</strong> ของแต่ละ app</td>
+</tr>
+<tr>
+<td><strong>CLI plugin</strong></td>
+<td><strong>customize CLI</strong> (สร้าง command เอง)</td>
+</tr>
+<tr>
+<td><strong>NDK</strong></td>
+<td>library ให้ app 3rd-party คุยกับ SR Linux/IDB ตรง ๆ</td>
+</tr>
+<tr>
+<td><strong>XDP</strong></td>
+<td>abstraction ของ hardware datapath</td>
+</tr>
+<tr>
+<td><strong>EDA</strong></td>
+<td><strong>intent-based automation ของทุกด้านของ DC operation</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>เทียบ SR OS</strong>: SR OS เป็น monolithic NOS (TiMOS) — ไม่มี IDB/pub-sub ให้ user เห็น; SR Linux คือแนวคิด "ทุกอย่างเป็น Linux process + YANG" ส่วน MD-CLI ของ SR OS ก็ model-driven เหมือนกันแต่ไม่ได้เปิดให้เขียน plugin แบบ Python ในตัว CLI</p>
+<h3>1.3 Intro to EDA</h3>
+<ul>
+<li>ความต้องการของ DC ใหญ่: automate ทุกอย่าง, scale แบบเรียบง่าย, customize ต่อ tenant, security<ul>
+<li>→ <strong>จัดการ DC network เป็น unified switch fabric ตัวเดียว</strong></li>
+</ul>
+</li>
+<li><strong>EDA</strong>: toolkit automate DC fabric<ul>
+<li><strong>อยู่บน Kubernetes</strong></li>
+<li>ใส่ข้อมูลน้อยที่สุดสำหรับ fabric design</li>
+<li><strong>closed-loop</strong> (เฝ้า state ให้ตรง intent)</li>
+<li><strong>digital sandbox</strong> ลดความเสี่ยงของ change</li>
+<li>integrate กับ cloud platform</li>
+</ul>
+</li>
+<li>EDA operations ครอบ <strong>Day 0 design / Day 1 deployment / Day 2+ operation</strong>:<ul>
+<li><strong>Fabric intent</strong> = config state ของ fabric แบบ <strong>declarative YAML</strong>, รองรับ CI/CD, validate บน digital sandbox</li>
+<li><strong>Fabric operations</strong> = intent + streaming telemetry แสดงในบริบทเดียวกัน</li>
+<li><strong>Fabric observability</strong> = GUI แสดง performance จาก on-change/streaming telemetry</li>
+<li><strong>Fabric integration</strong> = plugin model กับ OpenShift, VMware</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปท้ายหัวข้อ</strong></p>
+<ul>
+<li>Clos = east-west path คงที่ + L3/ECMP + scale ได้ยืดหยุ่น</li>
+<li>protocol ที่แนะนำสำหรับ underlay = <strong>eBGP</strong></li>
+<li>leaf = <strong>ASN ไม่ซ้ำ</strong></li>
+<li>routing function = <strong>Linux application แยกแต่ละตัว</strong></li>
+<li>IDB publish ข้อมูลเป็น <strong>protobuf</strong></li>
+<li>EDA อยู่บน <strong>Kubernetes</strong></li>
+</ul>
+<hr />
+
+  </section>
+  <section id="s2">
+    <h2>2. SR Linux Configuration and Routing</h2>
+
+<h3>2.1 CLI Basics</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>mgmt_svr</strong> = จุดศูนย์กลางของ client ทั้งหมด (CLI, gNMI, JSON-RPC คุยกับ mgmt_svr ผ่าน <strong>gRPC</strong>)<ul>
+<li>enforce YANG แล้วเขียน config ลง IDB</li>
+</ul>
+</li>
+<li>CLI: เข้าได้ทาง <strong>SSH หรือ console</strong><ul>
+<li>command tree <strong>สร้างจาก YANG</strong> (container + leaf) จึง <strong>เหมือนกันทั้ง CLI/gNMI/JSON-RPC</strong></li>
+<li>แสดงผลเป็น JSON ได้, รองรับ plugin</li>
+<li><strong>leaf</strong> มีค่าเดียว (เช่น host-name), <strong>container</strong> จัดกลุ่ม node ไม่มีค่าในตัวเอง</li>
+</ul>
+</li>
+<li>การเข้าใช้:<ul>
+<li>console <strong>115200 8N1</strong> no flow control</li>
+<li>SSH เปิดบน mgmt โดย default (factory config)</li>
+<li><strong>default user admin/admin</strong></li>
+<li>ออกด้วย <strong>Ctrl+D หรือ <code>quit</code></strong></li>
+</ul>
+</li>
+<li>Prompt 2 บรรทัด: <code>--{ &lt;flags&gt; &lt;mode&gt; }--[ &lt;context&gt; ]--</code> + <code>A:hostname#</code> และ bottom toolbar (mode, user, session id, เวลา)</li>
+<li>Help:<ul>
+<li><code>?</code> = command ใน context นี้/usage</li>
+<li><code>help</code> = อธิบาย mode ปัจจุบัน</li>
+<li><code>tree</code> = โครง node</li>
+</ul>
+</li>
+<li>Navigate:<ul>
+<li><code>exit</code> ขึ้น 1 ชั้น</li>
+<li><code>exit all</code> หรือ <code>/</code> กลับ root</li>
+<li><code>..</code> ขึ้นชั้น (ใช้กับ info ได้)</li>
+<li><code>{ }</code> เข้า/ออก context</li>
+</ul>
+</li>
+<li>History:<ul>
+<li><code>history</code> / <code>history hot</code> (top 20) / <code>history context</code> / <code>history clear</code></li>
+<li><code>!8</code> เรียกคำสั่งที่ 8, <strong>Ctrl+R</strong> reverse search</li>
+<li>password ไม่โชว์ใน history; ไฟล์ <code>~/.srlinux_history</code></li>
+</ul>
+</li>
+<li><code>bash</code> = เข้า Linux shell (ออกด้วย Ctrl+D/<code>logout</code>), หรือ <code>bash &lt;cmd&gt;</code> รันคำสั่งเดียว</li>
+<li>Output redirection <code>&gt;</code> (overwrite) / <code>&gt;&gt;</code> (append) ไปไฟล์ใน home dir</li>
+<li>pipe ไป <code>grep / more / head / tail / wc</code> และ utility ของ SR Linux: <strong><code>| as json|table|text</code></strong>, <strong><code>| filter fields ...</code></strong></li>
+</ul>
+<p><strong>สรุปที่ควรจำ — 4 CLI modes + datastore</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>ทำอะไร</th>
+<th>Datastore</th>
+<th>แก้ config ได้?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>running</strong> (default ตอน login)</td>
+<td>ดู config ปัจจุบัน</td>
+<td>running (config อย่างเดียว)</td>
+<td><strong>ไม่ได้ (read-only)</strong></td>
+</tr>
+<tr>
+<td><strong>state</strong></td>
+<td>ดู config <strong>+ operational state</strong> (oper-state, counters, BGP state)</td>
+<td>state (config + non-config)</td>
+<td>ไม่ได้</td>
+</tr>
+<tr>
+<td><strong>show</strong></td>
+<td>ดู <strong>report สำเร็จรูป</strong> (Python) ที่อ่านง่าย</td>
+<td>ไม่มี datastore ของตัวเอง</td>
+<td>ไม่ได้</td>
+</tr>
+<tr>
+<td><strong>candidate</strong></td>
+<td><strong>โหมดเดียวที่แก้ config ได้</strong></td>
+<td>candidate</td>
+<td><strong>ได้</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>สลับ mode ด้วย <strong><code>enter &lt;mode&gt;</code></strong> (<code>enter candidate</code>, <code>enter running</code>, <code>enter state</code>, <code>enter show</code>)</li>
+<li>Datastore ตาม <strong>RFC 8342</strong>:<ul>
+<li>running/candidate เก็บเฉพาะ config object</li>
+<li>state เก็บทั้ง config + non-config</li>
+<li>gNMI/JSON-RPC ก็ใช้ datastore ชุดเดียวกัน</li>
+</ul>
+</li>
+<li><code>info</code> = แสดงเนื้อหา datastore ของ mode ปัจจุบัน<ul>
+<li><code>info from state ...</code> / <code>info from running ...</code> ดูข้าม datastore ได้โดยไม่ต้องเปลี่ยน mode</li>
+<li><strong>candidate datastore ดูได้เฉพาะตอนอยู่ใน candidate mode</strong></li>
+</ul>
+</li>
+<li><code>info detail</code> = รวม default values + sub-branch ที่ยังไม่ config<ul>
+<li><code>info flat</code> = แสดงเป็น <code>set / ...</code> (ใช้ทำไฟล์ config)</li>
+<li><code>info depth N</code>; <code>| as json</code></li>
+</ul>
+</li>
+<li>list/range/wildcard: <code>ethernet-1/{1,2}</code>, <code>ethernet-1/{10..12}</code>, <code>neighbor *</code></li>
+<li><code>watch [interval N] &lt;command&gt;</code> = รันซ้ำทับจอ (default ทุก <strong>2 วินาที</strong>) — รับ CLI command อะไรก็ได้</li>
+<li><code>monitor [sample N] from state &lt;yang-path&gt;</code> = <strong>on-change</strong> (default) หรือ sample ตามเวลา<ul>
+<li>อิง YANG = CLI-equivalent ของ <strong>gNMI streaming telemetry</strong></li>
+</ul>
+</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 315" role="img" aria-label="CLI mode ทั้งสี่ของ SR Linux: running, state, show, candidate สลับกันด้วย enter; candidate ออกด้วย commit หรือ discard กลับ running">
+<defs>
+<marker id="fig4-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+<marker id="fig4-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--amber)"/></marker>
+</defs>
+<g stroke="var(--line-strong)" stroke-width="1" stroke-dasharray="4 4"><path d="M260 100 L460 200 M460 100 L260 200"/></g>
+<g stroke="var(--muted)" stroke-width="1.5" fill="none">
+<path d="M262 65 L458 65" marker-start="url(#fig4-a)" marker-end="url(#fig4-a)"/>
+<path d="M262 235 L458 235" marker-start="url(#fig4-a)" marker-end="url(#fig4-a)"/>
+<path d="M110 100 L110 200" marker-start="url(#fig4-a)" marker-end="url(#fig4-a)"/>
+<path d="M610 100 L610 200" marker-start="url(#fig4-a)" marker-end="url(#fig4-a)"/>
+</g>
+<path d="M210 200 L210 100" stroke="var(--amber)" stroke-width="2" fill="none" marker-end="url(#fig4-b)"/>
+<rect x="60" y="30" width="200" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<rect x="460" y="30" width="200" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<rect x="60" y="200" width="200" height="70" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="2"/>
+<rect x="460" y="200" width="200" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<g font-family="inherit" font-size="14" fill="var(--ink)" text-anchor="middle">
+<text x="160" y="58">running (default)</text><text x="560" y="58">state</text><text x="160" y="228">candidate</text><text x="560" y="228">show</text>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)" text-anchor="middle">
+<text x="160" y="80">ดู config, read-only</text><text x="560" y="80">config + operational state</text>
+<text x="160" y="250">แก้ config ได้โหมดเดียว</text><text x="560" y="250">report สำเร็จรูป (Python)</text>
+<text x="360" y="57">enter</text><text x="360" y="227">enter</text>
+<text x="160" y="292">validate = ตรวจโดยไม่ apply</text>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)">
+<text x="104" y="155" text-anchor="end">enter</text><text x="616" y="155">enter</text>
+<text x="218" y="178" fill="var(--amber)">commit / discard</text>
+</g>
+<rect x="318" y="141" width="84" height="18" rx="4" fill="var(--bg-raised)"/>
+<text x="360" y="155" text-anchor="middle" font-family="inherit" font-size="12" fill="var(--muted)">enter &lt;mode&gt;</text>
+</svg>
+<figcaption>CLI mode ทั้งสี่สลับกันด้วย <code>enter</code>; ออกจาก candidate ด้วย <code>commit</code> หรือ <code>discard</code> แล้วกลับ running</figcaption>
+</figure>
+<pre><code>--{ running }--[ interface ethernet-1/1 ]--
+A:spine1# description &quot;Interface to leaf1&quot;
+Error: ... In 'running' mode, configuration allowed only in 'candidate' mode
+A:spine1# enter candidate
+--{ candidate shared default }--[ interface ethernet-1/1 ]--
+A:spine1# description &quot;Interface to leaf1&quot;
+--{ * candidate shared default }--[ interface ethernet-1/1 ]--
+A:spine1# diff
++     description &quot;Interface to leaf1&quot;
+A:spine1# commit stay
+</code></pre>
+<p><strong>Candidate / transaction</strong></p>
+<ul>
+<li>แก้ใน candidate → <strong>ไม่ต้องเรียงลำดับ config</strong> → <code>commit</code> → validate 3 ขั้น:<ul>
+<li><strong>(1) YANG validation</strong></li>
+<li><strong>(2) application validation</strong></li>
+<li><strong>(3) forwarding-plane/resource validation</strong></li>
+<li>ขั้นไหน fail = ไม่ commit ทั้งก้อน</li>
+</ul>
+</li>
+<li>candidate datastore <strong>อยู่ต่อแม้ logout</strong> จนกว่าจะ commit หรือ discard</li>
+<li>คำสั่ง:<ul>
+<li><code>commit validate</code> = ตรวจอย่างเดียวไม่ apply</li>
+<li><code>commit now</code> = apply แล้วกลับ running; <code>commit stay</code> = apply แล้วอยู่ candidate ต่อ</li>
+<li><code>commit save</code> = apply + <strong>save เป็น startup</strong> (<code>/etc/opt/srlinux/config.json</code>)</li>
+<li><code>commit confirmed [timeout N]</code> = apply ชั่วคราว ต้อง <code>commit confirmed accept</code> ภายในเวลา ไม่งั้น <strong>auto rollback (default 600 วินาที = 10 นาที)</strong></li>
+<li>ใช้กัน lock ตัวเองจาก ACL/route ผิด</li>
+<li><code>commit checkpoint name X comment Y</code> = commit + สร้าง checkpoint</li>
+<li><code>discard now</code> / <code>discard stay</code> = ทิ้งการแก้ไขตั้งแต่ commit ล่าสุด</li>
+<li><code>diff</code> = ดูสิ่งที่เปลี่ยน</li>
+</ul>
+</li>
+<li><strong>Prompt flags</strong>:<ul>
+<li><code>*</code> = candidate มีการแก้ที่ยังไม่ commit</li>
+<li><strong><code>+</code> = running ต่างจาก startup</strong> (ยังไม่ save)</li>
+<li><strong><code>!</code> = (private candidate) running เปลี่ยนไปจาก baseline ของเรา เพราะคนอื่น commit</strong></li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — 3 candidate modes</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>คำสั่ง</th>
+<th>พฤติกรรม</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>shared</strong> (default)</td>
+<td><code>enter candidate</code></td>
+<td>candidate <strong>เดียว</strong> ชื่อ <code>default</code> ใช้ร่วมกันทุกคน → ใคร commit ก็ <strong>commit ของทุกคน</strong>; คนที่เข้ามาทีหลังเห็น <code>Candidate 'default' is not empty</code></td>
+</tr>
+<tr>
+<td><strong>exclusive</strong></td>
+<td><code>enter candidate exclusive</code></td>
+<td><strong>บล็อกคนอื่นไม่ให้เข้า config mode</strong> (ทั้ง shared และ exclusive) จนกว่าจะ commit/discard — ปลอดภัยสุด; prompt แสดง <code>candidate shared-exclusive default</code>; ถ้ามีคนอยู่ shared อยู่แล้ว จะเข้า exclusive <strong>ไม่ได้</strong></td>
+</tr>
+<tr>
+<td><strong>private</strong></td>
+<td><code>enter candidate private</code></td>
+<td>candidate แยกต่อ user (ชื่อ <code>private-&lt;user&gt;</code>) → commit <strong>เฉพาะของตัวเอง</strong>; <strong>เป็นวิธีที่ gNMI และ JSON-RPC ใช้</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Private = baseline datastore + candidate datastore</strong>:<ul>
+<li>ตอนเข้า, running ถูก copy ไปทั้ง baseline และ candidate</li>
+<li>การแก้ไปอยู่ใน candidate; <strong>baseline ไม่เปลี่ยน</strong></li>
+<li>พอคนอื่น commit, running ≠ baseline → prompt ขึ้น <strong><code>!</code></strong></li>
+</ul>
+</li>
+<li>แก้ conflict:<ul>
+<li><strong><code>baseline diff</code></strong> = เทียบ <strong>running ปัจจุบัน กับ baseline</strong> (ไม่ใช่เทียบ candidate)</li>
+<li><strong><code>baseline update</code></strong> = copy running ใหม่เข้า baseline (merge การเปลี่ยนของคนอื่นเข้ามา) → <code>!</code> หาย</li>
+<li>ถ้าไม่ชนกัน ก็ <code>commit now</code> ได้เลย → commit เฉพาะของเรา</li>
+</ul>
+</li>
+<li>ข้อควรระวัง: ถ้าสองคนแก้ leaf เดียวกัน ใคร commit ทีหลังชนะ</li>
+<li>ดู session ที่กำลังแก้ config: <code>info from state system configuration</code> (โชว์ max-checkpoints 10, max-candidates default 10, session/candidate list)</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 340" role="img" aria-label="private candidate: ผู้ใช้แต่ละคนมี baseline กับ candidate ที่ copy จาก running; เมื่อ User 2 commit, running เปลี่ยนและ baseline ของ User 1 ไม่ตรงกับ running จึงขึ้น !">
+<defs>
+<marker id="fig5-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+<marker id="fig5-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--amber)"/></marker>
+</defs>
+<g stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" fill="none">
+<path d="M330 55 L170 95" marker-end="url(#fig5-a)"/><path d="M390 55 L550 95" marker-end="url(#fig5-a)"/>
+</g>
+<path d="M620 225 L430 290" stroke="var(--good)" stroke-width="2" fill="none" marker-end="url(#fig5-a)"/>
+<path d="M100 225 L288 292" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#fig5-b)"/>
+<rect x="290" y="15" width="140" height="40" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<rect x="290" y="275" width="140" height="40" rx="8" fill="var(--bg-raised)" stroke="var(--amber)" stroke-width="2"/>
+<rect x="20" y="95" width="300" height="130" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<rect x="400" y="95" width="300" height="130" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="40" y="130" width="120" height="44" rx="8"/><rect x="180" y="130" width="120" height="44" rx="8"/>
+<rect x="420" y="130" width="120" height="44" rx="8"/><rect x="560" y="130" width="120" height="44" rx="8"/>
+</g>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<text x="360" y="40">running datastore</text><text x="360" y="300">running ใหม่</text>
+<text x="170" y="114">User 1 — private candidate</text><text x="550" y="114">User 2 — private candidate</text>
+<text x="100" y="157">baseline</text><text x="240" y="157">candidate</text><text x="480" y="157">baseline</text><text x="620" y="157">candidate</text>
+</g>
+<g font-family="inherit" font-size="12" fill="var(--muted)" text-anchor="middle">
+<text x="240" y="205">③ User 1 แก้ไข</text><text x="620" y="205">④ User 2 แก้ไข</text>
+<text x="235" y="70">① copy</text><text x="485" y="70">② copy</text>
+<text x="590" y="262" fill="var(--good)">⑤ User 2 commit</text>
+</g>
+<text x="20" y="272" font-family="inherit" font-size="12" fill="var(--amber)">⑥ baseline ≠ running</text>
+<text x="20" y="335" font-family="inherit" font-size="12" fill="var(--ink)">→ prompt ของ User 1 ขึ้น ! (ต้อง baseline update หรือตรวจ conflict ก่อน commit)</text>
+</svg>
+<figcaption>Private candidate = baseline + candidate; เมื่อมีคนอื่น commit จน running เปลี่ยน baseline ของเราจะไม่ตรงและ prompt ขึ้น <code>!</code></figcaption>
+</figure>
+<p><strong>สรุปที่ควรจำ — Checkpoint</strong></p>
+<ul>
+<li>checkpoint = running config เก็บเป็น <strong>JSON</strong> ใน <code>/etc/opt/srlinux/checkpoint/checkpoint-N.json</code></li>
+<li>default เก็บได้ <strong>10</strong> (range 1..255)<ul>
+<li><strong>checkpoint 0 = ล่าสุดเสมอ</strong>, อันเก่าถูก renumber +1</li>
+<li>เกิน max → <strong>ลบอันเก่าสุด</strong></li>
+</ul>
+</li>
+<li><strong>revert ได้ทุก checkpoint</strong> ที่มีอยู่ (ไม่ใช่แค่อันล่าสุด) — ต้องอยู่ <strong>candidate mode</strong> ก่อน</li>
+<li><code>auto-checkpoint</code> (สร้างทุก commit) <strong>default = false</strong></li>
+<li>คำสั่งสร้าง: <code>commit checkpoint name ... comment ...</code>, <code>save checkpoint</code>, <code>tools system configuration generate-checkpoint [name ..] [comment ..]</code></li>
+<li>ดู: <code>info from state detail system configuration checkpoint * | as table</code></li>
+<li>revert/clear:</li>
+</ul>
+<pre><code>A:spine1# enter candidate
+A:spine1# tools system configuration checkpoint 0 revert
+    Successfully reverted configuration
+A:dc-leaf-1# tools system configuration checkpoint 2 clear
+</code></pre>
+<p><strong>สรุปที่ควรจำ — ไฟล์ config / startup / rescue</strong></p>
+<ul>
+<li><code>source &lt;file&gt; [auto-commit]</code> = รันคำสั่งจากไฟล์ทีละบรรทัด (default จาก home dir; ใช้รูปแบบ <strong>flat</strong> จะรันได้จากทุก context)</li>
+<li><code>save file &lt;name&gt; [detail] [from running|state] [text]</code> = save datastore เป็นไฟล์ (default <strong>JSON</strong> ใน home) — <strong>ไม่ได้ทำให้เป็น startup</strong></li>
+<li>ทำเป็น startup: <code>commit save</code> หรือ <code>save startup</code> หรือ <code>tools system configuration save</code> → <code>/etc/opt/srlinux/config.json</code> (เครื่องหมาย <code>+</code> หาย)</li>
+<li><strong>Rescue</strong>: ลำดับตอน boot<ul>
+<li>ใช้ <code>config.json</code> ก่อน</li>
+<li>ถ้า fail ใช้ <strong>rescue</strong> (<code>/etc/opt/srlinux/checkpoint/rescue-config.json</code>, สร้างด้วย <code>save rescue</code> / <code>tools system configuration rescue-save</code>)</li>
+<li>ถ้าไม่มี/fail อีก <strong>สร้าง factory config</strong> (mgmt0.0 DHCP v4/v6 + network-instance mgmt + SSH)</li>
+</ul>
+</li>
+<li><code>delete &lt;container|leaf&gt;</code> ต้องอยู่ candidate<ul>
+<li>ลบ container = ลบทั้ง subtree</li>
+<li>ลบ leaf ที่มี default = <strong>กลับเป็นค่า default</strong></li>
+</ul>
+</li>
+</ul>
+<p><strong>ไฟล์สำคัญใน Linux</strong></p>
+<ul>
+<li><code>/etc/opt/srlinux/config.json</code> (startup)</li>
+<li><code>/etc/opt/srlinux/checkpoint/</code></li>
+<li><code>/opt/srlinux/bin</code> (apps)</li>
+<li><code>/var/log/srlinux/buffer</code> (<strong>tmpfs = RAM</strong>)</li>
+<li><code>/var/log/srlinux/file</code> (<strong>persistent</strong>)</li>
+<li><code>~/.srlinuxrc</code> (environment ต่อ user)</li>
+</ul>
+<p><strong>CLI environment &amp; alias</strong></p>
+<ul>
+<li><code>environment &lt;alias|bottom-toolbar|cli-engine|complete-on-space|delete|key-completer-limit|load|network-instance|output-format|prompt|save|session-idle-timeout|show|pagination&gt;</code></li>
+<li><strong>session-idle-timeout default 300 วินาที (5 นาที), 0 = ไม่ timeout</strong></li>
+<li>prompt/bottom-toolbar ใช้ตัวแปรใน <code>{ }</code> (นิยามใน <code>~/.srlinux.conf</code>); เปลี่ยน prompt ด้วย <code>environment prompt "..."</code></li>
+<li><strong>alias</strong>: <code>environment alias "configure" "enter candidate"</code><ul>
+<li>alias หลายคำได้, ใส่ pipe ได้, escape <code>\"</code></li>
+<li><strong>required parameter</strong>: <code>{name}</code> อยู่ทั้งฝั่ง alias และฝั่งคำสั่ง → ไม่ใส่ = Parsing error</li>
+<li><strong>optional parameter</strong>: อยู่ฝั่งคำสั่งเท่านั้น</li>
+<li><code>{}</code> = unnamed (ใส่ค่าเลย)</li>
+<li><code>{subint}</code> = named (ต้องพิมพ์ keyword + ค่า)</li>
+<li>ไม่ใส่ = แทนด้วย <code>*</code></li>
+</ul>
+</li>
+<li>environment มีผลแค่ session นี้ ต้อง <code>environment save home</code> → <code>/home/&lt;user&gt;/.srlinuxrc</code><ul>
+<li>global = <code>/etc/opt/srlinux/srlinux.rc</code> (user file override ได้)</li>
+</ul>
+</li>
+</ul>
+<pre><code>A:spine1# environment alias &quot;display subinterface&quot; &quot;info from state / interface {} subinterface {subint} | as table&quot;
+A:spine1# display subinterface ethernet-1/1 subint 0
+A:spine1# environment save home
+Saved configuration to /home/admin/.srlinuxrc
+</code></pre>
+<p><strong>Platform status</strong>:</p>
+<ul>
+<li><code>show version</code> (chassis type, SW version, <strong>system MAC</strong> ใช้ใน LLDP)</li>
+<li><code>show platform environment</code></li>
+<li><code>show interface brief</code></li>
+<li><code>show system application</code> (สถานะ app เช่น bgp_mgr running / waiting-for-config)</li>
+</ul>
+<p><strong>เทียบ SR OS</strong>: MD-CLI มี candidate/running เหมือนกัน — <code>configure global</code> ≈ shared, <code>configure exclusive</code> ≈ exclusive, <code>configure private</code> ≈ private (SR OS private ก็มี baseline + <code>!</code> และ <code>update</code> เช่นกัน); <code>commit confirmed</code> เหมือนกัน; rollback/checkpoint ของ SR OS ใช้ <code>admin rollback</code>. ต่างกันที่ SR Linux แยก <strong>state</strong> และ <strong>show</strong> mode ออกมา (SR OS ใช้ <code>show</code> + <code>info</code> ใน <code>/state</code>)</p>
+<h3>2.2 Interfaces, LLDP, LAG</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>ประเภท interface:</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ประเภท</th>
+<th>ชื่อ</th>
+<th>หมายเหตุ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loopback</td>
+<td><code>lo&lt;0..255&gt;</code> (max 256)</td>
+<td>virtual, always up, ใช้กับ BGP</td>
+</tr>
+<tr>
+<td>System</td>
+<td><code>system0</code> (มีได้ subinterface เดียว <code>system0.0</code>)</td>
+<td>always up, <strong>จำเป็นสำหรับ VXLAN tunnel (VTEP address)</strong></td>
+</tr>
+<tr>
+<td>Management</td>
+<td><code>mgmt0</code></td>
+<td><strong>มีได้ 1 ต่อเครื่อง</strong>, physical OOB, active/standby บน chassis (2 CPM)</td>
+</tr>
+<tr>
+<td>Network</td>
+<td><code>ethernet-&lt;slot&gt;/&lt;port&gt;[/&lt;breakout&gt;]</code></td>
+<td>7220 แบบ fixed: slot = 1 เสมอ; IXR-6/10 มี 4/8 linecard</td>
+</tr>
+<tr>
+<td>LAG</td>
+<td><code>lag&lt;N&gt;</code></td>
+<td></td>
+</tr>
+<tr>
+<td>IRB</td>
+<td><code>irb&lt;0..255&gt;</code></td>
+<td>L3 internal interface เชื่อม mac-vrf ↔ ip-vrf</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>interface = L2</strong> (speed, MTU, vlan-tagging, LAG membership <code>ethernet aggregate-id</code>, transceiver, breakout) / <strong>subinterface = L3</strong> (IPv4/IPv6, ip-mtu, VLAN id)</li>
+<li>interface ที่สร้างใหม่ admin-state <strong>enable</strong> โดย default</li>
+<li>Breakout: เช่น IXR-D3 QSFP28 → <code>breakout-mode num-channels 4 channel-speed 25G</code> → ได้ <code>ethernet-1/3/1..4</code></li>
+<li><strong>Subinterface</strong>:<ul>
+<li>ชื่อ <code>&lt;parent&gt;.&lt;index&gt;</code> โดย index อยู่ในช่วง <strong>0..9999</strong></li>
+<li>type default = <strong>routed</strong> (อีกแบบ = <strong>bridged</strong> สำหรับ mac-vrf)</li>
+<li><strong>static IP กับ DHCP client ใช้พร้อมกันไม่ได้</strong></li>
+<li><strong>ถ้าจะมีมากกว่า 1 subinterface ต้องเปิด vlan-tagging</strong></li>
+</ul>
+</li>
+<li>IP:<ul>
+<li>ได้สูงสุด <strong>16 IPv4 + 16 IPv6 subnet ต่อ subinterface</strong></li>
+<li><strong>primary</strong> = source ของ broadcast/multicast — ตั้งเอง หรือระบบเลือก <strong>IP ต่ำสุด</strong></li>
+</ul>
+</li>
+<li>VLAN:<ul>
+<li><code>vlan-tagging true</code> ที่ <strong>interface</strong>, <code>vlan encap single-tagged vlan-id X</code> ที่ <strong>subinterface</strong></li>
+<li>VLAN 1..4094; เนื้อหาตรงนี้ครอบคลุมเฉพาะ <strong>single tag</strong>; VLAN มีความหมายแค่ local</li>
+<li>index ไม่จำเป็นต้องเท่ากับ VLAN (best practice: untagged = .0, tagged = index เท่ากับ VLAN)</li>
+<li>bridged เท่านั้น: <code>encap untagged</code> (รับ frame ไม่มี tag บน port ที่เปิด tagging) และ <code>vlan-id optional</code> (default subinterface รับ VLAN ที่ไม่ match ที่อื่น, ไม่ strip tag)</li>
+</ul>
+</li>
+<li>show vs info:<ul>
+<li><code>show interface</code> (เฉพาะที่ up), <code>show interface all</code>, <code>show interface X detail</code></li>
+<li><code>info detail interface X</code> (config + default), <code>info from state interface X</code> (config + oper + stats), <code>| as table</code></li>
+</ul>
+</li>
+<li><strong>ผิด prefix length</strong>: /32 บน ethernet subinterface → commit fail "ipv4 prefix length 32 not supported on this interface type" (ต้องลบอันผิดก่อน เพราะมีหลาย IP ได้)</li>
+</ul>
+<pre><code>A:leaf1# interface ethernet-1/10 vlan-tagging true subinterface 0 type bridged vlan encap untagged
+A:leaf1# interface lo0 subinterface 0 ipv4 address 100.0.2.1/32
+A:leaf1# interface lo0 subinterface 0 ipv4 admin-state enable
+</code></pre>
+<ul>
+<li>ระวัง: ต้อง <code>ipv4 admin-state enable</code> ที่ subinterface ด้วย</li>
+</ul>
+<p><strong>LLDP</strong></p>
+<ul>
+<li>IEEE <strong>802.1AB</strong>, ส่ง <strong>periodic ออกทุก interface</strong> ไปที่ <strong>reserved multicast MAC</strong> และ <strong>ไม่ถูก forward ต่อ</strong> (link-local)</li>
+<li><strong>enable by default</strong> ทุก interface; ตั้งได้ทั้ง <strong>system level และ interface level</strong> — ถ้า system disable = ปิดทุก interface แม้ interface enable</li>
+<li>configurable แค่ <strong>admin-state, hello-timer (default 30s), hold-multiplier (default 4)</strong></li>
+<li>ค่าที่ส่ง: chassis MAC (chassis-id type = MAC เท่านั้น), interface name (port-id), system capabilities, system name (= hostname), system description (SW version + hostname + kernel)</li>
+<li>ใช้ทำ topology discovery / troubleshoot / automation — <strong>ไม่ใช่กลไกตรวจ link fail เร็ว</strong> (นั่นคือหน้าที่ของ BFD)</li>
+<li>ดู: <code>show system lldp neighbor</code>, <code>info from state system lldp</code></li>
+</ul>
+<p><strong>LAG</strong></p>
+<ul>
+<li>IEEE <strong>802.1AX</strong>, รวม link เพื่อเพิ่ม BW + availability</li>
+<li>hashing ทำให้ flow เดียวกันวิ่ง link เดียว (ไม่ reorder); member ต่าง speed ได้</li>
+<li>สูงสุด 128 LAG/เครื่อง (ขึ้นกับ HW: 7220-D = 32, H = 127, IXR-6/10 = 128), <strong>64 member/LAG</strong></li>
+<li>สร้าง 2 ขั้น:<ol>
+<li><code>interface lagN</code> + <code>lag { }</code> (subinterface สร้างบน lag) — <strong>lag-type default = static</strong></li>
+<li>member: <code>interface ethernet-1/3 ethernet aggregate-id lag100</code> (member ไม่มี subinterface)</li>
+</ol>
+</li>
+<li>min-links default 1; static LAG up ทันทีที่มี member up 1 ตัว</li>
+<li><strong>static LAG ตรวจ miscabling ไม่ได้</strong></li>
+<li><strong>LACP</strong> ส่ง control frame ทุก member และระบุ far-end node (<strong>system-id-mac</strong>, default = chassis MAC) กับ LAG (<strong>admin-key</strong> 1..65535) → <strong>block member ที่ต่อไปผิด node หรือผิด LAG</strong> (oper-down-reason <code>other</code>, OUT_SYNC)</li>
+<li>LACP params:<ul>
+<li>interval <strong>SLOW = 30s / FAST = 1s</strong></li>
+<li>lacp-mode <strong>ACTIVE</strong> (ส่ง+ตอบ) / <strong>PASSIVE</strong> (ตอบอย่างเดียว)</li>
+<li>system-priority (ฝั่งไหนตัดสิน active link)</li>
+<li>ต้องเปิดทั้งสองฝั่ง; active-standby LAG ยังไม่รองรับ</li>
+</ul>
+</li>
+<li><strong>micro-BFD</strong> สำหรับ LAG: รัน BFD ทุก member, ต้องระบุ local/remote IP<ul>
+<li><code>desired-minimum-transmit-interval</code>, <code>required-minimum-receive</code> (<strong>หน่วย microseconds</strong>, 10000..100000000), <code>detection-multiplier</code> (default 3)</li>
+<li>interval ที่ใช้จริง = <strong>ค่าที่สูงกว่า</strong> ระหว่าง desired-tx ของเรากับ required-rx ของอีกฝั่ง (เช่น 100ms × 3 = ตรวจเจอใน 300ms)</li>
+</ul>
+</li>
+</ul>
+<pre><code>A:dc-leaf-2# info interface lag100
+    lag {
+        lacp {
+            interval SLOW
+            lacp-mode ACTIVE
+            admin-key 32768
+            system-id-mac 1A:E9:07:FF:00:00
+            system-priority 100
+        }
+    }
+A:dc-leaf-2# show lag lag100 lacp-state
+</code></pre>
+<figure class="diagram">
+<svg viewBox="0 0 720 290" role="img" aria-label="Leaf-2 ต่อ lag100 โดย e1/3 และ e1/4 ไป Spine-2 แต่ e1/5 ต่อผิดไป Spine-1; static LAG ใช้ e1/5 ทันที ส่วน LACP block e1/5">
+<rect x="40" y="20" width="110" height="44" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="95" y="47" text-anchor="middle" font-size="14" font-family="inherit" fill="var(--ink)">Spine-2</text>
+<rect x="220" y="20" width="110" height="44" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="275" y="47" text-anchor="middle" font-size="14" font-family="inherit" fill="var(--ink)">Spine-1</text>
+<rect x="90" y="210" width="130" height="44" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="155" y="237" text-anchor="middle" font-size="14" font-family="inherit" fill="var(--ink)">Leaf-2</text>
+<line x1="120" y1="210" x2="70" y2="64" stroke="var(--cyan)" stroke-width="2"/>
+<line x1="150" y1="210" x2="100" y2="64" stroke="var(--cyan)" stroke-width="2"/>
+<line x1="195" y1="210" x2="275" y2="64" stroke="var(--amber)" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="104" y="198" text-anchor="end" font-size="12" font-family="inherit" fill="var(--muted)">1/3</text>
+<text x="158" y="198" text-anchor="start" font-size="12" font-family="inherit" fill="var(--muted)">1/4</text>
+<text x="216" y="198" text-anchor="start" font-size="12" font-family="inherit" fill="var(--amber)">1/5</text>
+<text x="245" y="150" text-anchor="start" font-size="12" font-family="inherit" fill="var(--amber)">ต่อผิด node</text>
+<text x="155" y="276" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">members ของ lag100</text>
+<rect x="380" y="20" width="320" height="115" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="396" y="44" font-size="14" font-weight="bold" font-family="inherit" fill="var(--ink)">lag-type static</text>
+<text x="396" y="68" font-size="13" font-family="inherit" fill="var(--ink)">e1/3 up   e1/4 up</text>
+<text x="396" y="90" font-size="13" font-family="inherit" fill="var(--amber)">e1/5 up  ← ถูกใช้ load-balance ทันที</text>
+<text x="396" y="116" font-size="12" font-family="inherit" fill="var(--muted)">ตรวจ miscabling ไม่ได้</text>
+<rect x="380" y="155" width="320" height="115" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="396" y="179" font-size="14" font-weight="bold" font-family="inherit" fill="var(--ink)">lag-type lacp</text>
+<text x="396" y="203" font-size="13" font-family="inherit" fill="var(--ink)">e1/3 up   e1/4 up</text>
+<text x="396" y="225" font-size="13" font-family="inherit" fill="var(--ink)">e1/5 down (oper-down-reason: other)</text>
+<text x="396" y="251" font-size="12" font-family="inherit" fill="var(--muted)">LACP พบว่าเป็นคนละ node จึง block member</text>
+</svg>
+<figcaption>LACP block member ที่ต่อผิด node (e1/5 ไป Spine-1) ขณะที่ static LAG ใช้ link นั้นทันทีที่ port up</figcaption>
+</figure>
+<p><strong>เทียบ SR OS</strong>: SR OS <code>port</code> ≈ SR Linux <code>interface</code> (L2), SR OS router interface/SAP ≈ SR Linux <code>subinterface</code>; SR Linux ไม่มี <code>system</code> interface แบบ SR OS ใน base router แต่มี <code>system0</code> ใช้เป็น VTEP; LAG ของ SR OS ใช้ <code>lag N port ...</code> + <code>mode access/network</code>, LACP param คล้ายกัน</p>
+<h3>2.3 Network Instances, IP-VRF, MAC-VRF, IRB</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>network-instance = VRF</strong> (คำจาก OpenConfig) มีชื่อ, <strong>type</strong>, subinterfaces, routing/forwarding table, protocol instance (BGP/OSPF/IS-IS) และ static routes ของตัวเอง; แต่ละอันคือ <strong>Linux network namespace</strong></li>
+<li>type มี 3 แบบ:<ul>
+<li><strong>default</strong> — มีได้ <strong>อันเดียว ต้องชื่อ "default"</strong> = base routing instance / GRT</li>
+<li><strong>ไม่ถูกสร้างอัตโนมัติ</strong> ต้องสร้างเอง</li>
+<li>เป็น <strong>อันเดียวที่ใช้ resolve next-hop ของ tunnel (VXLAN)</strong></li>
+<li><strong>ip-vrf</strong> — L3, forward ตาม <strong>destination IP</strong>, มี route table ของตัวเอง; ใส่ <strong>routed</strong> subinterface</li>
+<li><strong>mac-vrf</strong> — L2 broadcast domain, forward ตาม <strong>destination MAC</strong> ด้วย <strong>bridge table (MAC table)</strong></li>
+<li>ใส่ <strong>bridged</strong> subinterface + <strong>IRB ได้แค่ 1 อัน</strong></li>
+<li>protocols/static-routes ใช้ไม่ได้</li>
+<li>รองรับบน 7220 IXR family</li>
+</ul>
+</li>
+<li>subinterface ต้องผูกกับ network-instance ถึงจะ forward ได้; <strong>1 subinterface อยู่ได้ 1 network-instance</strong>; 1 NI มีได้หลาย subinterface</li>
+<li><strong>mgmt network-instance</strong>: ถูกสร้างจาก <strong>factory config</strong><ul>
+<li><strong>type ip-vrf</strong>, มี <code>mgmt0.0</code> (DHCP client v4+v6), SSH เปิดบน NI mgmt</li>
+<li>เพิ่ม interface อื่นเพื่อทำ in-band mgmt ได้</li>
+</ul>
+</li>
+<li>ping/traceroute ต้องรู้ NI:<ul>
+<li>ระบุ <code>network-instance X</code> หรือใช้ NI ของ context ปัจจุบัน</li>
+<li>ถ้าไม่ได้อยู่ใน context ของ NI ใด จะใช้ <strong>mgmt</strong> โดย default</li>
+<li>IPv6 ใช้ <code>ping6</code>/<code>traceroute6</code></li>
+</ul>
+</li>
+<li>Route table: <code>show network-instance default route-table [all|ipv4-unicast|ipv6-unicast|next-hop|summary]</code><ul>
+<li>Owner: local, host, static, bgp, ospf, isis, aggregate…; <strong>ID 0 = active</strong></li>
+<li>Next-hop type: <strong>extract</strong> (ส่งขึ้น CPM), <strong>direct</strong> (local interface), <strong>indirect</strong> (non-local), discard, reject (drop + ICMP unreachable), tunnel</li>
+<li>Active route = มีใน FIB; inactive เพราะมีตัวที่ดีกว่า หรือ next-hop unresolved</li>
+</ul>
+</li>
+<li><strong>Route selection</strong>:<ul>
+<li>protocol ต่างกัน → <strong>preference ต่ำชนะ</strong> (= admin distance)</li>
+<li>protocol เดียวกัน preference เท่ากัน → <strong>metric ต่ำชนะ</strong></li>
+<li>เท่ากันหมด → <strong>ECMP</strong> (สูงสุด <strong>64 next-hop</strong>, static ได้ <strong>128</strong>)</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — Default preference</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Pref</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct/local</td>
+<td><strong>0</strong> (แก้ไม่ได้)</td>
+</tr>
+<tr>
+<td>Static</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td>OSPF</td>
+<td><strong>10</strong></td>
+</tr>
+<tr>
+<td>IS-IS L1 / L2</td>
+<td><strong>15 / 18</strong></td>
+</tr>
+<tr>
+<td>BGP (eBGP และ iBGP)</td>
+<td><strong>170</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>MAC-VRF &amp; IRB</strong></p>
+<ul>
+<li>ไม่มี mac-vrf: 1 server = 1 subnet → route table ใหญ่; มี mac-vrf: หลาย server อยู่ subnet เดียว, IRB เป็น gateway</li>
+<li><strong>IRB</strong> = internal L3 interface <code>irb&lt;0..255&gt;</code> (สูงสุด 256) เชื่อม <strong>mac-vrf ↔ ip-vrf</strong><ul>
+<li>subinterface ของ IRB <strong>ต้อง routed, ไม่มี VLAN</strong></li>
+<li>mtu/vlan-tagging/transceiver/ethernet ใช้ไม่ได้, <strong>ตั้ง IP-MTU ได้</strong></li>
+<li>IRB subinterface ต้องใส่ทั้งใน mac-vrf และ ip-vrf/default</li>
+</ul>
+</li>
+<li><strong>mac-vrf มี IRB ได้ 1</strong>, ip-vrf มีได้หลาย IRB (แต่ละอันไป mac-vrf คนละตัว) → IRB <strong>ไม่ได้ใช้เชื่อม ip-vrf กับ ip-vrf</strong></li>
+<li>bridged subinterface: ไม่มี IP/ip-mtu; มี <code>bridge-table</code> (discard-unknown-src-mac, mac-learning, mac-duplication, mac-limit)</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 310" role="img" aria-label="เปรียบเทียบ ip-vrf อย่างเดียวที่ 1 server ต่อ 1 subnet กับ mac-vrf ร่วมกับ IRB ที่หลาย server อยู่ subnet เดียว">
+<defs><marker id="c2f7a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+<text x="180" y="22" text-anchor="middle" font-size="14" font-weight="bold" font-family="inherit" fill="var(--ink)">ไม่มี MAC-VRF</text>
+<text x="180" y="42" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">1 server = 1 subnet</text>
+<rect x="90" y="90" width="180" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="180" y="115" text-anchor="middle" font-size="13" font-family="inherit" fill="var(--ink)">Leaf: ip-vrf (routed)</text>
+<line x1="180" y1="90" x2="180" y2="56" stroke="var(--muted)" marker-end="url(#c2f7a)"/>
+<text x="190" y="72" font-size="12" font-family="inherit" fill="var(--muted)">ไป Spine</text>
+<g stroke="var(--line-strong)">
+<line x1="115" y1="130" x2="85" y2="215"/><line x1="155" y1="130" x2="155" y2="215"/><line x1="205" y1="130" x2="225" y2="215"/><line x1="245" y1="130" x2="295" y2="215"/>
+</g>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="60" y="215" width="50" height="32" rx="6"/><rect x="130" y="215" width="50" height="32" rx="6"/><rect x="200" y="215" width="50" height="32" rx="6"/><rect x="270" y="215" width="50" height="32" rx="6"/>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--muted)" text-anchor="middle">
+<text x="85" y="236">srv</text><text x="155" y="236">srv</text><text x="225" y="236">srv</text><text x="295" y="236">srv</text>
+<text x="85" y="268">subnet A</text><text x="155" y="268">subnet B</text><text x="225" y="268">subnet C</text><text x="295" y="268">subnet D</text>
+<text x="180" y="296" fill="var(--amber)">route table โตตามจำนวน server</text>
+</g>
+<line x1="360" y1="20" x2="360" y2="300" stroke="var(--line-strong)" stroke-dasharray="4 4"/>
+<text x="540" y="22" text-anchor="middle" font-size="14" font-weight="bold" font-family="inherit" fill="var(--ink)">มี MAC-VRF + IRB</text>
+<text x="540" y="42" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">หลาย server = 1 subnet</text>
+<line x1="540" y1="82" x2="540" y2="56" stroke="var(--muted)" marker-end="url(#c2f7a)"/>
+<text x="550" y="72" font-size="12" font-family="inherit" fill="var(--muted)">ไป Spine</text>
+<rect x="430" y="84" width="220" height="32" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="540" y="105" text-anchor="middle" font-size="13" font-family="inherit" fill="var(--ink)">ip-vrf (L3)</text>
+<rect x="515" y="124" width="50" height="22" rx="6" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="540" y="140" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">IRB</text>
+<rect x="430" y="154" width="220" height="32" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="540" y="175" text-anchor="middle" font-size="13" font-family="inherit" fill="var(--ink)">mac-vrf (L2, bridged)</text>
+<g stroke="var(--line-strong)">
+<line x1="460" y1="186" x2="445" y2="215"/><line x1="500" y1="186" x2="515" y2="215"/><line x1="580" y1="186" x2="585" y2="215"/><line x1="620" y1="186" x2="655" y2="215"/>
+</g>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="420" y="215" width="50" height="32" rx="6"/><rect x="490" y="215" width="50" height="32" rx="6"/><rect x="560" y="215" width="50" height="32" rx="6"/><rect x="630" y="215" width="50" height="32" rx="6"/>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--muted)" text-anchor="middle">
+<text x="445" y="236">srv</text><text x="515" y="236">srv</text><text x="585" y="236">srv</text><text x="655" y="236">srv</text>
+<text x="550" y="268">ทุก server อยู่ subnet เดียวกัน</text>
+<text x="540" y="296" fill="var(--good)">route table เล็กลง, IRB เป็น gateway</text>
+</g>
+</svg>
+<figcaption>เมื่อมี mac-vrf หลาย server ใช้ subnet เดียวกันได้ โดยมี IRB เป็น gateway ไปยัง ip-vrf ทำให้ route table ไม่ต้องโตตามจำนวน server</figcaption>
+</figure>
+<figure class="diagram">
+<svg viewBox="0 0 720 330" role="img" aria-label="โครงสร้าง config: irb0.0 อยู่ทั้งใน network-instance default และ mac-vrf layer2 ซึ่งมี subinterface bridged จาก ethernet-1/10 และ 1/11">
+<defs>
+<marker id="c2f8a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--amber)"/></marker>
+<marker id="c2f8b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+</defs>
+<rect x="190" y="15" width="300" height="100" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="205" y="35" font-size="13" font-weight="bold" font-family="inherit" fill="var(--ink)">network-instance default</text>
+<rect x="330" y="48" width="140" height="26" rx="6" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="400" y="66" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">routing table</text>
+<rect x="205" y="75" width="70" height="26" rx="6" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="240" y="93" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">irb0.0</text>
+<rect x="190" y="145" width="300" height="100" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="205" y="165" font-size="13" font-weight="bold" font-family="inherit" fill="var(--ink)">network-instance layer2 (mac-vrf)</text>
+<rect x="205" y="178" width="70" height="26" rx="6" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="240" y="196" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">irb0.0</text>
+<rect x="330" y="178" width="140" height="26" rx="6" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="400" y="196" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">bridge table (MAC)</text>
+<rect x="205" y="212" width="70" height="26" rx="6" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="240" y="230" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">e1/10.0</text>
+<rect x="290" y="212" width="70" height="26" rx="6" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="325" y="230" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">e1/11.0</text>
+<rect x="15" y="105" width="130" height="50" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="80" y="126" text-anchor="middle" font-size="13" font-family="inherit" fill="var(--ink)">irb0 (subif .0)</text>
+<text x="80" y="144" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">192.168.101.1/28</text>
+<path d="M145 118 H165 V88 H203" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#c2f8a)"/>
+<path d="M145 142 H165 V191 H203" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#c2f8a)"/>
+<line x1="240" y1="238" x2="240" y2="272" stroke="var(--muted)" marker-start="url(#c2f8b)"/>
+<line x1="325" y1="238" x2="325" y2="272" stroke="var(--muted)" marker-start="url(#c2f8b)"/>
+<rect x="190" y="272" width="100" height="36" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="240" y="295" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">ethernet-1/10</text>
+<rect x="300" y="272" width="100" height="36" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="350" y="295" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">ethernet-1/11</text>
+<g font-size="12" font-family="inherit" fill="var(--muted)">
+<text x="515" y="60">ip-vrf/default: มีได้หลาย IRB</text>
+<text x="515" y="78">(แต่ละอันไป mac-vrf คนละตัว)</text>
+<text x="515" y="190">mac-vrf: มี IRB ได้ 1 อัน</text>
+<text x="515" y="208">มีเฉพาะ subinterface bridged</text>
+<text x="420" y="295">subinterface 0 type bridged</text>
+</g>
+</svg>
+<figcaption>subinterface ของ IRB ต้องถูกใส่ทั้งใน mac-vrf และ ip-vrf (หรือ default) จึงจะเป็นตัวเชื่อมสองฝั่ง ส่วน ethernet subinterface ใน mac-vrf ต้องเป็น type bridged</figcaption>
+</figure>
+<pre><code>A:leaf1# interface irb0 subinterface 0 ipv4 address 192.168.101.1/28
+A:leaf1# interface irb0 subinterface 0 ipv4 admin-state enable
+A:leaf1# network-instance default interface irb0.0
+A:leaf1# network-instance layer2 type mac-vrf
+A:leaf1# network-instance layer2 interface ethernet-1/10.0
+A:leaf1# network-instance layer2 interface irb0.0
+</code></pre>
+<p><strong>สรุปที่ควรจำ — MAC table</strong></p>
+<ul>
+<li>learn source MAC / flood unknown dest; type: <strong>irb-interface, learnt, static, duplicate</strong></li>
+<li><strong>aging default 300 วินาที</strong>; IRB/static ไม่ age</li>
+<li>static MAC: destination = subinterface หรือ <strong>blackhole</strong></li>
+<li><strong>mac-limit default 250 entries</strong> (range 1..8192) ต่อ mac-vrf และ default 250 ต่อ subinterface; warning threshold <strong>95%</strong> (clear ที่ threshold − 5%)</li>
+<li>mac-learning / aging ปิดได้ทั้งระดับ mac-vrf และ subinterface; ปิด learning → <strong>flood ทุกอย่าง</strong></li>
+<li><code>discard-unknown-dest-mac</code> (ระดับ <strong>mac-vrf</strong>) = ไม่ flood unknown dest</li>
+<li><code>discard-unknown-src-mac</code> (ระดับ <strong>subinterface</strong>) = anti-spoof (รับเฉพาะ source ที่อยู่ใน table/static)</li>
+<li><strong>MAC duplication (MAC move) = กลไกกัน L2 loop</strong> — <strong>enable by default</strong><ul>
+<li>อาการ: MAC เดียวกันถูก re-learn สลับ interface เร็ว ๆ (duplicate MAC จริง, switch กลาง flood, cable loop)</li>
+<li><code>monitoring-window</code> <strong>3 นาที</strong>, <code>num-moves</code> <strong>5</strong>, <code>hold-down-time</code> <strong>9 นาที</strong>, <code>action</code> <strong>stop-learning</strong> (default)</li>
+<li>ตั้งที่ mac-vrf, override ได้ที่ subinterface (<code>use-net-instance-action</code> = default)</li>
+<li>action ทำกับ <strong>subinterface ที่ learn MAC แล้วทำให้เกิน threshold</strong>; อยู่จน hold-down หมด</li>
+<li>show output ตัวอย่างอาจแสดง "Number of moves allowed: 4" ทั้งที่ config num-moves 5 — เพราะ move ครั้งที่ 5 คือครั้งที่เกิน threshold</li>
+<li><strong>[ตั้งแต่ 26.3]</strong> เอกสาร 26.3 แสดง default <code>hold-down-time 10</code> (รุ่นที่อธิบายข้างต้นคือ 9 นาที) — ควรตรวจค่าจริงบนเครื่องที่ใช้</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — 3 MAC-dup actions</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Action</th>
+<th>subinterface ที่ detect</th>
+<th>frame ที่ <strong>src</strong> = dup MAC (จาก interface อื่น)</th>
+<th>frame ที่ <strong>dst</strong> = dup MAC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>stop-learning</strong> (default)</td>
+<td><strong>ยัง up</strong>, หยุด learn MAC ใด ๆ บน interface นั้น</td>
+<td><strong>drop</strong></td>
+<td>ยัง forward ไป interface เดิม</td>
+</tr>
+<tr>
+<td><strong>oper-down</strong></td>
+<td><strong>ถูก oper-down</strong> (<code>mac-dup-detected</code>)</td>
+<td>ไม่ drop แต่ไม่ learn</td>
+<td><strong>drop</strong></td>
+</tr>
+<tr>
+<td><strong>blackhole</strong></td>
+<td><strong>ยัง up</strong></td>
+<td><strong>drop</strong></td>
+<td><strong>drop</strong> (แต่ src MAC ของ frame นั้นยัง learn)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>clear: <code>tools network-instance mac-vrf-1 bridge-table mac-duplication duplicate-entries mac &lt;MAC&gt; delete-mac</code> หรือ <code>... mac-duplication delete-macs-type &lt;all|blackhole-only&gt;</code></li>
+<li>ลบ MAC ที่ learn แล้ว: <code>tools ... mac-learning delete-all-macs</code></li>
+<li>ดู: <code>show network-instance mac-vrf-1 bridge-table mac-table all</code>, <code>... mac-duplication duplicate-entries</code>, <code>info from state network-instance * bridge-table mac-table mac * | as table</code></li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-label="MAC เดียวกันสลับไปมาระหว่าง ethernet-1/10 และ 1/12 จนเกินเกณฑ์ เมื่อ action เป็น blackhole port 1/10 ยัง up แต่ frame ที่ src หรือ dst เป็น MAC นั้นถูก drop">
+<rect x="130" y="60" width="180" height="44" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="220" y="87" text-anchor="middle" font-size="13" font-family="inherit" fill="var(--ink)">Leaf-1: mac-vrf-1</text>
+<g stroke="var(--line-strong)" stroke-width="2">
+<line x1="160" y1="104" x2="85" y2="190"/><line x1="220" y1="104" x2="220" y2="190"/><line x1="280" y1="104" x2="355" y2="190"/>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--muted)" text-anchor="middle">
+<text x="95" y="150">e1/10</text><text x="240" y="150">e1/11</text><text x="345" y="150">e1/12</text>
+</g>
+<g fill="var(--bg-raised)" stroke="var(--line-strong)">
+<rect x="35" y="190" width="100" height="40" rx="8"/><rect x="170" y="190" width="100" height="40" rx="8"/><rect x="305" y="190" width="100" height="40" rx="8"/>
+</g>
+<g font-size="12" font-family="inherit" text-anchor="middle">
+<text x="85" y="207" fill="var(--amber)">host A</text><text x="85" y="223" fill="var(--amber)">MAC ...:10</text>
+<text x="220" y="207" fill="var(--ink)">host B</text><text x="220" y="223" fill="var(--muted)">MAC ...:11</text>
+<text x="355" y="207" fill="var(--amber)">host C</text><text x="355" y="223" fill="var(--amber)">MAC ...:10</text>
+</g>
+<text x="220" y="270" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">MAC ...:10 ถูก learn สลับ 1/10 ↔ 1/12 ถี่เกิน num-moves</text>
+<rect x="440" y="20" width="260" height="260" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="456" y="44" font-size="14" font-weight="bold" font-family="inherit" fill="var(--ink)">ผลเมื่อ action = blackhole</text>
+<g font-size="13" font-family="inherit" fill="var(--ink)">
+<text x="456" y="78">1. detect duplicate บน e1/10.0</text>
+<text x="456" y="108">2. e1/10.0 ยัง oper up</text>
+<text x="456" y="138">3. MAC ...:10 เป็น type duplicate</text>
+<text x="456" y="168" fill="var(--amber)">4. frame ที่ src หรือ dst</text>
+<text x="456" y="188" fill="var(--amber)">   เป็น MAC นี้ ถูก drop</text>
+</g>
+<text x="456" y="228" font-size="12" font-family="inherit" fill="var(--muted)">อยู่จน hold-down-time หมด หรือสั่ง</text>
+<text x="456" y="246" font-size="12" font-family="inherit" fill="var(--muted)">delete-mac ด้วย tools command</text>
+</svg>
+<figcaption>ตัวอย่าง MAC duplication ด้วย action blackhole: interface ยัง up แต่ traffic ที่เกี่ยวกับ MAC ที่ซ้ำถูกทิ้งทั้งสองทิศทาง</figcaption>
+</figure>
+<p><strong>เทียบ SR OS</strong>: default NI ≈ Base router, ip-vrf ≈ VPRN, mac-vrf ≈ VPLS, IRB ≈ VPLS ที่ผูก <code>routed-vpls</code> เข้า IES/VPRN interface, MAC move ≈ <code>mac-move</code> ใน VPLS; preference: SR OS static 5, OSPF 10, IS-IS 15/18, BGP 170 — <strong>ตัวเลขเหมือนกัน</strong></p>
+<h3>2.4 Static Routes, Next-Hop-Group, ECMP</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>static route <strong>2 ขั้น</strong>:<ol>
+<li><code>static-routes route &lt;prefix&gt;</code> → <strong>prefix + preference + metric + admin-state + อ้าง next-hop-group</strong></li>
+<li><code>next-hop-groups group &lt;name&gt;</code> → <strong>list ของ next-hop (IP) หรือ blackhole</strong> (drop) — หลาย route ใช้ NHG เดียวกันได้ (แก้ next-hop ที่เดียว)</li>
+</ol>
+</li>
+<li>NHG: next-hop ต้องเป็น IPv4 ทั้งหมดหรือ IPv6 ทั้งหมด (ห้ามผสม); สูงสุด <strong>128 next-hop</strong> ต่อ group</li>
+<li>ข้อดี static: config ง่าย (เครือข่ายเล็ก), CPU ต่ำ, ไม่มี protocol overhead, predictable</li>
+<li>ข้อเสีย: <strong>ไม่ scale</strong></li>
+</ul>
+<p><strong>สรุปที่ควรจำ — defaults</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>อยู่ที่</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>admin-state</td>
+<td>route / NHG / nexthop</td>
+<td>enable</td>
+</tr>
+<tr>
+<td><strong>metric</strong></td>
+<td>static-routes route</td>
+<td><strong>1</strong></td>
+</tr>
+<tr>
+<td><strong>preference</strong></td>
+<td>static-routes route</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><strong>blackhole</strong></td>
+<td><strong>next-hop-group</strong> (exclusive กับ nexthop list)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>generate-icmp</td>
+<td>NHG blackhole</td>
+<td><strong>false</strong></td>
+</tr>
+<tr>
+<td><strong>resolve</strong></td>
+<td>NHG nexthop</td>
+<td><strong>true</strong> (false = ต้อง resolve ด้วย local route เท่านั้น)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>resolve true</strong> = recursive lookup ผ่าน route อะไรก็ได้ (BGP/IGP/static) เช่น next-hop = loopback ของ spine ที่เรียนจาก BGP</li>
+<li>route จะถูก install ถ้า: admin enable + next-hop reachable อย่างน้อย 1 + preference ต่ำสุด + (pref เท่ากัน) metric ต่ำสุด</li>
+<li>ไม่มี routing policy ผูกกับ next-hop ใน NHG</li>
+</ul>
+<pre><code>network-instance default {
+    static-routes {
+        route 192.168.20.0/30 {
+            next-hop-group NHG-leaf-2
+        }
+    }
+    next-hop-groups {
+        group NHG-leaf-2 {
+            nexthop 1 { ip-address 10.1.1.0 }
+            nexthop 2 { ip-address 10.2.1.0 }
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>ตัวอย่างนี้มี 2 next-hop = ECMP</li>
+<li><strong>[ตั้งแต่ 26.3]</strong> มี static route 2 แบบ:<ul>
+<li><strong>Legacy model</strong> (<code>network-instance static-routes</code> + <code>next-hop-groups</code>) — แบบที่อธิบายในหัวข้อนี้</li>
+<li><strong>New model</strong> (<code>network-instance static</code>, OpenConfig-based) — next-hop แยก index และใส่ tunnel encap ได้</li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — ECMP</strong></p>
+<ul>
+<li>ECMP <strong>enable by default</strong> สำหรับ static และ routing protocol (แต่ <strong>BGP multipath default = 1 path</strong> ต้องเพิ่มเอง — ดู 2.5)</li>
+<li>เลือก next-hop ด้วย <strong>hash</strong> (src/dst IP, src/dst port, protocol, ipv6-flow-label, vlan, mpls label + <strong>hash-seed</strong>) → <strong>hash % N</strong> (N = จำนวน next-hop)<ul>
+<li>flow เดียวกันไป path เดียวกัน (ไม่ reorder)</li>
+<li><strong>ไม่ใช่ round-robin</strong></li>
+</ul>
+</li>
+<li><code>system load-balancing hash-options &lt;destination-address|source-address|destination-port|source-port|protocol|vlan|ipv6-flow-label|mpls-label-stack|hash-seed&gt;</code></li>
+<li><strong>Polarization</strong>: ถ้า hash จากเนื้อ packet อย่างเดียว ทุก router ได้ผลเท่ากัน → multi-stage ECMP บาง link ว่าง<ul>
+<li>แก้ด้วย <strong>hash-seed ต่างกันทุก router</strong> (default hash-seed สร้างจาก <strong>system MAC</strong>)</li>
+</ul>
+</li>
+<li><strong>Resilient hashing</strong>: bucket คงที่ — เมื่อ next-hop หายไป เฉพาะ flow ที่ใช้ next-hop นั้นถูกย้าย (modulo ปกติทำให้ flow อื่นขยับด้วย); route table แสดง "Resilient hash routes"</li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+  P[&quot;packet: src/dst IP, src/dst port, proto&quot;] --&gt; H[&quot;hash()&quot;]
+  S[&quot;hash-seed ต่อ router (default จาก system MAC)&quot;] --&gt; H
+  H --&gt; M[&quot;hash % N&quot;] --&gt; NH[&quot;next-hop #k (flow เดียวกัน = path เดิม)&quot;]
+</pre></div>
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-label="ฟิลด์ใน packet และ hash-seed เข้าฟังก์ชัน hash แล้ว modulo N เพื่อเลือก spine ต่อ flow">
+<defs><marker id="c2f10a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+<g fill="var(--cyan-soft)" stroke="var(--cyan)">
+<rect x="10" y="15" width="100" height="28" rx="6"/><rect x="10" y="49" width="100" height="28" rx="6"/><rect x="10" y="83" width="100" height="28" rx="6"/><rect x="10" y="117" width="100" height="28" rx="6"/><rect x="10" y="151" width="100" height="28" rx="6"/>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--ink)" text-anchor="middle">
+<text x="60" y="34">src IP</text><text x="60" y="68">dst IP</text><text x="60" y="102">src port</text><text x="60" y="136">dst port</text><text x="60" y="170">protocol</text>
+</g>
+<rect x="10" y="205" width="100" height="28" rx="6" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="60" y="224" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--ink)">hash-seed</text>
+<text x="60" y="252" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">(ต่อ router)</text>
+<g stroke="var(--muted)">
+<line x1="110" y1="29" x2="170" y2="115" marker-end="url(#c2f10a)"/><line x1="110" y1="63" x2="170" y2="120" marker-end="url(#c2f10a)"/><line x1="110" y1="97" x2="170" y2="126" marker-end="url(#c2f10a)"/><line x1="110" y1="131" x2="170" y2="132" marker-end="url(#c2f10a)"/><line x1="110" y1="165" x2="170" y2="138" marker-end="url(#c2f10a)"/><line x1="110" y1="219" x2="170" y2="145" marker-end="url(#c2f10a)"/>
+</g>
+<rect x="170" y="100" width="90" height="60" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="215" y="136" text-anchor="middle" font-size="14" font-family="inherit" fill="var(--ink)">hash()</text>
+<line x1="260" y1="130" x2="300" y2="130" stroke="var(--muted)" marker-end="url(#c2f10a)"/>
+<rect x="300" y="100" width="100" height="60" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="350" y="126" text-anchor="middle" font-size="14" font-family="inherit" fill="var(--ink)">hash % N</text>
+<text x="350" y="146" text-anchor="middle" font-size="12" font-family="inherit" fill="var(--muted)">N = 4 next-hop</text>
+<g stroke="var(--muted)">
+<line x1="400" y1="125" x2="560" y2="40" marker-end="url(#c2f10a)"/><line x1="400" y1="128" x2="560" y2="110" marker-end="url(#c2f10a)"/><line x1="400" y1="132" x2="560" y2="180" marker-end="url(#c2f10a)"/><line x1="400" y1="135" x2="560" y2="250" marker-end="url(#c2f10a)"/>
+</g>
+<g fill="var(--good-soft)" stroke="var(--good)">
+<rect x="560" y="20" width="140" height="40" rx="8"/><rect x="560" y="90" width="140" height="40" rx="8"/><rect x="560" y="160" width="140" height="40" rx="8"/><rect x="560" y="230" width="140" height="40" rx="8"/>
+</g>
+<g font-size="13" font-family="inherit" fill="var(--ink)" text-anchor="middle">
+<text x="630" y="45">Spine-1 (0)</text><text x="630" y="115">Spine-2 (1)</text><text x="630" y="185">Spine-3 (2)</text><text x="630" y="255">Spine-4 (3)</text>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--muted)">
+<text x="250" y="222">ตัวอย่าง: flow1 12 % 4 = 0 → Spine-1</text>
+<text x="250" y="240">flow2 101 % 4 = 1 → Spine-2</text>
+<text x="250" y="258">flow3 18 % 4 = 2 → Spine-3</text>
+<text x="250" y="276">flow4 43 % 4 = 3 → Spine-4</text>
+</g>
+</svg>
+<figcaption>ECMP เลือก next-hop ด้วย hash ของฟิลด์ใน packet รวมกับ hash-seed แล้ว modulo จำนวน next-hop ทำให้ packet ของ flow เดียวกันไป path เดิมเสมอ</figcaption>
+</figure>
+<p><strong>เทียบ SR OS</strong>: SR OS ใส่ <code>next-hop</code>/<code>blackhole</code> ที่ <code>static-routes route X route-type unicast</code> เลย; SR Linux แยก NHG; SR OS ECMP ต้องตั้ง <code>ecmp N</code> ใน router (default 1) — SR Linux static ECMP ใช้ได้ทันทีถ้า NHG มีหลาย next-hop</p>
+<hr />
+<h3>2.5 BGP underlay, Routing Policy, BFD</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>SR Linux ใช้ protocol stack จาก SR OS; แต่ละ network-instance รัน IS-IS/OSPF/BGP ได้ แต่หัวข้อนี้เน้น <strong>BGP</strong></li>
+<li>ฟีเจอร์ BGP:<ul>
+<li>iBGP + eBGP, IPv4 + IPv6, import/export policy</li>
+<li><strong>ECMP สูงสุด 64 next-hop</strong>, MD5 auth, BFD, route reflector</li>
+<li><strong>dynamic neighbors</strong> (รับ session ที่ peer เริ่ม)</li>
+</ul>
+</li>
+<li>BGP พื้นฐาน: RFC 4271, Internet routing protocol, MP-BGP (IPv6, L2VPN/EVPN, L3VPN, flowspec)<ul>
+<li><strong>AS</strong> = กลุ่ม router ภายใต้การจัดการเดียวกัน ระบุด้วย <strong>ASN</strong></li>
+<li>หน้าที่ของ BGP: (1) advertise prefix ข้าม AS + เลือก best (2) policy ว่าจะรับ/ส่งอะไร</li>
+</ul>
+</li>
+<li><strong>AS-path</strong>: eBGP prepend ASN ตัวเองทุกครั้งที่ส่งออก (iBGP ไม่เปลี่ยน)<ul>
+<li>ใช้ (1) <strong>เลือก path สั้นสุด</strong> (2) <strong>loop detection</strong> (เห็น ASN ตัวเองใน path = ทิ้ง)</li>
+<li>iBGP ไม่ re-advertise route จาก iBGP peer → ต้อง full mesh หรือ RR</li>
+</ul>
+</li>
+<li><strong>DC design</strong>:<ul>
+<li><strong>spine ทั้งหมด AS เดียวกัน (64999), leaf แต่ละตัว AS ของตัวเอง (65001…)</strong></li>
+<li>private ASN 64512–65534 (หรือ 4-byte)</li>
+<li><strong>eBGP ทุก leaf↔spine</strong></li>
+<li>leaf advertise subnet ของ server ตัวเอง → spine ส่งต่อให้ leaf อื่น</li>
+<li>ถ้า leaf ส่งกลับไป spine อื่น spine จะเจอ <strong>AS loop</strong> (เห็น 64999) แล้วทิ้ง → optimization: export เฉพาะ local prefix</li>
+</ul>
+</li>
+<li><strong>Leaf ไม่ได้ peer กับ leaf อื่นโดยตรง</strong> — เรียนผ่าน spine</li>
+<li>Guidelines:<ul>
+<li>eBGP leaf-spine</li>
+<li>export policy (ประกาศ server subnet), import policy (รับจาก spine)</li>
+<li><strong>เปิด ECMP + BGP multipath</strong></li>
+<li>ลด MAI = 1s, เปิด <strong>rapid-withdrawal</strong>, <strong>fast-external-failover</strong> (default on)</li>
+</ul>
+</li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart TB
+  subgraph AS64999[&quot;Spines: AS 64999 (ASN เดียวกัน)&quot;]
+    S1[Spine-1]
+    S2[Spine-2]
+  end
+  L1[&quot;Leaf-1 AS65001&quot;] --- S1
+  L1 --- S2
+  L2[&quot;Leaf-2 AS65002&quot;] --- S1
+  L2 --- S2
+  L1 -.-&gt;|&quot;192.168.101.0/28 path [65001]&quot;| S1
+  S1 -.-&gt;|&quot;path [64999 65001]&quot;| L2
+  L2 -.-&gt;|&quot;ถ้าส่งต่อ: [65002 64999 65001]&quot;| S2
+  S2 -.-&gt;|&quot;เห็น 64999 = AS loop → ทิ้ง&quot;| S2
+</pre></div>
+<figure class="diagram">
+<svg viewBox="0 0 720 350" role="img" aria-label="Spine ทั้งหมดอยู่ AS 64999 และ leaf แต่ละตัวมี AS ของตัวเอง eBGP เต็มรูปแบบ prefix ที่ leaf ส่งกลับไป spine อีกตัวจะถูกทิ้งด้วย AS loop">
+<defs>
+<marker id="c2f11a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cyan)"/></marker>
+<marker id="c2f11b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--amber)"/></marker>
+</defs>
+<rect x="60" y="8" width="620" height="82" rx="10" fill="var(--bg-raised)" stroke="var(--line-strong)" stroke-dasharray="5 4"/>
+<text x="75" y="26" font-size="12" font-weight="bold" font-family="inherit" fill="var(--muted)">AS 64999 (ทุก spine)</text>
+<g fill="var(--cyan-soft)" stroke="var(--cyan)">
+<rect x="90" y="40" width="100" height="36" rx="8"/><rect x="250" y="40" width="100" height="36" rx="8"/><rect x="410" y="40" width="100" height="36" rx="8"/><rect x="570" y="40" width="100" height="36" rx="8"/>
+</g>
+<g font-size="13" font-family="inherit" fill="var(--ink)" text-anchor="middle">
+<text x="140" y="63">Spine-1</text><text x="300" y="63">Spine-2</text><text x="460" y="63">Spine-3</text><text x="620" y="63">Spine-4</text>
+</g>
+<g stroke="var(--line-strong)" opacity="0.55">
+<line x1="140" y1="76" x2="140" y2="230"/><line x1="140" y1="76" x2="300" y2="230"/><line x1="140" y1="76" x2="460" y2="230"/><line x1="140" y1="76" x2="620" y2="230"/>
+<line x1="300" y1="76" x2="140" y2="230"/><line x1="300" y1="76" x2="300" y2="230"/><line x1="300" y1="76" x2="460" y2="230"/><line x1="300" y1="76" x2="620" y2="230"/>
+<line x1="460" y1="76" x2="140" y2="230"/><line x1="460" y1="76" x2="460" y2="230"/><line x1="460" y1="76" x2="620" y2="230"/>
+<line x1="620" y1="76" x2="140" y2="230"/><line x1="620" y1="76" x2="460" y2="230"/><line x1="620" y1="76" x2="620" y2="230"/>
+</g>
+<g fill="var(--good-soft)" stroke="var(--good)">
+<rect x="90" y="230" width="100" height="44" rx="8"/><rect x="250" y="230" width="100" height="44" rx="8"/><rect x="410" y="230" width="100" height="44" rx="8"/><rect x="570" y="230" width="100" height="44" rx="8"/>
+</g>
+<g font-size="13" font-family="inherit" fill="var(--ink)" text-anchor="middle">
+<text x="140" y="249">Leaf-1</text><text x="300" y="249">Leaf-2</text><text x="460" y="249">Leaf-3</text><text x="620" y="249">Leaf-4</text>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--muted)" text-anchor="middle">
+<text x="140" y="266">AS 65001</text><text x="300" y="266">AS 65002</text><text x="460" y="266">AS 65003</text><text x="620" y="266">AS 65004</text>
+</g>
+<line x1="170" y1="228" x2="455" y2="78" stroke="var(--cyan)" stroke-width="2.5" marker-end="url(#c2f11a)"/>
+<line x1="465" y1="78" x2="290" y2="228" stroke="var(--cyan)" stroke-width="2.5" marker-end="url(#c2f11a)"/>
+<line x1="330" y1="228" x2="610" y2="78" stroke="var(--amber)" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#c2f11b)"/>
+<g stroke="var(--cyan)" fill="var(--bg-raised)"><circle cx="312" cy="153" r="9"/><circle cx="377" cy="153" r="9"/></g>
+<circle cx="470" cy="153" r="9" fill="var(--bg-raised)" stroke="var(--amber)"/>
+<g font-size="12" font-family="inherit" fill="var(--ink)" text-anchor="middle">
+<text x="312" y="157">1</text><text x="377" y="157">2</text><text x="470" y="157">3</text>
+</g>
+<g font-size="12" font-family="inherit" fill="var(--ink)">
+<text x="30" y="302">1  Leaf-1 ประกาศ subnet ของ server ให้ Spine-3 (AS-path: 65001)</text>
+<text x="30" y="320">2  Spine-3 ส่งต่อให้ Leaf-2 (AS-path: 64999 65001)</text>
+<text x="30" y="338" fill="var(--amber)">3  ถ้า Leaf-2 ส่งกลับไป Spine-4 จะเห็น 64999 ใน path = AS loop จึงทิ้ง</text>
+</g>
+</svg>
+<figcaption>ใช้ AS loop detection ให้เป็นประโยชน์: spine ทุกตัวอยู่ AS เดียวกัน ส่วน leaf แต่ละตัวมี AS ของตัวเอง prefix ที่ leaf ส่งต่อกลับขึ้นไปจึงถูก spine ทิ้งเอง (จึงควร export เฉพาะ local prefix เพื่อลด update ที่ไม่จำเป็น)</figcaption>
+</figure>
+<p><strong>สรุปที่ควรจำ — config ขั้นต่ำ</strong></p>
+<ul>
+<li>ต้องมี: <strong>ASN + router-id + afi-safi (admin-state enable) + peer-as + neighbor (+group)</strong></li>
+<li>multipath ไม่ใช่ส่วนที่บังคับ</li>
+</ul>
+<pre><code>A:leaf1# network-instance default protocols bgp
+A:leaf1# autonomous-system 65001
+A:leaf1# router-id 100.0.2.1
+A:leaf1# afi-safi ipv4-unicast admin-state enable
+A:leaf1# group spines peer-as 64999
+A:leaf1# neighbor 10.1.1.0 peer-group spines
+A:leaf1# neighbor 10.2.1.0 peer-group spines
+A:leaf1# ebgp-default-policy import-reject-all false
+A:leaf1# afi-safi ipv4-unicast ebgp maximum-paths 2      ← ECMP
+</code></pre>
+<ul>
+<li>parameter ตั้งได้ 3 ระดับ <strong>global → group → neighbor; ระดับที่เจาะจงสุดชนะ</strong> (ASN, peer-as, policy, failure-detection ฯลฯ)</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — BGP defaults</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>หมายเหตุ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ebgp-default-policy</strong> import-reject-all / export-reject-all</td>
+<td><strong>true / true</strong></td>
+<td><strong>RFC 8212</strong>: eBGP ไม่รับ ไม่ส่งอะไรเลยถ้าไม่มี policy (เฉพาะ eBGP)</td>
+</tr>
+<tr>
+<td>multipath (max-paths)</td>
+<td><strong>1</strong> (ไม่มี ECMP)</td>
+<td>allow-multiple-as true; level-1 = next-hop ต่อตรง, level-2 = BGP resolved next-hop</td>
+</tr>
+<tr>
+<td>local-preference</td>
+<td><strong>100</strong></td>
+<td>สูงกว่าชนะ</td>
+</tr>
+<tr>
+<td>preference (route table)</td>
+<td>ebgp <strong>170</strong> / ibgp <strong>170</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>timers connect-retry / hold-time / keepalive / MAI</td>
+<td><strong>120 / 90 / 30 (=hold/3) / 5 วินาที</strong></td>
+<td>MAI ตั้งได้ 1–255</td>
+</tr>
+<tr>
+<td>failure-detection enable-bfd / fast-failover</td>
+<td><strong>false / true</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>rapid-withdrawal</td>
+<td><strong>false</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>wait-for-fib-install</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>min-wait-to-advertise</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td>graceful-restart</td>
+<td>disable</td>
+<td></td>
+</tr>
+<tr>
+<td>as-path-options allow-own-as</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td>send-community standard / large</td>
+<td>true / true</td>
+<td></td>
+</tr>
+<tr>
+<td>tcp-mss</td>
+<td>1024</td>
+<td></td>
+</tr>
+<tr>
+<td>passive-mode</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>prefix-limit</td>
+<td>4294967295, warning 90%</td>
+<td></td>
+</tr>
+<tr>
+<td>afi-safi</td>
+<td>ipv4-unicast enable, ipv6-unicast disable</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>[ต่างตามรุ่น syntax]</strong> ส่วนที่แสดง default ใช้ <code>multipath { max-paths-level-1 1; max-paths-level-2 1 }</code> แต่ตัวอย่าง config ใช้ <code>multipath { ebgp { maximum-paths 2 } ibgp { maximum-paths 2 } }</code><ul>
+<li>เป็น syntax คนละรุ่น ความหมายเดียวกัน</li>
+<li>จำว่า <strong>default = 1, ต้องตั้ง = จำนวน spine</strong></li>
+</ul>
+</li>
+<li>RIB: <strong>RIB-In-pre → import policy → RIB-In-post → best path → Loc-RIB → RTM (route table) → export policy → RIB-Out</strong><ul>
+<li>RTM แจ้งกลับว่า route ไหน used</li>
+<li>non-BGP route เข้า export ได้ผ่าน policy</li>
+<li><code>show ... bgp neighbor X received-routes ipv4</code> = RIB-In (แสดงทั้งที่ถูก reject ด้วย status ว่าง)</li>
+<li><code>show ... bgp neighbor X advertised-routes ipv4</code> = RIB-Out</li>
+<li><code>show ... bgp routes ipv4 summary</code> = Loc-RIB (status <code>u</code>=used <code>*</code>=valid <code>&gt;</code>=best)</li>
+<li><code>show route-table all</code> = RTM</li>
+</ul>
+</li>
+<li>SR Linux <strong>ไม่ advertise route กลับไปหา peer ที่ส่งมา</strong> และ advertise เฉพาะ route ที่ used</li>
+<li>Show อื่น:<ul>
+<li><code>show protocols bgp neighbor</code> (state established, Rx/Active/Tx), <code>show protocols bgp summary</code></li>
+<li><code>show protocols bgp neighbor X detail</code> (timer, capabilities: ROUTE_REFRESH, <strong>4-OCTET_ASN</strong>, MP_BGP, GR)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Routing policy</strong></p>
+<ul>
+<li>อยู่ใต้ <code>routing-policy</code> (top-level) ประกอบด้วย:<ul>
+<li><code>prefix-set</code> (IPv4+IPv6 ปนได้, <code>mask-length-range exact</code> หรือ <code>24..26</code>)</li>
+<li><code>community-set</code> (ค่าตรง/regex/well-known), <code>as-path-set</code> (regex), <code>extended-community-set</code>, <code>tag-set</code></li>
+<li><code>policy</code></li>
+</ul>
+</li>
+<li>policy = <strong>default-action + statement เรียงเลข</strong><ul>
+<li><strong>first match ชนะ</strong>; ไม่ match → default-action</li>
+<li>หลาย match condition ใน statement เดียว = AND</li>
+</ul>
+</li>
+<li>match: protocol, family (ipv4/ipv6/evpn/route-target), prefix-set, bgp community-set / as-path-set / <strong>as-path-length</strong></li>
+<li>action: <strong>policy-result accept | reject | next-policy | next-statement</strong> + แก้ BGP attr (as-path prepend/remove/replace, communities add/remove/replace, local-preference, origin, med)</li>
+<li>apply: <code>import-policy</code> / <code>export-policy</code> ที่ global/group/neighbor (เจาะจงสุดชนะ) — <strong>policy ที่ apply แล้วจะ override ebgp-default-policy</strong></li>
+<li>Well-known community:<ul>
+<li><strong>no-export</strong> (ห้ามส่งต่อให้ eBGP peer, iBGP ได้)</li>
+<li><strong>no-advertise</strong> (ห้ามส่งให้ใครเลย)</li>
+</ul>
+</li>
+<li>ตัวอย่าง import: set <strong>local-preference 150</strong> ให้ route จาก spine-1 → <strong>Loc-RIB เลือก path จาก spine-1 อันเดียว</strong> (ECMP หาย, tie-break = local-pref)</li>
+<li>ตัวอย่าง export: prepend ASN ตัวเอง 3 ครั้ง (<code>as-number auto repeat-n 3</code>) + add community → ให้ peer ไม่ชอบ path นี้</li>
+<li><strong>Generic policy best practice</strong>:<ul>
+<li>default accept, reject <code>/31</code> (<code>0.0.0.0/0 mask-length-range 31..31</code>), reject <strong>as-path-length ≥ 1</strong> (route ที่เรียนจากคนอื่น)</li>
+<li>เหลือแค่ local loopback + host subnet</li>
+<li>ใช้ policy เดียวกันทุก leaf</li>
+</ul>
+</li>
+</ul>
+<pre><code>routing-policy {
+    prefix-set hosts {
+        prefix 192.168.101.0/28 mask-length-range exact { }
+    }
+    policy export-hosts {
+        default-action { policy-result reject }
+        statement 10 {
+            match { prefix-set hosts }
+            action { policy-result accept }
+        }
+    }
+}
+A:leaf1# network-instance default protocols bgp neighbor 10.1.1.0 export-policy export-hosts
+A:leaf1# routing-policy policy export-hosts statement 20 action policy-result accept bgp communities add no-export
+</code></pre>
+<p><strong>BFD for BGP</strong></p>
+<ul>
+<li>BFD = lightweight, <strong>asynchronous mode</strong>, ตกลง tx/rx rate กัน, พลาดหลาย packet (detection-multiplier) → <strong>แจ้ง BGP</strong></li>
+<li><strong>ต้อง enable 2 ที่</strong>:<ol>
+<li><code>bfd subinterface ethernet-1/1.0 admin-state enable</code> (top-level <code>bfd</code>)</li>
+<li><code>failure-detection enable-bfd true</code> ที่ BGP (global/group/neighbor — เจาะจงสุดชนะ)
+- <strong>ไม่ต้องมี export policy ใด ๆ</strong></li>
+</ol>
+</li>
+<li>ถ้าเปิดแค่ที่ subinterface → <code>total-bfd-sessions 0</code> (ยังไม่มี protocol subscribe); ดูด้วย <code>info from state bfd</code> (subscribed-protocols BGP)</li>
+<li>interval หน่วย <strong>µs</strong> (100000 = 100ms), multiplier 3 → ~300ms</li>
+<li>เทียบกับ timer อื่น:<ul>
+<li>hold-time 90s vs BFD sub-second</li>
+<li><strong>fast-failover</strong> (default true) = session ลงทันทีเมื่อ local interface down — ใช้ได้เฉพาะ peer ต่อตรง; ถ้ามี L1/L2 device คั่นกลาง → ต้อง BFD</li>
+</ul>
+</li>
+<li>BFD <strong>ไม่ได้</strong> ช่วยลด advertisement interval (นั่นคือ MAI/rapid-withdrawal)</li>
+</ul>
+<pre><code>A:leaf1# bfd subinterface ethernet-1/1.0 admin-state enable
+A:leaf1# bfd subinterface ethernet-1/2.0 admin-state enable
+A:leaf1# network-instance default protocols bgp group spines failure-detection enable-bfd true
+</code></pre>
+<p><strong>เทียบ SR OS</strong>: SR OS ไม่มี RFC 8212 default reject (ส่ง/รับหมดถ้าไม่มี policy — ยกเว้นตั้ง); <code>multipath</code> / <code>ebgp-ibgp</code> ใน SR OS = <code>multipath max-paths</code>; BFD ของ SR OS ตั้งที่ router interface (<code>bfd</code>) + <code>bfd-liveness</code> ใน BGP — แนวคิด 2 ที่เหมือนกัน; <code>rapid-withdrawal</code>, <code>min-route-advertisement</code> คล้ายกัน; policy ของ SR OS เป็น <code>policy-options</code> แบบ entry/from/action — SR Linux ใช้ statement/match/action</p>
+<hr />
+<h3>2.6 EVPN-VXLAN: L2 และ L3</h3>
+<p><strong>สาระสำคัญ — Underlay/Overlay &amp; VXLAN</strong></p>
+<ul>
+<li><strong>Underlay</strong> = IP fabric (ปกติ <strong>eBGP</strong> ตาม RFC 7938); <strong>Overlay</strong> = VPN ผ่าน tunnel ระหว่าง endpoint, <strong>แลก reachability ด้วย iBGP</strong> (EVPN)</li>
+<li><strong>VXLAN</strong> (RFC 7348) = L2 over IP/UDP (MAC-in-UDP); <strong>VTEP</strong> = จุด encap/decap อยู่บน <strong>hypervisor, leaf, หรือ DCGW</strong>; <strong>VNI</strong> ระบุ VXLAN segment/tunnel</li>
+<li><strong>Packet format</strong>: Outer Ethernet (14B) + Outer IP (20B) + <strong>UDP (8B, dst port 4789)</strong> + <strong>VXLAN header (8B, VNI 24 bit ≈ 16M segment)</strong> + inner Ethernet frame<ul>
+<li><strong>UDP source port = hash จาก inner flow</strong> → ECMP ใน underlay กระจายได้</li>
+<li><strong>outer src IP = ingress VTEP, outer dst IP = egress VTEP</strong>; outer Ethernet เปลี่ยนทุก hop</li>
+<li>overhead ~50 byte → ต้องเผื่อ MTU underlay</li>
+</ul>
+</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 172" role="img" aria-label="รูปแบบ VXLAN packet"><defs><marker id="c3f12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="20" y="30" width="120" height="56" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="80.0" y="55.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Outer Ethernet</text><text x="80.0" y="72.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">14 B</text><rect x="150" y="30" width="120" height="56" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="210.0" y="55.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Outer IP</text><text x="210.0" y="72.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">20 B</text><rect x="280" y="30" width="120" height="56" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="340.0" y="55.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">UDP</text><text x="340.0" y="72.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">8 B, dst 4789</text><rect x="410" y="30" width="130" height="56" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="475.0" y="55.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">VXLAN header</text><text x="475.0" y="72.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">8 B, VNI 24 bit</text><rect x="550" y="30" width="150" height="56" rx="8" fill="var(--good-soft)" stroke="var(--line-strong)"/><text x="625.0" y="55.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Inner Ethernet frame</text><text x="625.0" y="72.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">payload ของ host</text><text x="210" y="112" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">src = ingress VTEP, dst = egress VTEP</text><text x="340" y="134" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">src port = hash ของ inner flow (ECMP)</text><text x="475" y="156" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">VNI ~16M segment</text><path d="M20 22H540" stroke="var(--amber)" stroke-width="1.5" fill="none"/><text x="280" y="14" text-anchor="middle" font-size="12" fill="var(--amber)"  font-family="inherit">overhead ~50 B: เผื่อ MTU ใน underlay</text></svg>
+<figcaption>รูปแบบ VXLAN packet: inner Ethernet frame ถูกห่อด้วย VXLAN header, UDP (port 4789) และ outer IP/Ethernet</figcaption>
+</figure>
+<p><strong>สาระสำคัญ — EVPN</strong></p>
+<ul>
+<li>EVPN = <strong>address family ของ MP-BGP: AFI 25 (L2VPN) / SAFI 70 (EVPN)</strong>; ทำ <strong>auto-discovery VTEP + เรียน/กระจาย MAC/IP ใน control plane</strong> → <strong>ไม่มี flood-and-learn</strong> ข้าม fabric; RFC 8365 (NVO), RFC 7432 (route types)</li>
+<li><strong>next-hop ใน MP_REACH_NLRI = IP ของ VTEP</strong> (system0)</li>
+<li><strong>spine มักทำ RR</strong> (ต่อกับทุกตัว, ไม่มี VTEP workload)</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — EVPN route types</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Type</th>
+<th>ชื่อ</th>
+<th>ใช้ทำอะไร</th>
+<th>ใช้ใน</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RT1</strong></td>
+<td>Ethernet Auto-Discovery (A-D)</td>
+<td>multi-homing: <strong>aliasing + mass withdraw (fast convergence)</strong>; มี per-ES และ per-EVI</td>
+<td>MH</td>
+</tr>
+<tr>
+<td><strong>RT2</strong></td>
+<td>MAC/IP Advertisement</td>
+<td>ประกาศ <strong>MAC</strong> (หรือ MAC+IP) ของ host/IRB → สร้าง bridge table (+ARP/ND)</td>
+<td>L2, asymmetric L3</td>
+</tr>
+<tr>
+<td><strong>RT3</strong></td>
+<td>Inclusive Multicast Ethernet Tag (<strong>IMET</strong>)</td>
+<td><strong>discover VTEP ใน service เดียวกัน + สร้าง flooding list สำหรับ BUM</strong></td>
+<td>L2 (ทุก mac-vrf ที่มี vxlan)</td>
+</tr>
+<tr>
+<td><strong>RT4</strong></td>
+<td>Ethernet Segment (ES)</td>
+<td>MH: discover leaf ใน ES เดียวกัน + <strong>DF election</strong></td>
+<td>MH</td>
+</tr>
+<tr>
+<td><strong>RT5</strong></td>
+<td>IP-Prefix</td>
+<td>ประกาศ <strong>IP prefix</strong> (inter-subnet, L3) แยกจาก MAC</td>
+<td><strong>symmetric L3</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>L2 EVPN operation</strong></p>
+<ul>
+<li><strong>BD</strong> = instance ของ EVPN L2 service บน VTEP หนึ่ง; <strong>EVI</strong> = กลุ่ม BD ที่เป็น service เดียวกันข้ามหลาย VTEP — แต่ละ EVI มี <strong>RD</strong> และ <strong>RT</strong></li>
+<li>single-homed host → VTEP ส่งแค่ <strong>RT2 + RT3</strong></li>
+<li><strong>Local MAC learning</strong> ด้วย data plane เฉพาะ <strong>local interface</strong> → ประกาศเป็น <strong>RT2</strong> (MAC, RD, <strong>label = VNI</strong>, RT) → VTEP อื่นเช็ก <strong>RT</strong> ตรงกับ import-rt → ติดตั้ง MAC ชี้ไป "tunnel to VTEP1 (VNI)"; remote MAC เป็น type <strong>evpn</strong> ใน mac table</li>
+<li><strong>RD</strong> = แยก route ของต่าง EVI (overlap ได้), auto = <strong>system0-IP:EVI</strong>; <strong>RT</strong> = ตัดสินว่า route ไหน import เข้า NI ไหน, auto = <strong>local-AS:EVI</strong> (แต่ใน DC leaf ASN ต่างกัน → <strong>ต้องตั้ง RT เองให้เหมือนกันทุก VTEP</strong>)</li>
+<li><strong>MP-BGP instance เดียวส่ง route ของทุก EVI</strong></li>
+<li><strong>IMET (RT3)</strong> มี: <strong>RD</strong> ของ mac-vrf ผู้ส่ง, <strong>Originating router IP (VTEP IP)</strong>, <strong>RT</strong>, <strong>tunnel type = ingress replication</strong>, <strong>tunnel ID/label = VNI</strong> (+ community bgp-tunnel-encap:VXLAN) → ผู้รับเอาไปสร้าง <strong>flooding list</strong> (flooding list <strong>ไม่ได้อยู่ใน route</strong> — เป็นผลลัพธ์ที่ผู้รับสร้าง)</li>
+<li><strong>BUM</strong>: VTEP ดู flooding list ของ EVI แล้ว <strong>ingress replication</strong> ส่งสำเนาไป VTEP ทุกตัวใน list</li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+  participant H1 as Host1 (MAC1)
+  participant V1 as VTEP1 mac-vrf1
+  participant RR as Spine RR
+  participant V2 as VTEP2 mac-vrf1
+  V1-&gt;&gt;RR: RT3 IMET (RD 1.1.1.1:100, orig IP 1.1.1.1, IR, VNI 100, RT 65000:100)
+  RR-&gt;&gt;V2: RT3 → V2 ใส่ VTEP1 ใน flooding list
+  H1-&gt;&gt;V1: ARP (src MAC1) → learn local
+  V1-&gt;&gt;RR: RT2 MAC1 (label=VNI 100, RT 65000:100)
+  RR-&gt;&gt;V2: RT2 → MAC1 = tunnel to 1.1.1.1 VNI 100 (type evpn)
+</pre></div>
+<p><strong>Multi-homing</strong></p>
+<ul>
+<li><strong>ES (Ethernet Segment)</strong> = ชุด link ที่ต่อ host ไปยัง leaf ≥1 ตัว; <strong>ESI</strong> (10 byte) = <strong>unique ทั้ง network (global)</strong>, ทุก leaf ใน ES เดียวกันใช้ <strong>ESI เดียวกัน</strong>; ESI <strong>0 = single-homed</strong>, <strong>0xFF = MAX-ESI</strong> (reserved)</li>
+<li>RT1 (A-D per-ES: หาว่า leaf ไหนอยู่ ES ไหน; A-D per-EVI: ผูก ES กับ EVI) + RT4 (ES discovery + <strong>DF election</strong>)</li>
+<li>โหมด: <strong>single-active</strong> (leaf เดียว forward) / <strong>all-active</strong> (ทุก leaf forward, <strong>host ต้องใช้ LAG</strong> กัน BUM ซ้ำ/loop) — <strong>SR Linux (VXLAN) รองรับเฉพาะ all-active</strong>, สูงสุด 4 peer</li>
+</ul>
+<p><strong>L2 EVPN config workflow</strong>: <strong>(1) system0.0 (2) BGP EVPN peering (3) local bridged interfaces (4) vxlan-interface (5) mac-vrf + bgp-evpn/bgp-vpn</strong></p>
+<ul>
+<li><strong>system0</strong>: virtual, always up, <strong>ต้องอยู่ใน network-instance default</strong>, มี subinterface เดียว 1 IP (v4/v6); <strong>source IP ของทุก VXLAN tunnel (เปลี่ยนไม่ได้)</strong>, ใช้ auto-derive <strong>RD</strong>, เป็น <strong>default source ของ multihop BGP</strong> (เปลี่ยนได้ด้วย <code>transport local-address</code>); ต้อง export system0 /32 เข้า underlay ด้วย</li>
+<li><strong>EVPN BGP peering</strong>: อยู่ใน <strong>network-instance default</strong> แต่เป็น <strong>group แยกจาก underlay</strong>, ปกติ <strong>iBGP</strong> — ทุก VTEP + RR อยู่ <strong>AS เดียวกัน (เช่น 65000) ที่ต่างจาก underlay</strong> (ใช้ <code>local-as</code>), เปิด <strong>afi-safi evpn</strong>, ปิด ipv4-unicast ใน group นั้น; full mesh หรือ <strong>RR</strong> (บน spine หรือ VNF); RR <strong>ใช้กับ EVPN ได้ปกติ</strong></li>
+<li><strong>tunnel-interface <code>vxlan&lt;0..255&gt;</code></strong> → <code>vxlan-interface &lt;index&gt;</code> <strong>type bridged (L2) / routed (L3)</strong>, <code>ingress vni X</code>, egress source-ip = <code>use-system-ipv4-address</code> (ตายตัว); <strong>egress VNI ไม่ได้ config แต่เรียนจาก EVPN และต้องเท่ากับ ingress VNI → ทุก VTEP ใน service ต้องใช้ VNI เดียวกัน</strong></li>
+<li><strong>mac-vrf</strong> ที่มี vxlan-interface = เป็น VTEP; <strong>ผูก vxlan-interface ได้ 1 อันต่อ mac-vrf</strong>; MAC learning เฉพาะ local interface<ul>
+<li><code>protocols bgp-evpn bgp-instance 1 { admin-state enable; vxlan-interface vxlan1.100; evi 100; ecmp 2 }</code> — EVI ต้อง unique, ใช้ DF election + auto RD/RT; encap = VXLAN เท่านั้น; 7220 รองรับ instance เดียว</li>
+<li><code>protocols bgp-vpn bgp-instance 1 route-target { export-rt target:65000:100; import-rt target:65000:100 }</code></li>
+</ul>
+</li>
+<li>verify: <code>show network-instance mac-vrf-100 vxlan-interface vxlan1.100</code>, <code>show tunnel-interface vxlan-interface brief</code>, <code>show network-instance mac-vrf-100 bridge-table mac-table all</code> (remote = type <code>evpn</code>, destination <code>vtep:2.2.2.2 vni:100</code>), <code>show network-instance default protocols bgp routes evpn route-type 3|2 detail</code></li>
+</ul>
+<pre><code>A:leaf1# / interface system0 subinterface 0 ipv4 address 1.1.1.1/32
+A:leaf1# / network-instance default interface system0.0
+A:leaf1# / network-instance default protocols bgp group evpn
+    peer-as 65000
+    local-as as-number 65000
+    afi-safi evpn admin-state enable
+    afi-safi ipv4-unicast admin-state disable
+A:leaf1# / network-instance default protocols bgp neighbor 2.2.2.2 peer-group evpn
+A:leaf1# / interface ethernet-1/10 subinterface 100 type bridged vlan encap single-tagged vlan-id 100
+A:leaf1# / tunnel-interface vxlan1 vxlan-interface 100 type bridged ingress vni 100
+A:leaf1# / network-instance mac-vrf-100 type mac-vrf
+A:leaf1# / network-instance mac-vrf-100 interface ethernet-1/10.100
+A:leaf1# / network-instance mac-vrf-100 vxlan-interface vxlan1.100
+    protocols bgp-evpn bgp-instance 1 { admin-state enable vxlan-interface vxlan1.100 evi 100 ecmp 2 }
+    protocols bgp-vpn bgp-instance 1 route-target { export-rt target:65000:100 import-rt target:65000:100 }
+</code></pre>
+<figure class="diagram">
+<svg viewBox="0 0 720 114" role="img" aria-label="ลำดับการ config L2 EVPN"><defs><marker id="c3f13" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="72.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">1. system0.0</text><text x="72.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">source IP / RD</text><line x1="135" y1="62" x2="153" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="154" y="30" width="124" height="64" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="216.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">2. BGP EVPN peering</text><text x="216.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">group evpn</text><line x1="279" y1="62" x2="297" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="298" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="360.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">3. Local interface</text><text x="360.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">bridged subif</text><line x1="423" y1="62" x2="441" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="442" y="30" width="124" height="64" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="504.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">4. vxlan-interface</text><text x="504.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ingress vni</text><line x1="567" y1="62" x2="585" y2="62" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f13)"/><rect x="586" y="30" width="124" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="648.0" y="59.0" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="inherit">5. mac-vrf</text><text x="648.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">bgp-evpn / bgp-vpn</text></svg>
+<figcaption>ลำดับการ config L2 EVPN-VXLAN: system0 → BGP EVPN → interface ฝั่ง host → vxlan-interface → mac-vrf</figcaption>
+</figure>
+<p><strong>L3 EVPN — asymmetric vs symmetric IRB</strong></p>
+<ul>
+<li>IRB เชื่อม mac-vrf ↔ ip-vrf → intra-subnet = L2 forward, inter-subnet = L3 route + L2 forward; ip-vrf มีหลาย IRB ได้</li>
+<li>RT2 (MAC + optional IP ของ host และ IRB) → MAC table + ARP/proxy-ARP; RT5 (IP prefix) → ip-vrf route table</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — Asymmetric vs Symmetric</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Asymmetric IRB</strong></th>
+<th><strong>Symmetric IRB</strong> (SR Linux = <strong>interface-less (IFL) VRF-to-VRF</strong>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mac-vrf</td>
+<td><strong>ต้องมีทุก leaf ทุก subnet</strong> แม้ไม่มี host local</td>
+<td>มีเฉพาะ leaf ที่มี host local</td>
+</tr>
+<tr>
+<td>route ที่ใช้</td>
+<td><strong>RT2 + RT3</strong> เท่านั้น (เหมือน L2)</td>
+<td><strong>RT5</strong> (+RT2/RT3 ถ้า subnet กระจายหลาย leaf)</td>
+</tr>
+<tr>
+<td>vxlan-interface</td>
+<td>อยู่ที่ <strong>mac-vrf</strong> (type <strong>bridged</strong>) ทุกตัว</td>
+<td><strong>routed</strong> vxlan-interface อยู่ที่ <strong>ip-vrf</strong> (+ bgp-evpn/bgp-vpn ที่ ip-vrf)</td>
+</tr>
+<tr>
+<td>ip-vrf</td>
+<td>แค่ "กอง IRB" ไม่มี EVPN config</td>
+<td>มี EVPN/VXLAN config, VNI ของ L3 (เช่น 1000)</td>
+</tr>
+<tr>
+<td>lookup ingress</td>
+<td><strong>L2 + L3 + ARP + L2</strong> (หลายครั้ง)</td>
+<td>L2 + L3 (route ไป VXLAN tunnel)</td>
+</tr>
+<tr>
+<td>lookup egress</td>
+<td><strong>L2 อย่างเดียว</strong></td>
+<td>L3 + ARP + L2</td>
+</tr>
+<tr>
+<td>ARP/FDB</td>
+<td>ทุก leaf เก็บ ARP/MAC ของทุก host → <strong>ไม่ scale</strong></td>
+<td>ARP เฉพาะ host local → <strong>scale ดีกว่า</strong></td>
+</tr>
+<tr>
+<td>IRB option</td>
+<td>ต้อง <code>arp evpn advertise dynamic</code> ให้ RT2 มี IP (ไปเติม ARP ฝั่งไกล)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>VNI ที่ใช้ข้าม</td>
+<td>VNI ของ <strong>subnet ปลายทาง</strong> (bridged)</td>
+<td>VNI ของ <strong>ip-vrf</strong> (routed)</td>
+</tr>
+<tr>
+<td>- <strong>RT5 มี</strong>: prefix + prefix-len, RD/RT ของ ip-vrf, <strong>label = VNI ของ ip-vrf</strong>, gateway IP 0.0.0.0, community <strong>mac-nh</strong> (= chassis MAC ของ leaf ไกล ใช้เป็น <strong>inner dst MAC</strong>) + bgp-tunnel-encap:VXLAN; route ใน ip-vrf แสดง owner <strong>bgp-evpn</strong>, next-hop <code>2.2.2.2/32 (indirect/vxlan)</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>- symmetric: ถ้ามี host เดียวต่อ ip-vrf ตรงได้โดยไม่ต้องมี mac-vrf; traffic subnet เดียวกันใช้ bridged VNI, ข้าม subnet ใช้ routed VNI</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<pre><code>Asymmetric (Client1 100.1.1.10 @Leaf1 → Client2 101.1.1.21 @Leaf2)
+Leaf1: [mac-vrf-100] dstMAC=IRB1.100 → [ip-vrf] dstIP→IRB1.101 → [ARP] 101.1.1.21→MAC..21
+       → [mac-vrf-101] MAC..21 → VXLAN VNI 101 ─────► Leaf2: [mac-vrf-101] MAC..21 → eth-1/11.101
+       (ingress = หลาย lookup, egress = L2 lookup เดียว)
+
+Symmetric (VNI L3 = 1000 ที่ ip-vrf)
+Leaf1: [mac-vrf1] dstMAC=IRB → [ip-vrf] 101.1.1.0/24 (RT5) → VXLAN VNI 1000 (inner dMAC = mac-nh)
+       ─────► Leaf2: [ip-vrf] dstIP → IRB → [ARP] → [mac-vrf2] MAC → eth-1/11.100
+       (ingress L2+L3, egress L3+L2 = สมมาตร)
+</code></pre>
+<figure class="diagram">
+<svg viewBox="0 0 720 276" role="img" aria-label="Asymmetric IRB traffic flow"><defs><marker id="c3f14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="60.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Client1</text><text x="60.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">100.1.1.10</text><rect x="610" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="660.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Client2</text><text x="660.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">101.1.1.21</text><rect x="130" y="10" width="230" height="230" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="245.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf1 (ingress)</text><rect x="145" y="42" width="200" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="245.0" y="59.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">1. L2 lookup</text><text x="245.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-100: dst MAC = IRB</text><rect x="145" y="90" width="200" height="40" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="245.0" y="107.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">2. L3 lookup</text><text x="245.0" y="124.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ip-vrf: dst IP → IRB .101</text><rect x="145" y="138" width="200" height="40" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="245.0" y="155.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">3. ARP lookup</text><text x="245.0" y="172.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">101.1.1.21 → MAC</text><rect x="145" y="186" width="200" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="245.0" y="203.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">4. L2 lookup</text><text x="245.0" y="220.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-101 → VNI 101</text><rect x="440" y="10" width="170" height="230" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="525.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf2 (egress)</text><rect x="450" y="42" width="150" height="40" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="525.0" y="59.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">5. L2 lookup</text><text x="525.0" y="76.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf-101 → port</text><line x1="110" y1="45" x2="144" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f14)"/><line x1="345" y1="210" x2="449" y2="75" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#c3f14)"/><line x1="601" y1="62" x2="610" y2="45" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f14)"/><text x="400" y="172" text-anchor="middle" font-size="12" fill="var(--amber)" font-weight="600" font-family="inherit">VXLAN VNI 101</text><text x="360" y="262" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">ingress ทำหลาย lookup, egress ทำ L2 lookup เดียว (VNI = ของ subnet ปลายทาง)</text></svg>
+<figcaption>Asymmetric IRB: ingress leaf ทำ L2 + L3 + ARP + L2 แล้วส่งใน VNI ของ subnet ปลายทาง; egress leaf ทำ L2 lookup เดียว</figcaption>
+</figure>
+<figure class="diagram">
+<svg viewBox="0 0 720 240" role="img" aria-label="Symmetric IRB traffic flow"><defs><marker id="c3f15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="10" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="60.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Host A</text><text x="60.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">subnet 100</text><rect x="610" y="20" width="100" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="660.0" y="42.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">Host B</text><text x="660.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">subnet 101</text><rect x="130" y="10" width="200" height="150" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="230.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf1 (ingress)</text><rect x="145" y="42" width="170" height="42" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="230.0" y="60.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">1. L2 lookup</text><text x="230.0" y="77.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">mac-vrf: dst MAC = IRB</text><rect x="145" y="98" width="170" height="42" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="230.0" y="116.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">2. L3 lookup</text><text x="230.0" y="133.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ip-vrf: RT5 → VNI 1000</text><rect x="390" y="10" width="220" height="150" rx="8" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 3"/><text x="500.0" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">Leaf2 (egress)</text><rect x="405" y="42" width="190" height="32" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="500.0" y="63.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">3. L3 lookup (ip-vrf)</text><rect x="405" y="80" width="190" height="32" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="500.0" y="101.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">4. ARP → IRB</text><rect x="405" y="118" width="190" height="32" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="500.0" y="139.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">5. L2 lookup (mac-vrf)</text><line x1="110" y1="45" x2="144" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="230" y1="141" x2="230" y2="180" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="230" y1="180" x2="389" y2="180" stroke="var(--amber)" stroke-width="1.5" marker-end="url(#c3f15)"/><line x1="595" y1="134" x2="610" y2="60" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f15)"/><text x="310" y="198" text-anchor="middle" font-size="12" fill="var(--amber)" font-weight="600" font-family="inherit">VXLAN VNI 1000 (routed, inner dst MAC = mac-nh)</text><text x="360" y="226" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">ingress: L2 + L3  |  egress: L3 + ARP + L2  (สมมาตร)</text></svg>
+<figcaption>Symmetric IRB: route ผ่าน VXLAN VNI ของ ip-vrf (routed) แล้วให้ leaf ปลายทางทำ L3 lookup ต่อ</figcaption>
+</figure>
+<pre><code>A:leaf1# info interface irb1
+    subinterface 100 {
+        ipv4 {
+            address 100.1.1.254/24 { }
+            arp { evpn { advertise dynamic { } } }     ← asymmetric: ใส่ IP ใน RT2
+        }
+    }
+A:leaf1# info network-instance ip-vrf-symmetric
+    type ip-vrf
+    vxlan-interface vxlan2.1000 { }
+    interface irb2.1000 { }
+    protocols bgp-evpn bgp-instance 1 { vxlan-interface vxlan2.1000 evi 1000 ecmp 2 }
+    protocols bgp-vpn bgp-instance 1 route-target { export-rt target:65000:1000 import-rt target:65000:1000 }
+A:leaf1# info tunnel-interface vxlan2
+    vxlan-interface 1000 { type routed ingress { vni 1000 } }
+</code></pre>
+<p><strong>เทียบ SR OS</strong>: SR OS EVPN-VXLAN = VPLS + <code>vxlan instance 1 vni X</code> + <code>bgp-evpn</code> (RT2/RT3) ส่วน L3 = R-VPLS เข้า VPRN; SR OS ใช้ <code>evpn-tunnel</code> ใน R-VPLS สำหรับ symmetric/IFL RT5 คล้ายกัน; source ของ VXLAN ใน SR OS คือ system IP เหมือน system0; RD/RT auto ของ SR OS ก็ derive จาก system-ip/AS แบบเดียวกัน</p>
+<p><strong>ทวนสั้น ๆ — EVPN-VXLAN และหัวข้อก่อนหน้า</strong></p>
+<ul>
+<li>default mode = <strong>running</strong></li>
+<li>state = config + operational</li>
+<li>exclusive = <strong>บล็อกคนอื่นเข้า config</strong></li>
+<li>LLDP</li>
+<li><strong>LACP</strong> ตรวจ miswiring</li>
+<li>BFD = ตรวจ link fail เร็ว</li>
+<li>NI 3 แบบ = default/ip-vrf/mac-vrf</li>
+<li>IRB</li>
+<li>MAC move = กัน loop/broadcast storm</li>
+<li>next-hop ไม่ local → <strong>resolve true</strong></li>
+<li>export policy = เลือก route ที่จะส่ง</li>
+<li>default eBGP import = <strong>ไม่รับอะไรเลย</strong></li>
+<li>RIB-In-pre/post</li>
+<li>Loc-RIB ส่ง best ให้ RTM</li>
+<li><strong>VNI</strong> ระบุ tunnel</li>
+<li><strong>spine = RR</strong></li>
+<li>EVPN = control-plane MAC learning</li>
+<li><strong>RT2</strong> ประกาศ MAC/IP</li>
+<li><strong>RT3</strong> หา VTEP + flooding list</li>
+<li>install ตาม <strong>RT</strong></li>
+<li>MH = single-active/all-active</li>
+<li><strong>asymmetric</strong> ต้องมี mac-vrf ทุก leaf</li>
+<li><strong>RT5</strong> ใช้ใน symmetric</li>
+</ul>
+<hr />
+
+  </section>
+  <section id="s3">
+    <h2>3. Logging, Monitoring and Filtering</h2>
+
+<h3>3.1 Logging</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>SR Linux logging สร้างบน Linux rsyslog</strong> (rsyslogd) — รองรับทั้ง local และ remote; ข้อความ syslog มี <strong>อย่างน้อย time, hostname, application name, message</strong>; ส่ง remote ได้ทั้ง <strong>UDP และ TCP</strong></li>
+<li>config จาก CLI/gNMI/JSON-RPC ถูก <strong>แปลงเป็น <code>/etc/rsyslog.conf</code></strong> (แก้ไฟล์ตรงได้แต่จะถูก overwrite เมื่อแก้ผ่าน CLI)</li>
+<li>ไฟล์ Linux: <code>/var/log/messages</code> (default ของ CentOS/RedHat; SR Linux app log ก็ลงที่นี่ด้วย), <code>/var/log/secure</code> (auth/SSH), <code>/var/log/srlinux/</code> (log ที่ config ใน SR Linux), <code>/var/log/ztp</code> (ZTP)</li>
+<li><strong>ไม่มี "encrypted local file"</strong> — rsyslog เข้ารหัสได้แค่ตอนส่ง remote ด้วย TLS</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — Logging = Source → (filter) → Destination</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>ตัวเลือก</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Destinations (4)</strong></td>
+<td><strong>file</strong> (persistent, default dir <code>/var/log/srlinux/file</code>), <strong>buffer</strong> (<strong>RAM/tmpfs</strong> <code>/var/log/srlinux/buffer</code>, หายตอน reboot, ทำ persist ได้), <strong>console</strong> (<code>/dev/console</code> = serial port, ไม่เก็บ), <strong>remote-server</strong> (UDP/TCP, <strong>default port 514</strong>, ต้องระบุ <code>network-instance</code> ที่ใช้ route ไป)</td>
+</tr>
+<tr>
+<td><strong>Sources (3)</strong></td>
+<td><strong>facility + priority</strong> (Linux native: kern, auth, cron, daemon, local0–7 …), <strong>subsystem + priority</strong> (SR Linux app: aaa, accounting, acl, bgp, chassis, lldp, netinst, …), <strong>filter</strong> (syslog filter ที่สร้างไว้)</td>
+</tr>
+<tr>
+<td><strong>ไม่ใช่ source</strong></td>
+<td><strong>console</strong> (console เป็น destination เท่านั้น)</td>
+</tr>
+<tr>
+<td>- <strong>SR Linux app ทั้งหมดถูก report เป็น Linux facility <code>local6</code></strong></td>
+<td></td>
+</tr>
+<tr>
+<td>- <strong>Priority (severity)</strong> 0–7: <strong>0 emergency, 1 alert, 2 critical, 3 error, 4 warning, 5 notice, 6 informational, 7 debug</strong> (0 = รุนแรงสุด); <code>match-above X</code> (X และรุนแรงกว่า) vs <code>match-exact X</code></td>
+<td></td>
+</tr>
+<tr>
+<td>- <strong>filter</strong> (<code>system logging filter &lt;name&gt;</code>): match ด้วย <strong>contains</strong>, <strong>prefix</strong>, <strong>regex</strong>, <strong>tag</strong> (เช่น <code>sr_bgp_mgr</code>, chassis), <strong>facility+priority</strong>; หลายเงื่อนไขใน filter = AND; แล้วอ้างใน destination <code>filter [ name ]</code></td>
+<td></td>
+</tr>
+<tr>
+<td>- file params: <strong>directory</strong> (default <code>/var/log/srlinux/file</code>), <strong>format</strong> (RSYSLOG_FileFormat), <strong>rotate default 4</strong>, <strong>size default 10M</strong>; หลาย subsystem/facility/filter ใน destination เดียว = log ทุกอันที่ match (OR)</td>
+<td></td>
+</tr>
+<tr>
+<td>- ใช้ <strong>severity</strong> เพื่อลดปริมาณ log ให้เหลือเฉพาะที่สำคัญ</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>สรุปที่ควรจำ — Default logging config</strong> (3 destination)</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ชื่อ</th>
+<th>ชนิด</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>buffer messages</code></td>
+<td>buffer</td>
+<td><strong>local6 (SR Linux) match-above informational</strong> (ทุกอย่างยกเว้น debug)</td>
+</tr>
+<tr>
+<td><code>buffer system</code></td>
+<td>buffer</td>
+<td>Linux facility อื่นทั้งหมด (<strong>ไม่รวม local6</strong>) match-above <strong>warning</strong></td>
+</tr>
+<tr>
+<td><code>file messages</code></td>
+<td>file</td>
+<td><strong>local6 match-above warning</strong> (log สำคัญของ SR Linux เก็บถาวร)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Show / debug</strong></p>
+<ul>
+<li><code>show system logging</code> = list ของ file/buffer; <code>show system logging file &lt;name&gt;</code> / <code>show system logging buffer &lt;name&gt;</code> (pipe <code>| grep</code>, <code>| tail --lines N</code> ได้)</li>
+<li><strong>debug</strong> = priority ระดับ 7 ใช้คู่กับ <strong>trace-options</strong> ของแต่ละ app (BGP: <code>trace-options flag packets/keepalive/... modifier detail</code>) — ต้องมี <strong>ทั้ง trace-options + destination ที่รับ priority debug</strong> ถึงจะเห็น</li>
+<li>trace-options มีใน: system LLDP, interface DHCP, BGP (global/group/neighbor), IS-IS, gNMI server, JSON-RPC server</li>
+<li>ทดสอบด้วย <code>bash logger -p mail.error "msg"</code> (format <code>facility.priority</code>)</li>
+</ul>
+<pre><code>A:leaf1# system logging filter interface-e-1-1 contains &quot;Interface ethernet-1/1&quot; tag chassis
+A:leaf1# system logging file interfaces filter [ interface-e-1-1 ]
+A:leaf1# system logging network-instance mgmt
+A:leaf1# system logging remote-server 172.20.20.1 subsystem bgp
+A:leaf1# system logging buffer bgp-debug subsystem bgp priority match-exact [ debug ]
+A:leaf1# network-instance default protocols bgp trace-options flag keepalive modifier detail
+A:leaf1# show system logging file bgp-log-file | grep ESTABLISHED
+</code></pre>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+  subgraph SRC[&quot;Sources&quot;]
+    F[&quot;facility+priority (Linux: kern, auth, local0-7)&quot;]
+    S[&quot;subsystem+priority (SR Linux apps = local6)&quot;]
+    FL[&quot;filter (contains/prefix/regex/tag/facility)&quot;]
+  end
+  subgraph DST[&quot;Destinations&quot;]
+    FI[&quot;file /var/log/srlinux/file (persistent)&quot;]
+    BU[&quot;buffer /var/log/srlinux/buffer (RAM)&quot;]
+    CO[&quot;console /dev/console&quot;]
+    RS[&quot;remote-server UDP/TCP 514 + network-instance&quot;]
+  end
+  F --&gt; FI &amp; BU &amp; CO &amp; RS
+  S --&gt; FI &amp; BU &amp; CO &amp; RS
+  FL --&gt; FI &amp; BU &amp; CO &amp; RS
+</pre></div>
+<p><strong>เทียบ SR OS</strong>: SR OS ใช้ <code>log-id</code> = <code>filter</code> + <code>from main/security/change/debug-trace</code> (source = <strong>log stream</strong>) + <code>to memory/file/syslog/session/snmp</code> (destination); แนวคิด source/destination เหมือนกันแต่ SR OS ไม่ได้อิง rsyslog; debug ของ SR OS = <code>debug ...</code> + log ที่ <code>from debug-trace</code> ≈ trace-options + priority debug</p>
+<h3>3.2 ACLs, CPM-filter, Policers, Capture-filter</h3>
+<p><strong>สาระสำคัญ — ชนิด ACL และลำดับการประเมิน</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ACL</th>
+<th>ติดตั้งที่ไหน / ทิศทาง</th>
+<th>ทำอะไร</th>
+<th>จำนวน</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>System ACL</strong></td>
+<td>ทุก line card, <strong>ทุก interface, ingress</strong> — ก่อนทุกอย่าง (ก่อน tunnel termination)</td>
+<td>accept/drop/log; <strong>ตัวเดียวที่ match outer header ของ VXLAN ที่ terminate บนตัวเอง</strong> (7220 IXR-D เท่านั้น)</td>
+<td>1 IPv4 + 1 IPv6 (ชื่อ <code>system</code>)</td>
+</tr>
+<tr>
+<td><strong>Ingress (input) ACL</strong></td>
+<td><strong>subinterface</strong> เฉพาะ, line card นั้น</td>
+<td>accept/drop/log</td>
+<td>หลายอัน</td>
+</tr>
+<tr>
+<td><strong>Capture ACL</strong></td>
+<td>ทุก line card, <strong>ทุก subinterface ingress รวม mgmt</strong></td>
+<td><strong>copy</strong> packet ขึ้น CPM ให้ <strong>traffic-monitor</strong> (tcpdump-like)</td>
+<td>1 IPv4 + 1 IPv6 (ชื่อ <code>capture</code>)</td>
+</tr>
+<tr>
+<td><strong>CPM ACL (cpm-filter)</strong></td>
+<td>ทุก line card (เมื่อ apply ที่ control plane), เฉพาะ traffic ที่ <strong>terminate บน CPM</strong> รวม <strong>OOB mgmt</strong></td>
+<td><strong>control-plane protection / กัน DoS</strong>: accept/drop, <strong>rate-limit ด้วย policer</strong></td>
+<td>1 IPv4 + 1 IPv6 (ชื่อ <code>cpm</code>)</td>
+</tr>
+<tr>
+<td><strong>Egress (output) ACL</strong></td>
+<td>subinterface, ขาออก</td>
+<td>accept/drop (7220-D: egress ไม่มี log)</td>
+<td>หลายอัน</td>
+</tr>
+<tr>
+<td>- <strong>ลำดับ: 1) System → 2) Ingress → 3) Capture → 4) CPM → 5) Egress</strong>; ถ้า ingress ACL drop control traffic ไปแล้ว cpm-filter ไม่เห็น</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>- (คำว่า ACL กับ filter ใช้แทนกันได้: cpm-filter = CPM ACL, capture-filter = capture ACL)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<figure class="diagram">
+<svg viewBox="0 0 720 162" role="img" aria-label="ตำแหน่งและลำดับของ ACL"><defs><marker id="c3f16" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="15" y="50" width="125" height="64" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="77.5" y="74.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">1. System ACL</text><text x="77.5" y="92.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ทุก ingress,</text><text x="77.5" y="106.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ก่อนทุกอย่าง</text><line x1="141" y1="82" x2="155" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f16)"/><rect x="156" y="50" width="125" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="218.5" y="79.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">2. Ingress ACL</text><text x="218.5" y="96.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ต่อ subinterface</text><line x1="282" y1="82" x2="296" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f16)"/><rect x="297" y="50" width="125" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="359.5" y="79.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">3. Capture ACL</text><text x="359.5" y="96.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">copy ไป CPM</text><line x1="423" y1="82" x2="437" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f16)"/><rect x="438" y="50" width="125" height="64" rx="8" fill="var(--good-soft)" stroke="var(--line-strong)"/><text x="500.5" y="74.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">4. CPM ACL</text><text x="500.5" y="92.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">เฉพาะที่ terminate</text><text x="500.5" y="106.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">บน CPM</text><line x1="564" y1="82" x2="578" y2="82" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f16)"/><rect x="579" y="50" width="125" height="64" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="641.5" y="79.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">5. Egress ACL</text><text x="641.5" y="96.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">ขาออก subinterface</text><text x="360" y="30" text-anchor="middle" font-size="13" fill="var(--ink)" font-weight="600" font-family="inherit">ลำดับการประเมินของ packet</text><text x="360" y="146" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">ถ้า Ingress ACL drop control traffic ไปแล้ว CPM ACL จะไม่เห็น packet นั้น</text></svg>
+<figcaption>ลำดับการประเมิน ACL: System → Ingress → Capture → CPM → Egress</figcaption>
+</figure>
+<p><strong>สรุปที่ควรจำ — กฎ ACL</strong></p>
+<ul>
+<li><code>acl acl-filter &lt;name&gt; type ipv4|ipv6|mac</code> → entry <strong>sequence 1..65535</strong>, เลขต่ำประเมินก่อน, <strong>first match ชนะ</strong>, ไม่ใส่ match = match all; หลาย criteria ใน entry = AND</li>
+<li><strong>default action = accept เสมอ</strong> → ถ้าต้องการ default drop ใส่ entry สุดท้าย (เช่น 65535) match-all + drop</li>
+<li>match: L3 (src/dst IP/prefix, protocol/next-header, dscp, fragment, ICMP type/code), L4 (src/dst port เป็นชื่อหรือเลข, range, <strong>tcp-flags</strong>)</li>
+<li>action: <strong>accept</strong> (+ rate-limit policer/system-cpu-policer ใน cpm), <strong>drop</strong>, <strong>copy</strong> (capture), <strong>log</strong>; <code>statistics-per-entry true</code> = นับ hit</li>
+<li>7220 IXR-D: ingress ไม่รองรับ log กับ accept, egress ไม่รองรับ log เลย; cpm-filter log ได้เฉพาะ <strong>drop</strong></li>
+<li>apply interface ACL:</li>
+</ul>
+<pre><code>A:leaf1# acl interface ethernet-1/10.0 input acl-filter block-v4-infrastructure type ipv4
+</code></pre>
+<p>หมายเหตุ: ตั้งแต่ 25.3 ไวยากรณ์อยู่ใต้ <code>acl interface &lt;subif&gt; input|output</code></p>
+<ul>
+<li><strong>TCAM</strong>: ACL อยู่ใน TCAM บน line card เพื่อ <strong>line rate</strong>; default <strong>subinterface-specific disabled</strong> = หลาย subinterface ใช้ TCAM entry ร่วม (stats รวม); <code>input-only | output-only | input-and-output</code> = แยก entry/สถิติต่อ subinterface; commit ACL <strong>ถูกเช็กว่า TCAM พอทุก line card</strong> ไม่พอ = commit fail; threshold <code>platform acl/tcam resource ... rising-threshold-log / falling-threshold-log</code> (default 90/70%), <code>show platform linecard 1 detail</code>, <code>show resource-monitoring</code></li>
+<li>show/clear: <code>show acl summary</code>, <code>show acl acl-filter X type ipv4 [subinterface Y entry 10]</code>, <code>tools acl acl-filter X type ipv4 statistics clear</code>; system ACL ไม่มี show ใช้ <code>info from state acl-filter system type ipv4</code></li>
+</ul>
+<p><strong>สรุปที่ควรจำ — CPM-filter</strong></p>
+<ul>
+<li>apply: <strong><code>system control-plane-traffic input acl acl-filter cpm type ipv4</code></strong> — แนะนำ <code>commit now confirmed timeout 120</code> กันตัวเองหลุด</li>
+<li>best practice: อนุญาตเฉพาะ protocol + source ที่ต้องใช้ (BGP จาก peer, SSH จาก mgmt subnet, BFD …) แล้ว <strong>entry 65535 drop + log</strong>; ดู log ด้วย destination ที่มี <strong><code>subsystem acl</code></strong></li>
+<li><strong>Hierarchical policing</strong> (กัน line card เดียวทำ CPU อดอยาก):<ul>
+<li><strong>policer (distributed)</strong> = <strong>ต่อ line card, hardware</strong>, หน่วย <strong>peak-rate-kbps + maximum-burst-size (bytes)</strong></li>
+<li><strong>system-cpu-policer</strong> = <strong>บน CPM, software, รวม traffic จากทุก line card</strong>, หน่วย <strong>peak-rate-pps + maximum-burst-packet</strong></li>
+<li>bucket ถูก "ระบาย" ที่ peak-rate; ถ้าเต็มถึง max-burst → non-conforming = <strong>drop</strong></li>
+<li>entry ใช้ได้ไม่มี / policer อย่างเดียว / system-cpu อย่างเดียว / ทั้งคู่; <strong>entry-specific default false</strong> (หลาย entry แชร์ rate เดียว), true = instance ต่อ entry</li>
+<li><strong>เฉพาะ cpm-filter เท่านั้นที่ rate-limit ได้</strong> (interface/capture ACL ไม่มี policer)</li>
+</ul>
+</li>
+</ul>
+<pre><code>acl acl-filter cpm type ipv4 {
+    entry 10 { match { ipv4 { protocol tcp source-ip { prefix 10.2.1.0/32 } } transport { destination-port { value 179 } } } action { accept { } } }
+    entry 20 { match { ipv4 { protocol tcp source-ip { prefix 172.18.18.0/24 } } transport { destination-port { value ssh } } } action { accept { } } }
+    entry 100 { match { ipv4 { protocol icmp } } action { accept { rate-limit { system-cpu-policer pol-1 policer pol-1 } } } }
+    entry 65535 { action { log true drop { } } }
+}
+acl policers {
+    system-cpu-policer pol-1 { entry-specific true peak-rate-pps 5000 maximum-burst-packet 500 }
+    policer pol-1 { entry-specific true peak-rate-kbps 1000 maximum-burst-size 1000 }
+}
+</code></pre>
+<figure class="diagram">
+<svg viewBox="0 0 720 252" role="img" aria-label="Hierarchical policing"><defs><marker id="c3f17" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="20" y="20" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="50.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 1</text><rect x="200" y="20" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="42.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="59.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="45" x2="199" y2="45" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="45" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="20" y="90" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="120.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 2</text><rect x="200" y="90" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="112.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="129.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="115" x2="199" y2="115" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="115" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="20" y="160" width="130" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/><text x="85.0" y="190.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Line card 3</text><rect x="200" y="160" width="170" height="50" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="285.0" y="182.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">policer (HW)</text><text x="285.0" y="199.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">kbps + burst (byte)</text><line x1="151" y1="185" x2="199" y2="185" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><line x1="371" y1="185" x2="429" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><rect x="430" y="60" width="160" height="80" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="510.0" y="92.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">system-cpu-policer</text><text x="510.0" y="109.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">บน CPM, SW</text><text x="510.0" y="124.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">รวมทุก line card (pps)</text><rect x="630" y="70" width="80" height="60" rx="8" fill="var(--good-soft)" stroke="var(--line-strong)"/><text x="670.0" y="105.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">CPU</text><line x1="591" y1="100" x2="629" y2="100" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f17)"/><text x="360" y="238" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">เฉพาะ cpm-filter ที่ rate-limit ได้; non-conforming = drop</text></svg>
+<figcaption>Hierarchical policing: policer ต่อ line card (hardware) แล้วรวมที่ system-cpu-policer บน CPM (software)</figcaption>
+</figure>
+<p><strong>สรุปที่ควรจำ — Capture-filter + traffic-monitor</strong></p>
+<ul>
+<li>capture-filter: 1 IPv4 + 1 IPv6, ติดทุก subinterface ingress (รวม mgmt0.0), action <strong>copy</strong> → CPM; <strong>ไม่ drop, ไม่มี policer</strong></li>
+<li><code>tools system traffic-monitor [hexdump] [verbose] [output-file X.pcap] [protocol|source-address|destination-address|source-port|destination-port ...]</code><ul>
+<li>ต้องมี capture-filter อยู่ หรือใส่ match criteria → สร้าง capture-filter <strong>on the fly</strong> (entry เดียว, ไม่มี range, <strong>ทีละ user</strong>, overwrite ของเดิมถ้ายืนยัน warning)</li>
+<li>SR Linux เติม <strong>header 48 byte</strong> หน้า packet ที่ copy (มี ingress interface) → ต้องตัดออก (editcap) ก่อนเปิด pcap ใน Wireshark</li>
+<li>หลาย user ดู traffic-monitor พร้อมกันได้ (ถ้าไม่ได้สร้าง filter ใหม่)</li>
+</ul>
+</li>
+<li><strong>System ACL vs subinterface ACL กับ VXLAN</strong>: บน VTEP, packet VXLAN ที่ terminate จะถูก decap ก่อนถึง subinterface ACL → <strong>subinterface/CPM/capture ACL เห็นแค่ inner</strong>; ต้องใช้ <strong>system ACL</strong> match UDP 4789 outer; ถ้าแค่ transit ทั้งสองแบบเห็น outer</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 212" role="img" aria-label="System ACL กับ subinterface ACL บน VTEP"><defs><marker id="c3f18" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs><rect x="15" y="60" width="150" height="60" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="90.0" y="87.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">VXLAN packet</text><text x="90.0" y="104.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">outer + inner</text><line x1="166" y1="90" x2="214" y2="90" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f18)"/><rect x="215" y="40" width="160" height="100" rx="8" fill="var(--amber-soft)" stroke="var(--line-strong)"/><text x="295.0" y="87.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">System ACL</text><text x="295.0" y="104.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">match outer: UDP 4789</text><line x1="376" y1="90" x2="424" y2="90" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f18)"/><rect x="425" y="60" width="100" height="60" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="475.0" y="95.0" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)" font-family="inherit">decap</text><line x1="526" y1="90" x2="564" y2="90" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#c3f18)"/><rect x="565" y="40" width="140" height="100" rx="8" fill="var(--cyan-soft)" stroke="var(--line-strong)"/><text x="635.0" y="87.0" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" font-family="inherit">Subinterface /</text><text x="635.0" y="104.0" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="inherit">CPM / Capture ACL</text><text x="295" y="162" text-anchor="middle" font-size="12" fill="var(--amber)"  font-family="inherit">เห็น outer header</text><text x="635" y="162" text-anchor="middle" font-size="12" fill="var(--cyan)"  font-family="inherit">เห็นแค่ inner</text><text x="360" y="196" text-anchor="middle" font-size="12" fill="var(--muted)"  font-family="inherit">VXLAN ที่ terminate บน VTEP นี้: ใช้ System ACL; ถ้าแค่ transit ทุก ACL เห็น outer</text></svg>
+<figcaption>System ACL อยู่ก่อน decap จึง match outer header ได้; subinterface/CPM/capture ACL ทำงานหลัง decap จึงเห็นแค่ inner</figcaption>
+</figure>
+<p><strong>ตัวอย่างการใช้งาน</strong>: ACL <code>leaf-spine</code>/<code>block-v4-infrastructure</code> match <strong>destination 10.0.0.0/8 drop</strong> → apply <strong>input บน subinterface ฝั่ง host</strong> (เช่น ethernet-1/10.x) เพื่อกัน host เข้าถึง IP infra</p>
+<p><strong>เทียบ SR OS</strong>: SR OS <code>ip-filter</code> ผูก SAP/interface ingress/egress ≈ subinterface ACL; <strong>CPM filter</strong> (<code>system security cpm-filter</code>) ≈ cpm-filter (SR OS มี <code>cpu-protection</code> policer แยก); default action ของ SR OS ip-filter = <strong>drop</strong> (ตั้งได้) แต่ <strong>SR Linux default = accept</strong>; capture ≈ SR OS <code>mirror</code> + <code>debug ... packet</code> ไม่มีเครื่องมือ tcpdump ในตัวแบบนี้</p>
+<hr />
+
+  </section>
+  <section id="s4">
+    <h2>4. User and System Management</h2>
+
+<h3>4.1 Users, AAA, roles</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>User 3 แบบ</strong>:<ol>
+<li><strong>SR Linux users</strong> (local, นิยามแยกจาก Linux, <strong>UID ≥ 1500</strong>) — default <code>admin</code> (full access)</li>
+<li><strong>Linux users</strong> (UID 1000–1499) — <strong>เข้าถึงไฟล์/process ของ SR Linux ได้</strong>; <strong>ไม่แนะนำให้สร้าง</strong>; มี <code>linuxadmin</code> / password <code>linuxadmin</code> โดย default จึงควรเปลี่ยน</li>
+<li><strong>Remote users (TACACS+)</strong> — ได้ <strong>random UID ตอน login ครั้งแรก</strong> (คงเดิมทุก session) และระบบสร้าง home dir ให้
+- <strong>ไม่มี "container users"</strong></li>
+</ol>
+</li>
+<li>Authentication ทั้งหมดผ่าน <strong>Linux PAM</strong><ul>
+<li><strong>aaa_mgr</strong> ใช้ PAM จัดการ auth ให้ทุก app</li>
+<li>ทุกการเข้าถึงต้องผ่าน aaa_mgr: <strong>console, SSH, FTP, gNMI/gRPC, JSON-RPC, SNMP</strong></li>
+</ul>
+</li>
+<li><strong>Accounting</strong> = บันทึก <strong>คำสั่งที่ user สั่ง</strong> → เก็บ local file หรือส่ง TACACS+ server-group</li>
+<li><strong>TACACS+ server-group</strong>: หลาย server, ลองแบบ <strong>round-robin</strong><ul>
+<li>params: name, <strong>network-instance</strong>, IP, port, <strong>secret key</strong></li>
+</ul>
+</li>
+<li><strong>Roles</strong>: rule ต่อ path ของ CLI tree + action <strong>read / write / deny</strong> มี 3 ขั้น:<ol>
+<li>สร้าง role ที่ <code>system aaa authorization role &lt;name&gt;</code></li>
+<li>ใส่ rule ที่ <code>system configuration role &lt;name&gt; rule &lt;path&gt; action &lt;read|write|deny&gt;</code></li>
+<li>สร้าง user ที่ <code>system aaa authentication user &lt;name&gt; password .. role [..]</code>
+- user ที่ไม่มีสิทธิ์จะได้ <code>Error: No authorization to execute command</code></li>
+</ol>
+</li>
+<li><strong>CPM filter บล็อกตาม source IP/protocol ได้ แต่ไม่ได้ "บล็อก unauthorized user"</strong> — การยืนยันตัวตน user เป็นงานของ AAA</li>
+</ul>
+<pre><code>A:dc-leaf-1# system aaa authorization role user-role
+A:dc-leaf-1# system configuration role user-role rule / action write
+A:dc-leaf-1# system configuration role user-role rule /acl action read
+A:dc-leaf-1# system aaa authentication user bob-user password 123aad role [ user-role ]
+A:leaf1# system aaa accounting accounting-method [ local ]
+A:leaf1# system aaa accounting event command record stop
+A:leaf1# system logging file accounting rotate 4 size 10M subsystem accounting
+</code></pre>
+<p><strong>เทียบ SR OS</strong>: SR OS ใช้ <code>system security user</code> + <code>profile</code> (entry match command → permit/deny) + <code>user-template</code> สำหรับ TACACS+/RADIUS; SR Linux role ≈ profile ของ SR OS แต่อิง YANG path; SR OS ไม่มีแนวคิด "Linux user"</p>
+<h3>4.2 TLS, PKI, gNMI/JSON-RPC server</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>gNMI/gRPC และ JSON-RPC ควรใช้ TLS profile</strong> เพื่อความปลอดภัย<ul>
+<li><strong>SR Linux เป็น server</strong>, client = app ที่ส่ง gNMI/JSON request</li>
+</ul>
+</li>
+<li><strong>PKI</strong> = ระบบจัดการ certificate ของ public-key system สำหรับ encryption + authentication<ul>
+<li><strong>CA</strong> = trusted third party รับรองตัวตนของ subject</li>
+</ul>
+</li>
+<li>asymmetric (public/private key) ใช้ทรัพยากรสูง จึงใช้แลก <strong>session key</strong> แล้วใช้ <strong>symmetric encryption</strong> คุยกันจริง<ul>
+<li><strong>TLS handshake</strong> ต่อรอง cipher + แลก key</li>
+</ul>
+</li>
+<li><strong>Certificate</strong> (X.509, ส่วนมาก format <strong>PEM</strong>) มี identity (CN, org) + <strong>public key ของ subject — ไม่มี private key เด็ดขาด</strong></li>
+<li><strong>Flow</strong>:<ol>
+<li><strong>client/server สร้าง key pair เอง</strong></li>
+<li>ส่ง <strong>CSR</strong> ไป CA</li>
+<li><strong>CA เซ็น cert ด้วย private key ของ CA</strong></li>
+<li>client ขอเชื่อม</li>
+<li>server ส่ง cert (+ขอ cert client)</li>
+<li>client ตรวจ cert ด้วย public key ของ CA แล้วส่ง cert ตัวเอง</li>
+<li>server ตรวจ cert client</li>
+</ol>
+</li>
+<li><strong>CA ไม่ได้สร้าง key pair ให้ subject</strong> (subject สร้างเอง)</li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+  participant C as Client (gnmic)
+  participant CA as Certificate Authority
+  participant S as SR Linux (server)
+  C-&gt;&gt;C: 1. สร้าง public/private key
+  S-&gt;&gt;S: 1. สร้าง public/private key
+  C-&gt;&gt;CA: 2. CSR (identity + public key)
+  S-&gt;&gt;CA: 2. CSR
+  CA--&gt;&gt;C: 3. cert เซ็นด้วย CA private key
+  CA--&gt;&gt;S: 3. cert เซ็นด้วย CA private key
+  C-&gt;&gt;S: 4. ขอเชื่อมต่อ
+  S--&gt;&gt;C: 5. ส่ง server cert (+ขอ client cert)
+  C-&gt;&gt;S: 6. ตรวจด้วย CA public key, ส่ง client cert
+  S-&gt;&gt;S: 7. ตรวจ client cert ด้วย trust-anchor (CA)
+</pre></div>
+<p><strong>สรุปที่ควรจำ — config</strong></p>
+<ul>
+<li>server: <code>system grpc-server &lt;name&gt;</code> (รุ่นเก่าใช้ชื่อ <code>system gnmi-server</code>) หรือ <code>system json-rpc-server</code><ul>
+<li>อ้าง <strong>tls-profile</strong>, ระบุ <strong>network-instance</strong>, port, session-limit, services</li>
+</ul>
+</li>
+<li><code>system tls server-profile &lt;name&gt;</code>:<ul>
+<li><strong>authenticate-client</strong> (default <strong>false</strong>) — true = ตรวจ cert ของ client ด้วย</li>
+<li><strong>certificate</strong> = cert ของ server (มี public key)</li>
+<li><strong>key</strong> = private key ของ server (เก็บแบบ hash)</li>
+<li><strong>trust-anchor</strong> = cert ของ <strong>CA ที่เซ็น cert ของ client</strong></li>
+<li><strong>cipher-list</strong></li>
+<li>ค่าทั้งหมดใส่เป็น Base64/PEM ในเครื่องหมายคำพูด</li>
+</ul>
+</li>
+</ul>
+<pre><code>A:leaf1# system tls server-profile lab
+    key &quot;-----BEGIN RSA PRIVATE KEY----- ...&quot;
+    certificate &quot;-----BEGIN CERTIFICATE----- ...&quot;
+    trust-anchor &quot;-----BEGIN CERTIFICATE----- ...&quot;
+    authenticate-client true
+A:leaf1# system grpc-server lab
+    admin-state enable
+    tls-profile lab
+    network-instance mgmt
+    port 57400
+    services [ gnmi ]
+    session-limit 40
+    metadata-authentication true
+$ gnmic get --path &quot;/system/name/host-name&quot; --tls-ca CA.pem --tls-cert client.pem \
+    --tls-key client_key.pem -a 172.20.20.101:57400 -u admin -p ... -e ascii
+</code></pre>
+<ul>
+<li><strong>gNMI</strong> = gRPC Network Management Interface: Get / Set / Subscribe (streaming telemetry) / Capabilities<ul>
+<li>ใช้ <strong>gRPC (HTTP/2 + protobuf)</strong> เหมาะกับ automation/telemetry หลายเครื่อง</li>
+</ul>
+</li>
+<li><strong>JSON-RPC</strong> = JSON ผ่าน <strong>HTTP/HTTPS</strong>, methods <code>get</code>, <code>set</code>, <code>validate</code>, <code>cli</code></li>
+<li>ทั้งสองใช้ YANG เดียวกับ CLI และ commit แบบ <strong>private candidate</strong></li>
+<li><strong>SNMP บน SR Linux = read-only monitoring</strong> (ไม่ได้ใช้ config/เข้าถึง CLI)</li>
+</ul>
+<p><strong>เทียบ SR OS</strong>: SR OS ใช้ <code>system security tls server-tls-profile</code> + <code>cert-profile</code>, <code>system grpc</code> (gNMI port 57400 เหมือนกัน); SR OS มี NETCONF เป็นหลัก ขณะที่ SR Linux เน้น gNMI/JSON-RPC</p>
+<h3>4.3 Zero Touch Provisioning</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>ZTP = ทำให้ router <strong>ทำงานในเครือข่ายได้โดยไม่ต้อง pre-provision</strong><ul>
+<li>จัดการโดย <strong>ZTP application</strong> ซึ่งเป็นส่วนของ <strong>autoboot</strong> และรันเป็น <strong>Linux OS service ก่อน SR Linux จะ start</strong></li>
+<li>ได้ boot parameter จาก <strong>DHCP</strong> และดาวน์โหลด <strong>Python provisioning script</strong></li>
+</ul>
+</li>
+</ul>
+<p><strong>สรุปที่ควรจำ — ZTP process</strong></p>
+<ol>
+<li>Linux ตรวจ <strong>autoboot flag ใน <code>grub.cfg</code></strong><ul>
+<li>สั่งซื้อด้วย part number ที่ถูก = autoboot enable มาเลย</li>
+<li>autoboot ทำผ่าน <strong>mgmt port</strong> เท่านั้น (ตามเอกสารรุ่นพื้นฐาน)</li>
+</ul>
+</li>
+<li>ส่ง <strong>DHCP request</strong> (ได้ IP, mask, gateway, NTP, URL)</li>
+<li><strong>DHCP option 66 + 67 หรือ option 43</strong> บอกที่อยู่ provisioning script (HTTP/HTTPS/FTP URL)</li>
+<li>ดาวน์โหลดและรัน <strong>script</strong></li>
+<li>ZTP start <strong>app_mgr</strong> → app_mgr start app อื่น</li>
+</ol>
+<ul>
+<li><strong>ทุก event ถูก log</strong> (console + <strong><code>/var/log/ztp</code></strong>)</li>
+<li>สำเร็จ → <strong>ลบ autoboot flag</strong> ใน grub.cfg (reboot ครั้งหน้าจะไม่ ZTP ซ้ำ)</li>
+<li>fail/timeout → restart ZTP (retry <strong>default 3</strong>) → เกินแล้ว <strong>reboot</strong> → วนจนสำเร็จหรือมีคนเข้าไปแก้ (เช่นลบ flag)</li>
+<li>server ที่ต้องมี: <strong>DHCP server</strong> (+ <strong>DHCP relay</strong> ถ้าต่าง subnet) และ <strong>HTTP/FTP file server</strong> (script, RPM, image) อยู่คนละ subnet ได้</li>
+<li><strong>ZTP CLI</strong> ใช้ได้ก่อน SR Linux start: ดู status, start/stop/restart ZTP, จัดการไฟล์/image, แก้ timer/retry/grub.cfg — ไม่จำเป็นต่อ autoboot</li>
+<li><strong>สาเหตุที่ ZTP ล้มเหลว</strong>:<ul>
+<li>DHCP ไม่ตอบ (server/relay เสีย)</li>
+<li>offer ไม่มี option 66/67/43</li>
+<li>login/download script ไม่ได้</li>
+<li>copy script/RPM/image ลง storage ไม่ได้</li>
+<li>script return error</li>
+</ul>
+</li>
+<li>ZTP แบบพื้นฐานนี้ <strong>ไม่มีขั้นตอน CSR/certificate</strong> และ <strong>ไม่ใช้ PKI</strong>; FSS/EDA <strong>ไม่ใช่</strong> ส่วนของ autoboot</li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+  A[&quot;1. boot: autoboot flag ใน grub.cfg?&quot;] --&gt;|yes| B[&quot;2. DHCP request (mgmt port)&quot;]
+  B --&gt; C[&quot;3. DHCP offer: IP/GW/NTP + option 66/67 หรือ 43 = URL script&quot;]
+  C --&gt; D[&quot;4. download + run Python script จาก HTTP/FTP (+RPM/image)&quot;]
+  D --&gt; E[&quot;5. ZTP start app_mgr → SR Linux apps&quot;]
+  E --&gt; F[&quot;success: ลบ autoboot flag&quot;]
+  D --&gt;|fail| R[&quot;retry (default 3) → reboot → วนใหม่&quot;]
+  B -.-&gt; L[&quot;ทุก event → console + /var/log/ztp&quot;]
+</pre></div>
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-label="ZTP flow: router ส่ง DHCP request ผ่าน DHCP relay ไป DHCP server แล้วดาวน์โหลด script จาก HTTP file server">
+<defs><marker id="c4f19a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cyan)"/></marker></defs>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<rect x="20" y="110" width="130" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="85" y="140" font-weight="600">ZTP router</text>
+<text x="85" y="160" fill="var(--muted)" font-size="12">autoboot flag = on</text>
+<rect x="270" y="110" width="130" height="70" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="335" y="140" font-weight="600">DHCP relay</text>
+<text x="335" y="160" fill="var(--muted)" font-size="12">ถ้าต่าง subnet</text>
+<rect x="540" y="30" width="160" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="620" y="60" font-weight="600">HTTP/FTP file server</text>
+<text x="620" y="80" fill="var(--muted)" font-size="12">script, RPM, image</text>
+<rect x="540" y="190" width="160" height="70" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="620" y="220" font-weight="600">DHCP server</text>
+<text x="620" y="240" fill="var(--muted)" font-size="12">option 66/67 หรือ 43</text>
+<path d="M150 130H268" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f19a)"/>
+<text x="209" y="122" fill="var(--cyan)">1 DHCP request</text>
+<path d="M400 150L538 215" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f19a)"/>
+<path d="M538 235L400 170" stroke="var(--amber)" stroke-width="2" marker-end="url(#c4f19a)"/>
+<text x="430" y="238" fill="var(--amber)" text-anchor="middle">2 offer: IP + URL</text>
+<path d="M85 110V65H538" fill="none" stroke="var(--good)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#c4f19a)"/>
+<text x="300" y="56" fill="var(--good)">3 ดาวน์โหลด script</text>
+<path d="M538 85H100V108" fill="none" stroke="var(--good)" stroke-width="2" marker-end="url(#c4f19a)"/>
+<text x="300" y="80" fill="var(--good)">4 ส่ง script กลับ แล้วรัน</text>
+<text x="85" y="215" fill="var(--muted)" font-size="12">5 ZTP start app_mgr</text>
+<text x="85" y="233" fill="var(--muted)" font-size="12">สำเร็จ = ลบ flag ใน grub.cfg</text>
+</g>
+</svg>
+<figcaption>ภาพรวม ZTP: router ขอ IP และ URL ของ script จาก DHCP (ผ่าน relay ได้) แล้วดึง script จาก file server มารัน</figcaption>
+</figure>
+<ul>
+<li><strong>[ตั้งแต่ 26.3]</strong> ZTP ขยายความสามารถเพิ่มเติม:<ul>
+<li>ลอง mgmt ก่อน แล้วใช้ <strong>in-band ports + VLAN discovery</strong> ได้</li>
+<li>DHCP option <strong>66+67, หรือ 67 อย่างเดียว, หรือ 43</strong> (66/67 มาก่อน 43)</li>
+<li><strong>Secure ZTP (sZTP)</strong> ถูกเลือกอัตโนมัติเมื่อ DHCP ส่ง <strong>OPTION_V4_SZTP_REDIRECT (143) / OPTION_V6_SZTP_REDIRECT (136)</strong></li>
+<li>มี <strong>BootZ</strong> (gRPC-based secure bootstrap, ใช้ IDevID/ownership voucher บน 7250 IXR-e)</li>
+<li>sZTP และ BootZ <strong>ใช้ PKI</strong> — ต่างจาก ZTP แบบพื้นฐานที่ไม่ใช้ PKI และไม่ส่ง CSR</li>
+</ul>
+</li>
+</ul>
+<p><strong>เทียบ SR OS</strong>: SR OS auto-provisioning ใช้ DHCP + provisioning file (<code>auto-boot</code>) คล้ายกัน; SR OS มี secure ZTP/BootZ ในรุ่นใหม่เช่นกัน</p>
+<hr />
+
+  </section>
+  <section id="s5">
+    <h2>5. EDA (Event Driven Automation)</h2>
+
+<h3>5.1 EDA overview &amp; architecture</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li>ความท้าทายของ DC สมัยใหม่: workload กระจาย, scale แบบง่าย, customize ต่อ tenant, security policy สม่ำเสมอ, ขาดคนเก่ง<ul>
+<li>จึงต้องการ open technology (ไม่ lock-in), IP stack ที่ mature, <strong>intent-driven automation + streaming telemetry</strong>, operations at scale, <strong>cloud-native</strong></li>
+</ul>
+</li>
+<li><strong>EDA = intent-based network automation platform</strong> สำหรับออกแบบ/deploy/operate DC fabric ครบ <strong>Day 0 / Day 1 / Day 2+</strong></li>
+<li>ความสามารถหลัก:<ul>
+<li><strong>ZTP</strong> (EDA มี <strong>DHCP server + HTTP file server ในตัว</strong>)</li>
+<li><strong>intent-based design</strong></li>
+<li><strong>closed-loop automation</strong> (event: config change, oper change, telemetry update, alarm → trigger action อัตโนมัติ)</li>
+<li><strong>fabric observability</strong> (gNMI streaming telemetry)</li>
+<li><strong>integration กับ CMP</strong></li>
+</ul>
+</li>
+<li><strong>บน Kubernetes</strong> (ไม่ใช่ Docker Swarm)<ul>
+<li>Kubernetes = orchestration container, intent-based (YAML manifest: <code>kind</code> + <code>spec</code>)</li>
+<li><strong>resource controller</strong> validate → สร้าง instance → monitor ให้อยู่ใน desired state; self-healing, auto-scale</li>
+</ul>
+</li>
+<li><strong>EDA = Kubernetes Operator</strong> (custom resources + controllers)<ul>
+<li>ไม่ได้แค่ "รันบน" K8s แต่ <strong>ขยาย K8s ด้วยความสามารถ network automation</strong></li>
+<li>resource ของ EDA เช่น Fabric, Interface, VLAN, VirtualNetwork, BGPGroup, BGPPeer, StaticRoute, Policy, BridgeDomain, BridgeInterface, IRB, Router, RouterInterface</li>
+<li>config ผ่าน <strong>Kubernetes API</strong> (<code>kubectl apply -f x.yaml</code>) หรือ GUI</li>
+</ul>
+</li>
+</ul>
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-label="Network operator ส่ง intent เข้า Kubernetes API ซึ่งทำงานร่วมกับ EDA resources และ controllers เพื่อ configure และ monitor fabric">
+<defs><marker id="c4f20a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cyan)"/></marker></defs>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<rect x="20" y="20" width="160" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="100" y="42" font-weight="600">Network operator</text>
+<text x="100" y="60" fill="var(--muted)" font-size="12">YAML / GUI</text>
+<rect x="20" y="115" width="160" height="60" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="100" y="140" font-weight="600">Kubernetes API</text>
+<text x="100" y="160" fill="var(--muted)" font-size="12">declarative, intent-based</text>
+<rect x="300" y="100" width="400" height="90" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-dasharray="6 4"/>
+<text x="500" y="124" font-weight="600">EDA = Kubernetes Operator</text>
+<rect x="320" y="136" width="170" height="40" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="405" y="161">Custom resources</text>
+<rect x="510" y="136" width="170" height="40" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="595" y="161">Controllers</text>
+<rect x="150" y="235" width="420" height="50" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="360" y="257" font-weight="600">Fabric: spine / leaf (SR Linux)</text>
+<text x="360" y="275" fill="var(--muted)" font-size="12">Fabric, VLAN, BGPPeer, IRB, Router ...</text>
+<path d="M100 70V113" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f20a)"/>
+<path d="M182 145H298" stroke="var(--cyan)" stroke-width="2" marker-start="url(#c4f20a)" marker-end="url(#c4f20a)"/>
+<path d="M170 177V233" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f20a)"/>
+<text x="162" y="212" text-anchor="end" fill="var(--cyan)">configure</text>
+<path d="M600 192V250H572" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="5 4" marker-start="url(#c4f20a)"/>
+<text x="592" y="222" fill="var(--amber)" text-anchor="end">monitor (telemetry)</text>
+</g>
+</svg>
+<figcaption>EDA ขยาย Kubernetes ด้วย custom resources และ controllers ที่ configure และ monitor network ให้ตรงกับ intent</figcaption>
+</figure>
+<p><strong>สรุปที่ควรจำ — Day 0/1/2+</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>ทำอะไร</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Day 0 – Design</strong></td>
+<td>เขียน <strong>fabric intent (YAML)</strong> แบบ abstract/minimal (selector ของ leaf/spine/super-spine/border-leaf + ISL, pool ของ IP/system IP/ASN, underlay protocol) → EDA generate config ทุก node → <strong>validate บน digital sandbox</strong></td>
+</tr>
+<tr>
+<td><strong>Day 1 – Deploy</strong></td>
+<td><strong>ZTP</strong>: node ส่ง DHCP → EDA (DHCP) ตอบ IP + path → node ดึง <strong>OS image + upgrade</strong> → ดึง config ที่ EDA generate → พร้อม provision service; <strong>intent-based service provisioning</strong> (เช่น "ต่อ leaf2-eth1 เข้า L2 service bd4") → EDA generate EVI/VNI/EVPN param ให้เอง, ทดสอบบน digital twin แล้ว push config เดียวกันลง production</td>
+</tr>
+<tr>
+<td><strong>Day 2+ – Operate</strong></td>
+<td><strong>monitor ด้วย model-driven telemetry</strong>, flag <strong>intent vs config deviation</strong>, health/proactive ops, ทดสอบ change/upgrade บน sandbox ก่อน — แบบ <strong>CI/CD</strong>: Test (twin) → Approve (เก็บใน <strong>git</strong>) → Deploy (ถ้า node ไหน error <strong>rollback ทั้งก้อน</strong>) → Monitor → Verify deviation</td>
+</tr>
+</tbody>
+</table></div>
+<figure class="diagram">
+<svg viewBox="0 0 720 320" role="img" aria-label="วงจรชีวิต Day 0 design, Day 1 deploy, Day 2+ operate ของ EDA พร้อม digital sandbox และ fabric จริง">
+<defs><marker id="c4f21a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cyan)"/></marker></defs>
+<g font-family="inherit" font-size="13" fill="var(--ink)" text-anchor="middle">
+<rect x="20" y="20" width="190" height="80" rx="8" fill="var(--cyan-soft)" stroke="var(--cyan)"/>
+<text x="115" y="46" font-weight="600">Day 0 – Design</text>
+<text x="115" y="68" fill="var(--muted)" font-size="12">fabric intent (YAML)</text>
+<text x="115" y="86" fill="var(--muted)" font-size="12">generate config</text>
+<rect x="260" y="20" width="190" height="80" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/>
+<text x="355" y="46" font-weight="600">Day 1 – Deploy</text>
+<text x="355" y="68" fill="var(--muted)" font-size="12">ZTP + OS image</text>
+<text x="355" y="86" fill="var(--muted)" font-size="12">push config / service</text>
+<rect x="500" y="20" width="200" height="80" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+<text x="600" y="46" font-weight="600">Day 2+ – Operate</text>
+<text x="600" y="68" fill="var(--muted)" font-size="12">monitor, analyze, change</text>
+<text x="600" y="86" fill="var(--muted)" font-size="12">deviation, upgrade</text>
+<path d="M210 60H258" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<path d="M450 60H498" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<rect x="20" y="150" width="680" height="50" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)" stroke-dasharray="6 4"/>
+<text x="360" y="172" font-weight="600">Digital sandbox (SR Linux container twin)</text>
+<text x="360" y="190" fill="var(--muted)" font-size="12">validate design / ทดสอบ change และ upgrade ก่อนใช้จริง</text>
+<path d="M115 102V148" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<path d="M355 102V148" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<path d="M600 102V148" stroke="var(--cyan)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<rect x="20" y="245" width="680" height="55" rx="8" fill="var(--bg-raised)" stroke="var(--line-strong)"/>
+<text x="360" y="268" font-weight="600">Data center fabric จริง (leaf / spine + DC interconnect)</text>
+<text x="360" y="288" fill="var(--muted)" font-size="12">EVPN-VXLAN ใน DC, EVPN-MPLS ข้าม IP backbone</text>
+<path d="M360 202V243" stroke="var(--amber)" stroke-width="2" marker-end="url(#c4f21a)"/>
+<text x="372" y="226" text-anchor="start" fill="var(--amber)">push config เดียวกัน</text>
+</g>
+</svg>
+<figcaption>วงจร Day 0 / Day 1 / Day 2+ ของ EDA: ออกแบบและทดสอบบน sandbox ก่อน แล้วค่อย push ลง fabric จริง</figcaption>
+</figure>
+<ul>
+<li><strong>Digital sandbox / digital twin</strong> = <strong>"true emulation"</strong> — จำลอง fabric ด้วย <strong>container SR Linux</strong> ตาม topology YAML<ul>
+<li>เป็น <strong>วิธีเร็วและประหยัดในการ emulate/validate fabric ก่อนใช้ hardware จริง</strong></li>
+<li>ไม่ใช่ตัวตรวจ hardware เสีย, ไม่ใช่ตัว monitor performance, ไม่ได้ใช้ ZTP</li>
+</ul>
+</li>
+<li><strong>Fabric intent</strong> = abstract/minimal info ในรูป <strong>YAML ("code")</strong> → <strong>deploy/configure อัตโนมัติ</strong><ul>
+<li><strong>ไม่ได้มีหน้าที่เก็บ telemetry/log</strong> (นั่นคือ observability)</li>
+</ul>
+</li>
+<li><strong>EDA Cloud Connect</strong>: integrate <strong>OpenShift, OpenStack, VMware vCenter</strong> ผ่าน plugin<ol>
+<li>EDA สร้าง mapping compute↔leaf port ด้วย <strong>LLDP</strong></li>
+<li>CMP แจ้งว่าสร้าง workload (compute node, VLAN, network)</li>
+<li>EDA เพิ่ม bridge interface เข้า bridge domain ให้อัตโนมัติ</li>
+</ol>
+</li>
+<li><strong>EDA Cloud Service</strong> = EDA-as-a-Service จัดการโดย Nokia (NOC 24/7), fabric ต่อผ่าน <strong>IPsec gateway</strong></li>
+</ul>
+<div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+  OP[&quot;Operator: intent (YAML / GUI)&quot;] --&gt; K8S[&quot;Kubernetes API&quot;]
+  K8S --&gt; EDA[&quot;EDA (K8s operator): resources + controllers&quot;]
+  EDA --&gt;|&quot;Day0: generate + validate&quot;| SB[&quot;Digital sandbox (containerized SR Linux twin)&quot;]
+  EDA --&gt;|&quot;Day1: ZTP (DHCP+HTTP) + push config (transaction)&quot;| FAB[&quot;Production fabric (SR Linux)&quot;]
+  FAB --&gt;|&quot;Day2+: gNMI on-change/streaming telemetry, events&quot;| EDA
+  EDA --&gt;|&quot;deviation: accept / reject&quot;| FAB
+  EDA --&gt; GIT[&quot;git repo: revision / revert / restore&quot;]
+</pre></div>
+<h3>5.2 EDA use cases: intent automation, transactions, deviations, observability</h3>
+<p><strong>สาระสำคัญ</strong></p>
+<ul>
+<li><strong>Fabric automation 3 ขั้น</strong>:<ol>
+<li><code>myTopology.yaml</code> นิยาม node (ชื่อ, OS, type เช่น 7220 IXR-D5), link (local/remote node+interface), <strong>label</strong> (role: leaf/spine/super-spine/border-leaf; link: interSwitch/edge/compute/storage)</li>
+<li><code>kubectl -n eda apply -f myTopology.yaml</code> → สร้าง TopoNodes/TopoLinks/Interfaces + <strong>digital sandbox</strong></li>
+<li><code>kind: Fabric</code> ใช้ label selector + <code>systemPoolIPV4</code> + <code>underlayProtocol EBGP</code> + <code>asnPool</code> + <code>overlayProtocol EBGP</code> (+ ISL <code>unnumbered: IPV6</code>) → EDA หา role, generate + push config</li>
+</ol>
+</li>
+<li>Fabric resource แตกเป็น DefaultRouter (= network-instance default), DefaultInterface, DefaultBGPGroup/Peer, Policy, (iBGP → RouteReflector/Client) → รวมเป็น <strong>NodeConfig</strong> ต่อ node</li>
+<li><strong>Virtual network</strong>: ระบุ workload interface ที่จะเชื่อม → EDA สร้าง <strong>L3 router (ip-vrf), L2 bridge domain (mac-vrf), IRB, VXLAN tunnel</strong> ให้<ul>
+<li>ID (VLAN, EVI, VNI, tunnel index) จัดสรรจาก <strong>pool</strong></li>
+<li>resource: BridgeDomains, BridgeInterfaces, IRBInterfaces, Routers, RouterInterfaces, VLANs, StaticRoutes, BGPGroups/Peers, RoutingPolicies/PrefixSets</li>
+</ul>
+</li>
+<li><strong>Transactions</strong>: รวมหลาย change เป็น <strong>transaction เดียว — fail ส่วนใดส่วนหนึ่ง = rollback ทั้งหมด</strong><ul>
+<li>สำเร็จแล้ว <strong>เขียนลง EDA git repo</strong></li>
+<li><strong>dry run + Diffs</strong> ก่อน commit</li>
+<li>transaction log action:</li>
+<li><strong>Summary</strong></li>
+<li><strong>Revert</strong> (undo เฉพาะ transaction นั้น ด้วย transaction ใหม่)</li>
+<li><strong>Restore</strong> (คืนทุก resource กลับไปสถานะ ณ transaction นั้น)</li>
+</ul>
+</li>
+<li><strong>Deviations</strong>: EDA ใช้ <strong>gNMI on-change telemetry</strong> เฝ้า<ul>
+<li>config ที่ไม่ตรง intent (เช่น แก้ด้วย CLI เอง) = <strong>deviation</strong></li>
+<li><strong>Accept</strong> = intent ถูกอัปเดตตาม node</li>
+<li><strong>Reject</strong> = node ถูก revert กลับเป็น intent</li>
+</ul>
+</li>
+<li><strong>Observability</strong>:<ul>
+<li>dashboard (cluster, node sync, interfaces, alarms, traffic, top interfaces), fabric/service/component state</li>
+<li><strong>alarms แบบ stateful</strong> (probable cause + remedial action; acknowledge/suppress/delete หลัง cleared)</li>
+<li>telemetry ได้ <strong>ทุก YANG data</strong>: faults/stats, platform, interface, LLDP, BGP, RIB/FIB</li>
+<li><strong>ต่างจาก SNMP polling</strong> — subscribe ครั้งเดียว ส่งเมื่อเปลี่ยน → scale ดี</li>
+</ul>
+</li>
+<li><strong>Queries</strong>:<ul>
+<li><strong>EQL</strong> (EDA Query Language, คล้าย Jira QL) — ใช้ YANG path เช่น <code>.namespace.node.srl.interface fields [...] where (oper-state = "up") order by [ifindex]</code></li>
+<li><strong>normalized query</strong> ผ่าน EDA resource = multi-vendor</li>
+<li><strong>Natural Language Query</strong> ผ่าน <strong>OpenAI API (ต้องตั้ง API key ใน EngineConfig)</strong> และ EDA แสดง EQL ที่ render ให้ดูเสมอ</li>
+</ul>
+</li>
+</ul>
+<p><strong>FSS (Fabric Services System)</strong> — รุ่นก่อนหน้า EDA</p>
+<ul>
+<li>แนวคิดเดียวกัน: <strong>fabric intent แบบ declarative YAML</strong>, cloud-native (Kubernetes), integrate กับ CMP</li>
+<li><strong>digital sandbox</strong> ใช้ emulate/validate (ไม่ใช่การแจ้งเตือน performance)</li>
+<li>telemetry แสดงในบริบทของ intent</li>
+<li>ประโยชน์ = <strong>ทำ design/deploy/operate ให้ง่ายและอัตโนมัติ</strong> (simplified provisioning/management, orchestration, scale/flexibility)</li>
+</ul>
+<p><strong>เทียบ SR OS</strong>: ฝั่ง SR OS ใช้ <strong>NSP</strong> ทำ intent-based automation/assurance (NSP ใช้ YANG/NETCONF/gNMI เหมือนกัน); EDA เน้น DC + Kubernetes-native + digital twin ด้วย containerized SR Linux (ซึ่ง SR OS มี SR-SIM คล้าย ๆ กัน)</p>
+<hr />
+
+  </section>
+  <section id="s6">
+    <h2>ภาคผนวก — แนวคิดทั่วไปที่ควรรู้</h2>
+
+<ul>
+<li><strong>3 planes</strong>:<ul>
+<li><strong>Data plane</strong> = <strong>process/forward packet ตาม forwarding table (FIB)</strong> — ASIC/XDP บน line card</li>
+<li><strong>Control plane</strong> = <strong>routing protocol แลก/คำนวณ routing info เพื่อสร้าง forwarding table</strong> (BGP/OSPF/IS-IS, policy) — บน CPM</li>
+<li><strong>Management plane</strong> = <strong>การ config/operate/monitor ระบบโดยรวม</strong> (mgmt_svr, CLI, gNMI, JSON-RPC, app_mgr ดู health, mgmt interface <code>mgmt0</code>)</li>
+</ul>
+</li>
+<li><strong>ไม่มี component ชื่อ "Fabric Manager"</strong> ใน SR Linux — งาน orchestrate fabric เป็นของ EDA (หรือ FSS รุ่นก่อน)</li>
+<li>ความสามารถ "เพิ่ม protocol/feature เป็น app/plug-in" มาจาก <strong>modular application architecture + app_mgr + NDK</strong> (ไม่เกี่ยวกับ plane ใด)</li>
+<li>จุดเด่น SR Linux เทียบ NOS เดิม:<ul>
+<li><strong>open/programmable/model-driven</strong></li>
+<li>unmodified Linux kernel</li>
+<li>telemetry ในตัว</li>
+<li>protocol stack จาก SR OS</li>
+<li>extensible (NDK, CLI plugin)</li>
+<li>ลดภาระการบริหารจัดการด้วย <strong>automation/programmability</strong></li>
+</ul>
+</li>
+<li>Monitoring tools:<ul>
+<li><strong>Syslog</strong> (logging/event)</li>
+<li><strong>gNMI streaming telemetry</strong> (real-time)</li>
+<li><strong>SNMP</strong> (read-only polling)</li>
+<li><strong>sFlow</strong> (flow sampling)</li>
+</ul>
+</li>
+</ul>
+<hr />
+
+  </section>
+  <section id="s7">
+    <h2>สรุปย่อหน้าเดียว</h2>
+
+<p><strong>Fabric / BGP design</strong></p>
+<ul>
+<li>Clos: leaf ต่อ spine ทุกตัว, <strong>L3 + ECMP</strong>, ไม่มี STP, east-west path คงที่, scale ด้วย super-spine</li>
+<li><strong>eBGP-only (RFC 7938)</strong>, private ASN <strong>64512–65534</strong> / 4-byte <strong>4.2B–4.29B</strong></li>
+<li>ASN: <strong>leaf ไม่ซ้ำ, spine ใน cluster เดียวกันซ้ำ, spine ต่าง cluster ต่าง, super-spine ซ้ำกันเอง</strong></li>
+<li>BGP mandatory: <strong>ASN + router-id + afi-safi + peer-as + neighbor/group</strong> (multipath ไม่ mandatory)</li>
+<li><strong>ebgp-default-policy import/export-reject-all = true</strong> (RFC 8212)</li>
+<li>default: multipath <strong>1</strong>, local-pref <strong>100</strong>, pref eBGP/iBGP <strong>170</strong>, hold <strong>90</strong>/keepalive <strong>30</strong>/connect-retry <strong>120</strong>/MAI <strong>5s</strong>, BFD <strong>off</strong>, fast-failover <strong>on</strong>, rapid-withdrawal <strong>off</strong></li>
+<li>RIB: <strong>RIB-In-pre → import → RIB-In-post → Loc-RIB (best → RTM) → export → RIB-Out</strong></li>
+<li>local-pref สูงชนะ → ECMP หาย; prepend ASN ทำให้ peer ไม่ชอบ path</li>
+<li>BFD: enable ที่ <strong><code>bfd subinterface</code></strong> + <strong><code>failure-detection enable-bfd true</code></strong>; หน่วย <strong>µs</strong></li>
+</ul>
+<p><strong>CLI</strong></p>
+<ul>
+<li>modes: <strong>running (default, read-only) / state (config+oper) / show (report) / candidate (แก้ได้อย่างเดียว)</strong>; <code>enter &lt;mode&gt;</code></li>
+<li>candidate: <strong>shared (default) / exclusive (บล็อกคนอื่น) / private (gNMI/JSON-RPC ใช้; baseline+candidate)</strong></li>
+<li>prompt: <code>*</code> ยังไม่ commit, <code>+</code> running ≠ startup, <code>!</code> running ≠ baseline (private)<ul>
+<li><code>baseline diff</code> (running vs baseline) / <code>baseline update</code></li>
+</ul>
+</li>
+<li><code>commit now|stay|save|validate|confirmed [timeout] (default 600s)</code> → <code>commit confirmed accept</code></li>
+<li>checkpoint: <strong>0 = ใหม่สุด</strong>, max <strong>10</strong> (1–255), revert ได้ทุกอัน (ต้อง candidate), auto-checkpoint off</li>
+<li>startup <code>/etc/opt/srlinux/config.json</code> → rescue → factory</li>
+<li>idle timeout <strong>300s</strong> (0=off), alias <code>{p}</code> required / <code>{}</code> optional, <code>environment save home</code> → <code>~/.srlinuxrc</code></li>
+</ul>
+<p><strong>Interfaces / NI</strong></p>
+<ul>
+<li>subinterface index 0..9999, VLAN 1..4094, หลาย subif ต้อง <strong>vlan-tagging</strong>, type default <strong>routed</strong>, 16 IPv4+16 IPv6, primary = IP ต่ำสุด</li>
+<li>LLDP: 802.1AB, <strong>default on</strong>, hello <strong>30s</strong>, hold-multiplier <strong>4</strong>, ไม่ใช่ fast failure detection</li>
+<li>LAG: static default; <strong>LACP</strong> (admin-key, system-id) block miswire; SLOW 30s / FAST 1s</li>
+<li>NI: <strong>default (ต้องชื่อ default, ไม่สร้างเอง)</strong>, <strong>ip-vrf</strong>, <strong>mac-vrf</strong>; <strong>mgmt = ip-vrf</strong> (factory)</li>
+<li>IRB: <code>irb0..255</code>, L3, <strong>no VLAN</strong>, ตั้ง MTU ได้, <strong>mac-vrf มีได้ 1 IRB</strong></li>
+<li>pref: <strong>local 0, static 5, OSPF 10, IS-IS 15/18, BGP 170</strong>; ECMP <strong>64</strong> (static <strong>128</strong>)</li>
+<li>MAC: aging <strong>300s</strong>, limit <strong>250</strong>, MAC dup <strong>3 min / 5 moves / 9 min / stop-learning</strong></li>
+<li>dup action:<ul>
+<li><strong>stop-learning</strong> (intf up, src dup ที่อื่น drop)</li>
+<li><strong>oper-down</strong> (intf down, dst drop)</li>
+<li><strong>blackhole</strong> (intf up, src+dst drop)</li>
+</ul>
+</li>
+<li>static: <strong>blackhole อยู่ใน NHG</strong>, metric <strong>1</strong>, pref <strong>5</strong>, resolve <strong>true</strong>, generate-icmp <strong>false</strong><ul>
+<li>ECMP = hash % N (ไม่ใช่ round-robin), hash-seed กัน polarization</li>
+</ul>
+</li>
+</ul>
+<p><strong>EVPN-VXLAN</strong></p>
+<ul>
+<li>VXLAN: <strong>UDP 4789</strong>, VNI <strong>24 bit</strong>, src port = flow hash, outer IP = VTEP</li>
+<li>EVPN = <strong>AFI 25 / SAFI 70</strong><ul>
+<li>RT1 A-D (MH aliasing/mass-withdraw)</li>
+<li><strong>RT2 MAC/IP</strong></li>
+<li><strong>RT3 IMET (discover VTEP + flood list, IR)</strong></li>
+<li>RT4 ES (DF)</li>
+<li><strong>RT5 IP-prefix</strong></li>
+</ul>
+</li>
+<li>IMET มี RD, originating IP, RT, tunnel type IR, VNI — <strong>ไม่มี flooding list</strong></li>
+<li>RD auto = <strong>system0-IP:EVI</strong>, RT auto = <strong>AS:EVI</strong> (ตั้งเองเพราะ leaf ASN ต่างกัน)</li>
+<li>ESI <strong>global unique</strong>, 0 = single-homed; SR Linux VXLAN MH = <strong>all-active</strong> (host ใช้ LAG)</li>
+<li>workflow: <strong>system0 → EVPN iBGP group (afi-safi evpn, local-as, RR ได้) → bridged intf → vxlan-interface (VNI เดียวกันทุก VTEP) → mac-vrf bgp-evpn/bgp-vpn</strong></li>
+<li><strong>Asymmetric</strong> = mac-vrf ทุก leaf, RT2/RT3, ingress หลาย lookup/egress L2</li>
+<li><strong>Symmetric (IFL)</strong> = routed vxlan ที่ ip-vrf, <strong>RT5</strong>, scale ดีกว่า</li>
+</ul>
+<p><strong>Logging / ACL</strong></p>
+<ul>
+<li>logging = <strong>rsyslog</strong>, <code>/etc/rsyslog.conf</code><ul>
+<li>destinations: <strong>file / buffer (RAM) / console / remote-server (UDP/TCP 514)</strong></li>
+<li>sources: <strong>facility / subsystem / filter</strong> (console ไม่ใช่ source)</li>
+<li>SR Linux = <strong>local6</strong>; ไม่มี encrypted local file</li>
+</ul>
+</li>
+<li>default: buffer messages (local6 ≥ info), buffer system (อื่น ๆ ≥ warning), file messages (local6 ≥ warning)</li>
+<li>debug = priority debug <strong>+ trace-options</strong></li>
+<li>ACL order: <strong>System → Ingress → Capture → CPM → Egress</strong>; default action <strong>accept</strong>; seq 1..65535 first-match</li>
+<li><strong>cpm-filter</strong> = control-plane protection (DoS), apply ที่ <code>system control-plane-traffic input</code><ul>
+<li>rate-limit ได้: <strong>policer = per-linecard HW (kbps/bytes)</strong>, <strong>system-cpu-policer = CPM SW รวมทุก LC (pps/packets)</strong></li>
+</ul>
+</li>
+<li><strong>capture-filter</strong> = <strong>copy</strong> ทุก subif ingress → <code>tools system traffic-monitor</code> (header 48 byte)</li>
+<li>ต้องการ match outer VXLAN ที่ terminate = <strong>system ACL</strong></li>
+</ul>
+<p><strong>Users / mgmt / ZTP</strong></p>
+<ul>
+<li>users: <strong>SR Linux (UID≥1500) / Linux (1000–1499) / TACACS+ (random UID)</strong>; PAM + aaa_mgr; role = read/write/deny</li>
+<li>TLS profile สำหรับ gNMI/JSON-RPC<ul>
+<li><strong>subject สร้าง key pair เอง → CSR → CA เซ็นด้วย CA private key</strong></li>
+<li>trust-anchor = CA ของ client cert; authenticate-client default false</li>
+</ul>
+</li>
+<li>ZTP: <strong>grub.cfg autoboot flag → DHCP → option 66/67 หรือ 43 → download+run Python script → app_mgr</strong><ul>
+<li>log <code>/var/log/ztp</code>; สำเร็จลบ flag; retry 3 → reboot</li>
+<li>ZTP พื้นฐาน <strong>ไม่มี PKI/CSR</strong></li>
+</ul>
+</li>
+</ul>
+<p><strong>EDA</strong></p>
+<ul>
+<li><strong>Kubernetes Operator</strong> (ไม่ใช่ Docker Swarm), intent-based ทุกด้าน Day 0/1/2+</li>
+<li>digital sandbox = <strong>emulate/validate เร็ว+ประหยัด</strong></li>
+<li>fabric intent = <strong>YAML ข้อมูล minimal → auto deploy</strong> (ไม่เก็บ telemetry)</li>
+<li>transaction all-or-nothing + <strong>git</strong>, deviation <strong>accept/reject</strong></li>
+<li>observability = gNMI telemetry, EQL + NL query (OpenAI)</li>
+</ul>
+<hr />
+
+  </section>
+  <section id="s8">
+    <h2>เรื่องที่มักสับสน</h2>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>คู่ที่สับสน</th>
+<th>จำแบบนี้</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>capture-filter vs cpm-filter</strong></td>
+<td>capture = <strong>copy</strong> packet ขึ้น CPM ให้ traffic-monitor (troubleshoot) ไม่ drop/ไม่ policer; cpm = <strong>protect CPM</strong> (accept/drop/log + rate-limit policer) — ทั้งคู่ติดทุก LC, 1 v4 + 1 v6</td>
+</tr>
+<tr>
+<td><strong>policer vs system-cpu-policer</strong></td>
+<td>policer = per line card, <strong>HW</strong>, kbps/bytes; system-cpu = บน <strong>CPM, SW</strong>, รวมทุก LC, pps/packets</td>
+</tr>
+<tr>
+<td><strong>system ACL vs subinterface ACL</strong></td>
+<td>system = ทุก interface, ก่อนทุกอย่าง, เห็น outer VXLAN; subif = เฉพาะ subif, หลัง decap</td>
+</tr>
+<tr>
+<td><strong>show vs state vs running vs candidate</strong></td>
+<td>show = Python report อ่านง่าย; state = YANG ครบ config+oper; running = config ที่ active (read-only); candidate = ที่เดียวที่แก้ได้</td>
+</tr>
+<tr>
+<td><strong>info vs info from state vs info detail</strong></td>
+<td><code>info</code> = datastore ของ mode ปัจจุบัน; <code>from state</code> = ดู oper โดยไม่ต้องเปลี่ยน mode; <code>detail</code> = รวม default</td>
+</tr>
+<tr>
+<td><strong>watch vs monitor</strong></td>
+<td>watch = รัน CLI command ซ้ำทุก N วินาที (default 2) ทับจอ; monitor = YANG path on-change/sample (≈ gNMI subscribe)</td>
+</tr>
+<tr>
+<td><strong>shared vs exclusive vs private</strong></td>
+<td>shared commit ของทุกคน; exclusive บล็อกคนอื่น; private commit เฉพาะของตัวเอง + baseline</td>
+</tr>
+<tr>
+<td><strong>baseline diff vs diff</strong></td>
+<td><code>baseline diff</code> = <strong>running ปัจจุบัน vs baseline</strong> (ดูว่าคนอื่นเปลี่ยนอะไร); <code>diff</code> = candidate vs running (สิ่งที่เราแก้)</td>
+</tr>
+<tr>
+<td><strong><code>+</code> vs <code>*</code> vs <code>!</code></strong></td>
+<td><code>*</code> candidate มีของค้าง; <code>+</code> running ≠ startup; <code>!</code> running ≠ baseline</td>
+</tr>
+<tr>
+<td><strong>checkpoint vs rescue vs startup</strong></td>
+<td>checkpoint = JSON ย้อนกลับได้ (0 ใหม่สุด); startup = config.json ตอน boot; rescue = ใช้เมื่อ startup fail</td>
+</tr>
+<tr>
+<td><strong>asymmetric vs symmetric IRB</strong></td>
+<td>asym: mac-vrf ทุก leaf, RT2+RT3, ingress หนัก, ไม่ scale, VNI ของ L2 ปลายทาง; sym (IFL): RT5, routed VNI ที่ ip-vrf, ARP เฉพาะ local, scale ดี</td>
+</tr>
+<tr>
+<td><strong>RT2 vs RT3 vs RT5</strong></td>
+<td>RT2 = MAC(/IP) → bridge table/ARP; RT3 = IMET → flood list (BUM); RT5 = IP prefix → ip-vrf route table</td>
+</tr>
+<tr>
+<td><strong>IMET contents</strong></td>
+<td>RD, originating router IP (VTEP), RT, PMSI tunnel type = ingress replication, VNI (label) + encap VXLAN — <strong>ไม่มี flooding list</strong></td>
+</tr>
+<tr>
+<td><strong>RD vs RT</strong></td>
+<td>RD = ทำ route ให้ unique (system-IP:EVI); RT = ตัดสินว่า import เข้า NI ไหน (AS:EVI แต่ควรตั้งเอง)</td>
+</tr>
+<tr>
+<td><strong>local vs global ESI</strong></td>
+<td>ESI = <strong>global unique</strong>, ทุก leaf ใน ES เดียวกันใช้ ESI เดียวกัน (ไม่ใช่ local significance); 0 = single-homed, 0xFF = max</td>
+</tr>
+<tr>
+<td><strong>ESI vs EVI vs VNI</strong></td>
+<td>ESI = Ethernet Segment (multi-homing); EVI = EVPN instance (auto RD/RT, DF); VNI = VXLAN segment ID ใน data plane</td>
+</tr>
+<tr>
+<td><strong>bridged vs routed vxlan-interface</strong></td>
+<td>bridged → ผูก mac-vrf (L2 / asymmetric); routed → ผูก ip-vrf (symmetric RT5)</td>
+</tr>
+<tr>
+<td><strong>underlay BGP vs overlay EVPN BGP</strong></td>
+<td>underlay = eBGP leaf↔spine, ASN ต่าง, ipv4-unicast; overlay = iBGP group แยก, <code>local-as</code> เดียวกัน, afi-safi evpn, ใช้ RR, multihop จาก system0</td>
+</tr>
+<tr>
+<td><strong>ECMP static vs BGP</strong></td>
+<td>static: NHG หลาย next-hop ใช้ ECMP ได้ทันที; BGP: ต้องตั้ง multipath (default 1)</td>
+</tr>
+<tr>
+<td><strong>LLDP vs LACP vs BFD</strong></td>
+<td>LLDP = discovery (ไม่ใช่ fail detection); LACP = ตรวจ miswire ใน LAG; BFD = ตรวจ link/path fail เร็ว</td>
+</tr>
+<tr>
+<td><strong>fast-failover vs BFD</strong></td>
+<td>fast-failover = session ลงทันทีเมื่อ local interface down (เฉพาะ directly connected); BFD = ตรวจได้แม้ link ยัง up แต่ path ตาย</td>
+</tr>
+<tr>
+<td><strong>logging source vs destination</strong></td>
+<td>source = facility / subsystem / filter; destination = file / buffer / console / remote; <strong>console เป็น destination เท่านั้น</strong></td>
+</tr>
+<tr>
+<td><strong>file vs buffer</strong></td>
+<td>file = <code>/var/log/srlinux/file</code> persistent; buffer = <code>/var/log/srlinux/buffer</code> RAM หายเมื่อ reboot</td>
+</tr>
+<tr>
+<td><strong>app_mgr vs mgmt_svr vs IDB</strong></td>
+<td>app_mgr = start/monitor app; mgmt_svr = own YANG, validate, แปลงเป็น protobuf; IDB = pub/sub ระหว่าง app</td>
+</tr>
+<tr>
+<td><strong>IRB vs bridged subinterface</strong></td>
+<td>IRB = L3 ไม่มี VLAN, เชื่อม mac-vrf↔ip-vrf; bridged = L2 port ใน mac-vrf มี VLAN/bridge-table</td>
+</tr>
+<tr>
+<td><strong>resolve true vs false</strong></td>
+<td>true = next-hop resolve ผ่าน route อะไรก็ได้ (recursive); false = ต้องเป็น local/direct</td>
+</tr>
+<tr>
+<td><strong>ZTP พื้นฐาน vs sZTP/BootZ (ตั้งแต่ 26.3)</strong></td>
+<td>พื้นฐาน: DHCP 66/67/43 + script ไม่มี PKI; ตั้งแต่ 26.3 เพิ่ม sZTP (DHCP opt 143/136) และ BootZ ที่ใช้ certificate</td>
+</tr>
+<tr>
+<td><strong>Revert vs Restore (EDA)</strong></td>
+<td>revert = undo transaction เดียว; restore = คืนทุก resource ไปสถานะ ณ transaction นั้น</td>
+</tr>
+<tr>
+<td><strong>deviation accept vs reject</strong></td>
+<td>accept = อัปเดต intent ตาม node; reject = revert node กลับเป็น intent</td>
+</tr>
+</tbody>
+</table></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="mark">running config</div>
+    <div>สรุปพื้นฐาน Nokia SR Linux และ Data Center Fabric</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  (function(){
+    var bar = document.getElementById('progress-bar');
+    var toggle = document.getElementById('toc-toggle');
+    var panel = document.getElementById('toc-panel');
+    if (!bar) return;
+    var links = panel ? Array.prototype.slice.call(panel.querySelectorAll('a[data-toc]')) : [];
+
+    function clamp01(x){ return x<0?0:x>1?1:x; }
+    function updateBar(){
+      var doc = document.documentElement;
+      var scrollTop = window.scrollY || doc.scrollTop;
+      var height = doc.scrollHeight - doc.clientHeight;
+      var pct = height>0 ? clamp01(scrollTop/height)*100 : 0;
+      bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', updateBar, {passive:true});
+    window.addEventListener('resize', updateBar);
+    updateBar();
+
+    if (toggle && panel){
+      toggle.addEventListener('click', function(){
+        var willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+      });
+      document.addEventListener('click', function(e){
+        if (!panel.hidden && !panel.contains(e.target) && e.target!==toggle && !toggle.contains(e.target)){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+      links.forEach(function(a){
+        a.addEventListener('click', function(){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    if (sections.length && links.length){
+      var byId = {};
+      links.forEach(function(a){ byId[a.getAttribute('data-toc')] = a; });
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){
+            links.forEach(function(a){ a.classList.remove('active'); });
+            var a = byId[e.target.id];
+            if (a) a.classList.add('active');
+          }
+        });
+      }, {rootMargin:'-40% 0px -55% 0px', threshold:0});
+      sections.forEach(function(s){ io.observe(s); });
+    }
+  })();
+
+})();
+</script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  const dark = () => document.documentElement.getAttribute('data-theme') === 'dark' ||
+    (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+  mermaid.initialize({ startOnLoad: true, theme: dark() ? 'dark' : 'neutral', fontFamily: 'Sarabun, Inter, sans-serif' });
+</script>
+<script src="../assets/theme.js"></script>
+</body>
+</html>
