@@ -12,6 +12,27 @@
 </head>
 <body>
 
+<div class="progress-bar" id="progress-bar"></div>
+<nav class="toc-widget" id="toc-widget">
+  <button type="button" class="toc-toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc-panel">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    <span class="toc-toggle-label">สารบัญ</span>
+  </button>
+  <div class="toc-panel" id="toc-panel" hidden>
+    <ol>
+      <li><a href="#why" data-toc="why">01 · ทำไมต้องซิงค์</a></li>
+      <li><a href="#freq" data-toc="freq">02 · ความถี่ (Frequency)</a></li>
+      <li><a href="#phase" data-toc="phase">03 · เฟส (Phase)</a></li>
+      <li><a href="#time" data-toc="time">04 · เวลา (Time of Day)</a></li>
+      <li><a href="#synce" data-toc="synce">05 · SyncE</a></li>
+      <li><a href="#ptp" data-toc="ptp">06 · PTP</a></li>
+      <li><a href="#hierarchy" data-toc="hierarchy">07 · สายโซ่นาฬิกา GM / BC / OC / TC</a></li>
+      <li><a href="#profiles" data-toc="profiles">08 · PTP Profile</a></li>
+      <li><a href="#summary" data-toc="summary">09 · สรุป</a></li>
+    </ol>
+  </div>
+</nav>
+
 <nav class="site-nav">
   <div class="wrap">
     <a class="brand" href="../index.html">running<span class="prompt">&nbsp;config</span></a>
@@ -26,9 +47,9 @@
 <header class="hero">
   <canvas id="c-hero" aria-hidden="true"></canvas>
   <div class="wrap hero-inner">
-    <span class="kicker"><span class="dot"></span>SyncE &amp; PTP ฉบับเข้าใจง่าย · 2026-09-02</span>
+    <span class="kicker"><span class="dot"></span>SyncE &amp; PTP ฉบับเข้าใจง่าย · 2026-09-02 · เรียบเรียงใหม่ 2026-10-07</span>
     <h1>ทำไมนาฬิกาทุกตัว<br>ในเครือข่ายต้อง<span class="amber-text">&nbsp;เดินตรงกัน</span></h1>
-    <p class="lede">อุปกรณ์เครือข่ายหลายพันตัวทั่วประเทศ ต้อง "จับจังหวะ" และ "รู้เวลา" ตรงกันในระดับนาโนวินาที ถึงจะส่งสัญญาณโทรศัพท์ วิดีโอ หรือข้อมูลได้ไม่สะดุด หน้านี้จะพาไปดูว่า SyncE และ PTP ทำงานยังไง ด้วยแอนิเมชันที่มองเห็นภาพได้จริง — เริ่มจากศูนย์ ไม่ต้องมีพื้นฐานมาก่อน</p>
+    <p class="lede">อุปกรณ์เครือข่ายหลายพันตัวต้อง "จับจังหวะ" และ "รู้เวลา" ตรงกันระดับนาโนวินาที ถึงจะส่งสัญญาณมือถือ วิดีโอ หรือข้อมูลได้ไม่สะดุด โพสต์นี้แบ่งเป็น 2 ส่วน: ส่วนแรกปูพื้น 3 อย่างที่คำว่า "ซิงค์" หมายถึง (ความถี่ เฟส เวลา) ส่วนที่สองดูว่า SyncE กับ PTP ส่งของพวกนี้ยังไง ใครเป็นใครในสายโซ่นาฬิกา และ profile ไหนใช้ตอนไหน ด้วยแอนิเมชันที่เห็นภาพจริง เริ่มจากศูนย์</p>
     <span class="scroll-cue">เลื่อนลงเพื่อเริ่มเรียนรู้
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6l5 5 5-5"/></svg>
     </span>
@@ -37,13 +58,13 @@
 
 <main class="wrap">
 
-  <!-- ============ 1. ทำไมต้อง sync ============ -->
   <section id="why">
-    <span class="kicker"><span class="dot"></span>01 · จุดเริ่มต้น</span>
+    <span class="kicker"><span class="dot"></span>01 · พื้นฐาน 3 อย่าง</span>
     <h2>ทำไมอุปกรณ์เครือข่ายต้อง "ซิงค์" กัน</h2>
-    <p class="lede">ลองนึกถึงวงออร์เคสตรา — ถ้านักดนตรีแต่ละคนตีจังหวะเร็วช้าไม่เท่ากัน หรือเริ่มเล่นคนละจุดในโน้ต เสียงเพลงจะเพี้ยนทันที เครือข่ายโทรคมนาคมก็เหมือนกัน อุปกรณ์นับพันตัวต้อง "เดินตามจังหวะเดียวกัน" อย่างแม่นยำสุด ๆ โดยเฉพาะสถานีฐานมือถือ (4G/5G) ที่ต้องรู้เวลาแม่นระดับ <strong>ไม่กี่ร้อยนาโนวินาที</strong> ไม่งั้นสัญญาณจากเสาข้างเคียงจะชนกันเอง</p>
-    <p>คำว่า "ซิงค์" ในโลกโทรคมนาคมแยกออกเป็น 3 เรื่องที่ไม่เหมือนกัน แม้จะฟังดูคล้ายกัน — และนี่คือสิ่งที่หน้านี้จะอธิบายทีละเรื่องแบบช้า ๆ:</p>
-    <div class="trio">
+
+    <p class="lede">อุปกรณ์นับพันตัวทั่วเครือข่ายต้อง "เดินตามจังหวะเดียวกัน" โดยเฉพาะสถานีฐาน 4G/5G ที่ต้องรู้เวลาแม่นระดับ<strong>ไม่กี่ร้อยนาโนวินาที</strong> ไม่งั้นสัญญาณจากเสาข้างเคียงจะชนกันเอง เหมือนวงออร์เคสตราที่นักดนตรีตีจังหวะไม่เท่ากัน</p>
+    <p>คำว่า "ซิงค์" ในโทรคมนาคมแยกเป็น 3 เรื่องที่ไม่เหมือนกัน และต้องทำให้ครบทีละชั้น:</p>
+<div class="trio">
       <div class="card">
         <span class="num">01</span>
         <h3>ความถี่ <span class="mono" style="font-size:.8em;color:var(--muted)">Frequency</span></h3>
@@ -60,107 +81,129 @@
         <p>รู้ว่า "ตอนนี้กี่โมงกี่วินาทีจริง ๆ" เทียบกับเวลามาตรฐานโลกได้</p>
       </div>
     </div>
+    <ul class="points">
+      <li><strong>ความถี่</strong> พอสำหรับระบบแบบ FDD ที่ส่งกับรับคนละความถี่ ขอแค่ทุกตัวเดินจังหวะเท่ากัน</li>
+      <li><strong>เฟสและเวลา</strong> จำเป็นสำหรับระบบแบบ TDD (4G/5G ส่วนใหญ่) ที่ส่งกับรับสลับกันบนความถี่เดียว ทุกเสาต้องสลับ "พร้อมกัน"</li>
+      <li><strong>เวลาจริง (Time of Day)</strong> ใช้เทียบเหตุการณ์ข้ามอุปกรณ์: log, การคิดค่าบริการ, ความปลอดภัย</li>
+    </ul>
   </section>
 
-  <!-- ============ 2. Frequency ============ -->
   <section id="freq">
-    <span class="kicker"><span class="dot"></span>02 · พื้นฐานที่ 1</span>
-    <h2>ความถี่ (Frequency) คืออะไร</h2>
-    <p class="lede">ความถี่ คือ "จำนวนจังหวะต่อวินาที" ของนาฬิกา — ถ้าอุปกรณ์สองตัวเดินจังหวะเร็วไม่เท่ากัน แม้ตอนแรกจะตั้งเวลาตรงกัน เวลาของทั้งคู่ก็จะค่อย ๆ ห่างกันไปเรื่อย ๆ เหมือนนาฬิกาข้อมือสองเรือนที่เรือนหนึ่งเดินเร็วกว่านิดเดียว ผ่านไปหนึ่งเดือนก็จะคลาดกันไปหลายนาที</p>
-    <div class="stage">
+    <span class="kicker"><span class="dot"></span>02 · พื้นฐาน 3 อย่าง</span>
+    <h2>ความถี่ (Frequency): จังหวะต้องเท่ากัน</h2>
+
+    <p class="lede">ความถี่คือ "จำนวนจังหวะต่อวินาที" ของนาฬิกา ถ้าสองตัวเดินเร็วไม่เท่ากัน ต่อให้ตั้งเวลาตรงกันตอนแรก เวลาก็จะค่อย ๆ ห่างออกไปเรื่อย ๆ เหมือนนาฬิกาสองเรือนที่เรือนหนึ่งเดินเร็วกว่านิดเดียว</p>
+<div class="stage">
       <div class="stage-label">
         <span class="chip amber">● อ้างอิง (Reference)</span>
         <span class="chip cyan">● อุปกรณ์ (Local)</span>
       </div>
       <canvas id="c-freq" role="img" aria-label="แอนิเมชันแสดงจังหวะสองแถว แถวหนึ่งเริ่มเร็วกว่าอีกแถว แล้วค่อย ๆ ปรับจนจังหวะตรงกัน"></canvas>
     </div>
-    <p class="caption">แถวบน (สีเหลือง) คือจังหวะอ้างอิงที่คงที่ แถวล่าง (สีฟ้า) เริ่มถี่กว่า (เร็วกว่า) แล้วค่อย ๆ ถูกปรับจนช่องห่างเท่ากับแถวบน — เมื่อ "จังหวะเท่ากัน" ระบบจะขึ้นสถานะ ✓ ให้เห็น</p>
-    <p>ในเครือข่ายจริง อุปกรณ์แต่ละตัวมี <strong>oscillator</strong> (แหล่งกำเนิดจังหวะ เช่น คริสตัลหรือรูบิเดียม) ของตัวเอง ซึ่งไม่มีทางเที่ยงตรงเป๊ะเหมือนกันทุกตัว จึงต้อง "ส่งต่อจังหวะ" จากแหล่งที่แม่นที่สุดไปให้อุปกรณ์อื่นเดินตาม — วิธีหนึ่งที่ใช้ส่งต่อความถี่นี้คือ <strong>SyncE</strong> ซึ่งจะอธิบายในหัวข้อถัดไป</p>
+    <ul class="points">
+      <li>ในภาพ แถวบน (เหลือง) คือจังหวะอ้างอิงที่คงที่ แถวล่าง (ฟ้า) เริ่มถี่กว่า แล้วถูกปรับจนช่องห่างเท่ากัน จึงขึ้น ✓</li>
+      <li>อุปกรณ์แต่ละตัวมี <strong>oscillator</strong> ของตัวเอง (คริสตัล, OCXO, รูบิเดียม) ไม่มีตัวไหนเที่ยงตรงเท่ากันเป๊ะ จึงต้อง "ส่งต่อจังหวะ" จากแหล่งที่แม่นที่สุดให้ตัวอื่นเดินตาม</li>
+      <li>หน่วยที่ใช้บอกความคลาดคือ ppm / ppb: คลาด 50 ppb = ห่างออกไป 50 นาโนวินาทีทุก 1 วินาที</li>
+      <li><strong>Holdover:</strong> ถ้าแหล่งอ้างอิงหายไป อุปกรณ์เดินด้วย oscillator ของตัวเอง คุณภาพ oscillator กำหนดว่ารักษาความแม่นได้นานแค่ไหนก่อนหลุดเกณฑ์</li>
+      <li>วิธีส่งต่อความถี่บน Ethernet คือ <strong>SyncE</strong> (หัวข้อ 05)</li>
+    </ul>
   </section>
 
-  <!-- ============ 3. Phase ============ -->
   <section id="phase">
-    <span class="kicker"><span class="dot"></span>03 · พื้นฐานที่ 2</span>
-    <h2>เฟส (Phase) คืออะไร</h2>
-    <p class="lede">ความถี่เท่ากันแค่บอกว่า "เร็วเท่ากัน" แต่ไม่ได้บอกว่า "จุดเริ่มตรงกัน" — เหมือนคนสองคนตบมือจังหวะละ 1 วินาทีเท่ากันเป๊ะ แต่ถ้าอีกคนตบช้ากว่าเสมอ 0.3 วินาที ก็ยังไม่เรียกว่า "phase ตรงกัน" ต้องปรับให้จุดตบมือ ตรงกันพอดีด้วย</p>
-    <div class="stage">
+    <span class="kicker"><span class="dot"></span>03 · พื้นฐาน 3 อย่าง</span>
+    <h2>เฟส (Phase): จุดเริ่มต้องตรงกัน</h2>
+
+    <p class="lede">ความถี่เท่ากันบอกแค่ว่า "เร็วเท่ากัน" ไม่ได้บอกว่า "จุดเริ่มตรงกัน" คนสองคนตบมือจังหวะละ 1 วินาทีเท่ากัน แต่คนหนึ่งตบช้ากว่าเสมอ 0.3 วินาที ก็ยังไม่เรียกว่าเฟสตรงกัน</p>
+<div class="stage">
       <div class="stage-label">
         <span class="chip amber">● คลื่นอ้างอิง</span>
         <span class="chip cyan">● คลื่นอุปกรณ์</span>
       </div>
       <canvas id="c-phase" role="img" aria-label="แอนิเมชันคลื่นสองเส้นความถี่เท่ากันแต่ยอดคลื่นเหลื่อมกัน แล้วค่อย ๆ เลื่อนจนยอดคลื่นตรงกัน"></canvas>
     </div>
-    <p class="caption">คลื่นทั้งสองเส้นมีความถี่เท่ากันตลอด (ระยะห่างยอดคลื่นเท่ากัน) แต่ยอดคลื่นเส้นฟ้าเหลื่อมจากเส้นเหลืองอยู่ — เมื่อ "เฟสตรงกัน" ยอดคลื่นทั้งคู่จะขึ้นพร้อมกันเป๊ะ</p>
-    <div class="callout">
-      <span class="tag">ทำไมต้องแคร์เรื่องนี้</span>
-      <p>ระบบมือถือแบบ TDD (Time Division Duplex เช่น 4G/5G ส่วนใหญ่) ใช้ "ช่วงเวลาเดียวกัน" สลับกันส่ง-รับสัญญาณ ถ้าเสาสัญญาณสองต้นที่อยู่ใกล้กัน phase ไม่ตรงกัน ต้นหนึ่งอาจกำลัง "ส่ง" ในขณะที่อีกต้น "รับ" อยู่ สัญญาณจะรบกวนกันทันที</p>
-    </div>
+    <ul class="points">
+      <li>ในภาพ คลื่นสองเส้นมีความถี่เท่ากันตลอด (ระยะห่างยอดคลื่นเท่ากัน) แต่ยอดคลื่นเหลื่อมกัน เมื่อเฟสตรงกัน ยอดคลื่นจะขึ้นพร้อมกัน</li>
+      <li><strong>ทำไมต้องแคร์:</strong> ระบบ TDD ใช้ช่วงเวลาเดียวกันสลับส่ง-รับ ถ้าเสาสองต้นที่อยู่ใกล้กันเฟสเหลื่อม ต้นหนึ่งอาจกำลัง "ส่ง" ขณะที่อีกต้น "รับ" สัญญาณจะรบกวนกันทันที</li>
+      <li>เกณฑ์ที่ใช้กันทั่วไปสำหรับ LTE-TDD/5G คือเฟสคลาดได้ไม่เกิน <strong>±1.5 µs</strong> ที่ปลายทาง (ITU-T G.8271.1)</li>
+      <li>เฟสเป็นชั้นที่ "ละเอียดกว่า" ความถี่: ต้องมีความถี่ตรงก่อน เฟสถึงจะนิ่งอยู่ได้</li>
+    </ul>
   </section>
 
-  <!-- ============ 4. Time ============ -->
   <section id="time">
-    <span class="kicker"><span class="dot"></span>04 · พื้นฐานที่ 3</span>
-    <h2>เวลา (Time of Day) คืออะไร</h2>
-    <p class="lede">ขั้นถัดมาคือการรู้ "เวลาจริง" ไม่ใช่แค่จังหวะ — คือบอกได้ว่าตอนนี้ ปี เดือน วัน ชั่วโมง นาที วินาที เท่าไหร่ เทียบกับเวลามาตรฐานโลก (UTC) เพื่อให้เอาเหตุการณ์ที่เกิดขึ้นคนละที่ในเครือข่ายมาเทียบกันได้ตรง ๆ เช่น log, การคิดค่าบริการ, หรือความปลอดภัยของระบบ</p>
-    <div class="stage">
+    <span class="kicker"><span class="dot"></span>04 · พื้นฐาน 3 อย่าง</span>
+    <h2>เวลา (Time of Day): รู้ว่าตอนนี้กี่โมงจริง ๆ</h2>
+
+    <p class="lede">ชั้นสุดท้ายคือรู้ "เวลาจริง" เทียบกับเวลามาตรฐานโลก (UTC) ไม่ใช่แค่จังหวะ อุปกรณ์อาจเดินจังหวะเท่ากันและเฟสตรงกันแล้ว แต่ยังไม่รู้ว่าตอนนี้กี่โมง ถ้าไม่มีใครบอกเวลาตั้งต้นให้</p>
+<div class="stage">
       <div class="stage-label">
         <span class="chip amber">● นาฬิกาอ้างอิง</span>
         <span class="chip cyan">● นาฬิกาอุปกรณ์</span>
       </div>
       <canvas id="c-clock" role="img" aria-label="แอนิเมชันนาฬิกาสองเรือน เรือนหนึ่งเข็มชี้เวลาไม่ตรง แล้วขยับจนตรงกับอีกเรือน"></canvas>
     </div>
-    <p class="caption">นาฬิกาฝั่งขวาเริ่มต้นชี้เวลาไม่ตรงกับฝั่งซ้าย (ตัวเลข Δt ด้านล่างแสดงส่วนต่าง) จากนั้นเข็มจะขยับปรับจนตรงกันพอดี และ Δt กลายเป็น 0</p>
-    <p>สังเกตว่านี่คือ "ขั้นที่ละเอียดกว่า" เฟส — อุปกรณ์อาจจังหวะตรงกัน (frequency ตรง) และตบมือพร้อมกัน (phase ตรง) แต่ยังไม่รู้ว่า "ตอนนี้กี่โมง" ก็ได้ ถ้าไม่มีใครบอกเวลาตั้งต้นให้ การส่งทั้ง phase และ time นี้ ทำผ่านโพรโทคอลที่ชื่อว่า <strong>PTP</strong></p>
-  </section>
-
-  <!-- ============ 5. SyncE ============ -->
-  <section id="synce">
-    <span class="kicker"><span class="dot"></span>05 · กลไกที่ 1</span>
-    <h2>SyncE ส่งความถี่ผ่านสายสัญญาณโดยตรง</h2>
-    <p class="lede"><strong>SyncE (Synchronous Ethernet)</strong> คือการส่ง "จังหวะ" (ความถี่) ไปพร้อมกับสัญญาณไฟฟ้า/แสงบนสาย Ethernet เอง — ไม่ใช่การส่งข้อความไปบอกจังหวะ แต่เป็นการทำให้สัญญาณที่วิ่งบนสายมี "จังหวะ" ฝังอยู่ในตัวมันเลย เหมือนส่งจังหวะเพลงผ่านการสั่นของสายไฟ ไม่ใช่พูดบอกกันเป็นคำพูด</p>
-    <div class="stage">
-      <div class="stage-label"><span class="chip amber">● สัญญาณจังหวะ (Physical layer)</span></div>
-      <canvas id="c-synce" role="img" aria-label="แอนิเมชันจุดสัญญาณเดินทางผ่านอุปกรณ์ 5 ตัวที่ต่อกันเป็นสาย แต่ละตัวรับจังหวะแล้วส่งต่อ"></canvas>
-    </div>
-    <p class="caption">แต่ละอุปกรณ์ (สี่เหลี่ยม) รับจังหวะจากอุปกรณ์ก่อนหน้า แล้ว "สร้างจังหวะใหม่" ที่แม่นเท่าเดิมส่งต่อไปอุปกรณ์ถัดไป ทำแบบนี้ทีละช่วง (hop-by-hop) ไปเรื่อย ๆ</p>
     <ul class="points">
-      <li>ทุก "hop" (จุดต่อระหว่างอุปกรณ์สองตัว) ต้องรองรับ SyncE ถึงจะส่งต่อจังหวะได้ต่อเนื่องตลอดเส้นทาง</li>
-      <li>มีข้อความพิเศษชื่อ <strong>ESMC</strong> (Ethernet Synchronization Messaging Channel) คอยบอก "คุณภาพ" ของจังหวะต้นตอ เช่น ป้าย <span class="mono">QL-PRC</span> = คุณภาพดีที่สุด เพื่อให้อุปกรณ์ปลายทางเลือกรับจังหวะจากแหล่งที่ดีที่สุดโดยอัตโนมัติ</li>
-      <li>SyncE ส่งได้ <strong>แค่ความถี่เท่านั้น</strong> — ไม่ได้บอก phase หรือเวลาไปด้วย</li>
+      <li>ในภาพ นาฬิกาขวาเริ่มชี้เวลาไม่ตรงกับซ้าย (Δt ด้านล่างคือส่วนต่าง) แล้วเข็มขยับจนตรงกันและ Δt เป็น 0</li>
+      <li>ต้นทางของเวลาจริงคือ <strong>GNSS/GPS</strong> ที่ Grandmaster รับมาแล้วแจกต่อ</li>
+      <li>ได้เวลาจริงแล้วจะได้เฟสไปด้วยในตัว เพราะทุกตัวรู้ว่า "วินาทีที่ N เริ่มเมื่อไหร่" เหมือนกัน</li>
+      <li>ใช้กับ log, การคิดค่าบริการ, ความปลอดภัย และระบบที่ต้องเทียบเหตุการณ์ข้ามไซต์</li>
+      <li>โพรโทคอลที่ส่งทั้งเฟสและเวลาคือ <strong>PTP</strong> (หัวข้อ 06)</li>
     </ul>
   </section>
 
-  <!-- ============ 6. PTP ============ -->
+  <section id="synce">
+    <span class="kicker"><span class="dot"></span>05 · กลไกส่งจังหวะและเวลา</span>
+    <h2>SyncE: ส่งความถี่ไปกับสัญญาณบนสาย</h2>
+
+    <p class="lede"><strong>SyncE (Synchronous Ethernet)</strong> ฝัง "จังหวะ" ไว้ในสัญญาณไฟฟ้า/แสงบนสาย Ethernet เอง ไม่ได้ส่งข้อความไปบอก เหมือนส่งจังหวะเพลงผ่านการสั่นของสาย ไม่ใช่พูดบอกเป็นคำ</p>
+<div class="stage">
+      <div class="stage-label"><span class="chip amber">● สัญญาณจังหวะ (Physical layer)</span></div>
+      <canvas id="c-synce" role="img" aria-label="แอนิเมชันจุดสัญญาณเดินทางผ่านอุปกรณ์ 5 ตัวที่ต่อกันเป็นสาย แต่ละตัวรับจังหวะแล้วส่งต่อ"></canvas>
+    </div>
+    <ul class="points">
+      <li>Ethernet ปกติ clock ของแต่ละ port เป็นอิสระ (free-running คลาดได้ถึง ±100 ppm) SyncE ให้ port ส่งใช้จังหวะจากแหล่งอ้างอิงแทน แล้วฝั่งรับกู้จังหวะจากสัญญาณที่เข้ามา แนวคิดเดียวกับ SDH/SONET</li>
+      <li>ทำงานแบบ <strong>hop-by-hop</strong>: แต่ละอุปกรณ์กู้จังหวะจากตัวก่อนหน้า สร้างจังหวะใหม่ที่แม่นเท่าเดิม แล้วส่งต่อ ทุก hop ตลอดเส้นทางจึงต้องรองรับ SyncE</li>
+      <li><strong>ESMC</strong> (Ethernet Synchronization Messaging Channel) เป็นข้อความบอก "คุณภาพ" ของจังหวะต้นตอ เช่น <span class="mono">QL-PRC</span> = ดีที่สุด อุปกรณ์เลือกรับจากแหล่งที่คุณภาพดีที่สุดเอง</li>
+      <li><span class="mono">QL-DNU</span> (Do Not Use) ส่งกลับไปทาง port ที่ตัวเองรับจังหวะมา กันไม่ให้จังหวะวนกลับเป็นลูป</li>
+      <li>ส่งได้<strong>แค่ความถี่</strong> ไม่บอกเฟสหรือเวลา</li>
+    </ul>
+  </section>
+
   <section id="ptp">
-    <span class="kicker"><span class="dot"></span>06 · กลไกที่ 2</span>
-    <h2>PTP ส่ง "ข้อความถาม-ตอบเวลา" เป็นแพ็กเก็ต</h2>
-    <p class="lede"><strong>PTP (Precision Time Protocol)</strong> ทำงานต่างจาก SyncE โดยสิ้นเชิง — แทนที่จะฝังจังหวะไว้ในสัญญาณไฟฟ้า มันส่ง "แพ็กเก็ตข้อความ" ไปมาระหว่างอุปกรณ์ต้นทาง (Master) กับปลายทาง (Slave) แล้วให้ Slave คำนวณเองว่าตอนนี้นาฬิกาตัวเองคลาดจาก Master อยู่เท่าไหร่</p>
-    <div class="stage">
+    <span class="kicker"><span class="dot"></span>06 · กลไกส่งจังหวะและเวลา</span>
+    <h2>PTP: ถาม-ตอบเวลาด้วยแพ็กเก็ตที่ประทับเวลา</h2>
+
+    <p class="lede"><strong>PTP (Precision Time Protocol, IEEE 1588)</strong> ส่งแพ็กเก็ตที่มี timestamp ไปมาระหว่าง Master กับ Slave แล้วให้ Slave คำนวณเองว่านาฬิกาตัวเองคลาดจาก Master เท่าไหร่ จึงส่งได้ทั้งเฟสและเวลาจริง</p>
+<div class="stage">
       <div class="stage-label">
         <span class="chip amber">● Master</span>
         <span class="chip cyan">● Slave</span>
       </div>
       <canvas id="c-ptp" role="img" aria-label="แอนิเมชันข้อความ Sync, Follow_Up, Delay_Req, Delay_Resp วิ่งไปมาระหว่าง Master กับ Slave พร้อมค่าประทับเวลา แล้วคำนวณส่วนต่างเวลา"></canvas>
     </div>
-    <p class="caption">Master ส่ง <span class="mono">Sync</span> พร้อมประทับเวลา t1 → Slave รับที่ t2 · แล้ว Master บอก t1 จริงผ่าน <span class="mono">Follow_Up</span> · Slave ยิงถามกลับด้วย <span class="mono">Delay_Req</span> ที่ t3 → Master รับที่ t4 แล้วตอบกลับผ่าน <span class="mono">Delay_Resp</span> — จากตัวเลขทั้ง 4 ตัวนี้ Slave คำนวณ "ส่วนต่างเวลา" กับ Master ได้เอง แล้วปรับนาฬิกาตัวเองให้ตรง</p>
-    <div class="callout">
-      <span class="tag">จุดสำคัญ</span>
-      <p>PTP ส่งได้ทั้ง <strong>phase และเวลาจริง</strong> (ต่างจาก SyncE ที่ส่งได้แค่ความถี่) เพราะมันคุยกันด้วยตัวเลขเวลาที่ประทับไว้ในแพ็กเก็ตโดยตรง แต่ก็มีจุดอ่อน — ถ้าแพ็กเก็ตไปกลับใช้เวลาไม่เท่ากัน (asymmetric delay) การคำนวณจะคลาดตามไปด้วย นี่คือเหตุผลที่บาง profile ของ PTP ยังต้องพึ่ง SyncE ช่วยเสริมความแม่นยำ</p>
-    </div>
+    <ul class="points">
+      <li>Master ส่ง <span class="mono">Sync</span> ที่เวลา t1 → Slave รับที่ t2 · Slave ส่ง <span class="mono">Delay_Req</span> ที่ t3 → Master รับที่ t4 แล้วตอบด้วย <span class="mono">Delay_Resp</span></li>
+      <li>แบบ two-step ค่า t1 จริงมาทีหลังใน <span class="mono">Follow_Up</span> (ตามภาพ) ส่วน one-step ใส่ t1 ลงใน Sync ตั้งแต่แรก ไม่มี Follow_Up</li>
+      <li>สูตร: <span class="mono">offset = ((t2 − t1) − (t4 − t3)) / 2</span> และ <span class="mono">delay = ((t2 − t1) + (t4 − t3)) / 2</span> โดยสมมติว่าขาไปกับขากลับใช้เวลาเท่ากัน</li>
+      <li><strong>จุดอ่อน:</strong> ถ้าขาไปกลับไม่เท่ากัน (asymmetry) ค่า offset จะคลาดเท่ากับครึ่งหนึ่งของส่วนต่าง และถ้าแพ็กเก็ตผ่าน hop ที่ไม่รู้จัก PTP ความหน่วงที่แกว่ง (PDV) จะทำให้ค่ากระโดด</li>
+      <li>ความแม่นระดับนาโนวินาทีต้องประทับเวลาด้วยฮาร์ดแวร์ที่ port ไม่ใช่ software</li>
+      <li>เพราะอย่างนี้ profile ที่เข้มงวดจึงให้ทุก hop เป็น Boundary Clock และใช้ SyncE คุมความถี่ควบคู่ไป (หัวข้อ 08)</li>
+    </ul>
   </section>
 
-  <!-- ============ 7. Clock hierarchy ============ -->
   <section id="hierarchy">
-    <span class="kicker"><span class="dot"></span>07 · โครงสร้าง</span>
+    <span class="kicker"><span class="dot"></span>07 · กลไกส่งจังหวะและเวลา</span>
     <h2>ใครเป็นใครในสายโซ่นาฬิกา</h2>
-    <p class="lede">เครือข่ายจริงมีอุปกรณ์หลายชั้นต่อกันเป็นทอด ๆ แต่ละชั้นมีบทบาทต่างกัน:</p>
+
+    <p class="lede">เครือข่ายจริงต่อเป็นทอด ๆ หลายชั้น แต่ละชั้นมีบทบาทต่างกัน PTP จึงนิยามชนิดนาฬิกาไว้ 4 แบบ</p>
     <ul class="points">
-      <li><strong>Grandmaster (GM)</strong> — นาฬิกาต้นตอที่แม่นยำที่สุดในเครือข่าย ปกติรับเวลามาจากดาวเทียม GNSS/GPS</li>
-      <li><strong>Boundary Clock (BC)</strong> — อุปกรณ์กลางที่รับเวลาจาก GM แล้ว "กลายเป็น master ตัวใหม่" ส่งต่อให้อุปกรณ์ถัดไป ช่วยไม่ให้ความคลาดเคลื่อนสะสมยาวไปทั้งเส้นทาง</li>
-      <li><strong>Ordinary Clock (OC)</strong> — อุปกรณ์ปลายทางที่รับเวลามาใช้เฉยๆ ไม่ส่งต่อให้ใคร</li>
-      <li><strong>Transparent Clock (TC)</strong> — อุปกรณ์ที่ "ไม่ปรับนาฬิกาตัวเอง" แต่วัดว่าแพ็กเก็ต PTP ผ่านตัวมันช้าไปกี่นาโนวินาที แล้วแก้ตัวเลขในแพ็กเก็ตให้ถูกต้องก่อนส่งต่อ — เหมือนบุรุษไปรษณีย์ที่ประทับเวลาจริงตอนจดหมายผ่านมือตัวเอง</li>
+      <li><strong>Grandmaster (GM)</strong> นาฬิกาต้นตอที่แม่นที่สุด ปกติรับเวลาจาก GNSS/GPS</li>
+      <li><strong>Boundary Clock (BC)</strong> รับเวลาจากต้นทาง ปรับนาฬิกาตัวเอง แล้วเป็น master ให้ตัวถัดไป ตัดความคลาดสะสมเป็นช่วง ๆ</li>
+      <li><strong>Ordinary Clock (OC)</strong> ปลายทางที่รับเวลามาใช้ ไม่ส่งต่อ</li>
+      <li><strong>Transparent Clock (TC)</strong> ไม่ปรับนาฬิกาตัวเอง แต่วัดว่าแพ็กเก็ต PTP ค้างในตัวมันกี่นาโนวินาที แล้วแก้ตัวเลข (correction field) ก่อนส่งต่อ เหมือนบุรุษไปรษณีย์ที่ประทับเวลาตอนจดหมายผ่านมือ</li>
+      <li>ใน telecom profile เรียก T-GM, T-BC และ T-TSC (Telecom Time Slave Clock) ตามลำดับ</li>
+      <li>การเลือกว่าใครเป็น master ทำอัตโนมัติด้วย <strong>BMCA</strong> (Best Master Clock Algorithm) จาก priority และคุณภาพนาฬิกา (clockClass) ที่ประกาศใน <span class="mono">Announce</span></li>
     </ul>
-    <figure class="tree-figure">
+<figure class="tree-figure">
       <svg viewBox="0 0 720 360" role="img" aria-label="แผนภาพลำดับชั้นนาฬิกา จาก Grandmaster ด้านบน ไล่ลงมาที่ Boundary Clock สองตัว แล้วแตกไปยัง Ordinary Clock และ Transparent Clock ที่ปลายทาง โดยมีจุดสัญญาณไหลลงตามเส้นทางตลอดเวลา">
         <defs>
           <path id="e-gm-bc1" d="M360,66 L200,150"/>
@@ -237,13 +280,12 @@
     </figure>
   </section>
 
-  <!-- ============ 8. Profiles ============ -->
   <section id="profiles">
-    <span class="kicker"><span class="dot"></span>08 · เลือกใช้แบบไหน</span>
-    <h2>PTP Profile ต่างกันยังไง</h2>
-    <p class="lede">"Profile" คือชุดกฎที่กำหนดว่าจะใช้ PTP แบบไหนในสถานการณ์ไหน — โดยเฉพาะว่าจะบังคับให้มี SyncE ควบคู่ไปด้วยหรือไม่ ยิ่งเข้มงวดเท่าไหร่ ยิ่งแม่นยำเท่านั้น แต่ก็ต้องการให้อุปกรณ์ทุกตัวตลอดเส้นทางรองรับมากขึ้นเท่านั้น</p>
+    <span class="kicker"><span class="dot"></span>08 · กลไกส่งจังหวะและเวลา</span>
+    <h2>PTP Profile: เลือกใช้แบบไหน</h2>
 
-    <div class="profiles">
+    <p class="lede">"Profile" คือชุดกฎว่าจะใช้ PTP แบบไหนในสถานการณ์ไหน โดยเฉพาะว่าต้องมี SyncE ควบคู่ไหม และยอมให้มี hop ที่ไม่รู้จัก PTP ระหว่างทางหรือไม่ ยิ่งเข้มงวดยิ่งแม่น แต่ต้องการให้อุปกรณ์ทุกตัวรองรับ</p>
+<div class="profiles">
       <div class="profile-card">
         <h3>G.8275.1</h3>
         <div class="sub">Full Timing Support / Telecom Profile</div>
@@ -266,7 +308,7 @@
 
       <div class="profile-card">
         <h3>G.8275.2</h3>
-        <div class="sub">Partial Timing Support (APTS)</div>
+        <div class="sub">Partial Timing Support (PTS / APTS)</div>
         <div class="chain" aria-hidden="true">
           <div class="node"><div class="dotpair"><span class="on cyan"></span></div></div>
           <div class="seg"></div>
@@ -284,10 +326,12 @@
         <span class="badge-acc">ยืดหยุ่นกว่า แลกกับความแม่นยำที่ลดลง</span>
       </div>
     </div>
-
-    <p>ยังมี <strong>G.8265.1 (Frequency Profile)</strong> ซึ่งใช้ PTP ส่ง "ความถี่อย่างเดียว" ผ่านเครือข่ายทั่วไปได้โดยไม่ต้องมี SyncE เลย เหมาะกับกรณีที่ต้องการแค่จังหวะให้ตรงกัน ไม่สนใจ phase หรือเวลาจริง</p>
-
-    <div class="table-wrap">
+    <ul class="points">
+      <li><strong>G.8275.1</strong> (Full Timing Support): PTP แบบ multicast บน Ethernet (L2) ทุก hop เป็น T-BC และต้องมี SyncE คู่กัน เป้าหมาย ±1.5 µs ที่ปลายทาง ใช้กับ 4G/5G TDD</li>
+      <li><strong>G.8275.2</strong> (Partial Timing Support): PTP แบบ unicast บน IP วิ่งผ่าน hop ที่ไม่รู้จัก PTP ได้ จึงไวต่อ PDV และ asymmetry ส่วน <strong>APTS</strong> คือแบบที่ปลายทางมี GNSS ของตัวเองเป็นหลัก และใช้ PTP เป็นตัวช่วยหรือสำรองตอน GNSS หาย</li>
+      <li><strong>G.8265.1</strong> (Frequency Profile): PTP unicast บน IP ส่ง<strong>ความถี่อย่างเดียว</strong> ใช้แทน SyncE เมื่อ transport ระหว่างทางไม่รองรับ SyncE</li>
+    </ul>
+<div class="table-wrap">
       <table>
         <thead><tr><th>Profile</th><th>ต้องมี SyncE ไหม</th><th>ส่งอะไรได้บ้าง</th><th>ใช้ตอนไหน</th></tr></thead>
         <tbody>
@@ -314,20 +358,21 @@
     </div>
   </section>
 
-  <!-- ============ 9. Summary ============ -->
   <section id="summary">
-    <span class="kicker"><span class="dot"></span>09 · สรุป</span>
-    <h2>เอามารวมกันแล้วทำงานยังไง</h2>
-    <p class="lede">ใน G.8275.1 ซึ่งเข้มงวดที่สุด SyncE และ PTP ทำงาน <strong>คู่กัน</strong> ไม่ใช่แทนกัน:</p>
+    <span class="kicker"><span class="dot"></span>09 · กลไกส่งจังหวะและเวลา</span>
+    <h2>สรุป: เอามารวมกันแล้วทำงานยังไง</h2>
+
     <ul class="points">
-      <li><span class="amber-text">SyncE</span> กระจาย "ความถี่" ไปทีละ hop ผ่านสัญญาณ physical layer โดยตรง — ให้ทุกอุปกรณ์เดินจังหวะเท่ากัน</li>
-      <li><span class="cyan-text">PTP</span> (ผ่านสายโซ่ Boundary Clock) กระจาย "เฟสและเวลาจริง" ผ่านแพ็กเก็ตข้อความถาม-ตอบ — ให้ทุกอุปกรณ์รู้ว่าตอนนี้กี่โมงกี่วินาทีตรงกัน</li>
-      <li>รวมกันแล้ว เครือข่ายจึงมีทั้ง "ความเร็วเท่ากัน" และ "รู้ช่วงเวลาเดียวกันเป๊ะ" — ครบทั้งสามอย่างที่พูดถึงตั้งแต่ต้น: ความถี่ เฟส และเวลา</li>
+      <li>"ซิงค์" มี 3 ชั้น: <strong>ความถี่</strong> (เร็วเท่ากัน) → <strong>เฟส</strong> (จุดเริ่มตรงกัน) → <strong>เวลาจริง</strong> (รู้ว่ากี่โมง) ต้องมีชั้นล่างก่อนชั้นบนถึงนิ่ง</li>
+      <li><span class="amber-text">SyncE</span> ส่งความถี่ทีละ hop ผ่าน physical layer ส่งเฟสหรือเวลาไม่ได้</li>
+      <li><span class="cyan-text">PTP</span> ส่งเฟสและเวลาจริงด้วยแพ็กเก็ตที่ประทับเวลา ต้องการฮาร์ดแวร์ timestamp และไวต่อ asymmetry</li>
+      <li>ใน G.8275.1 ทั้งสองทำงาน<strong>คู่กัน</strong>: SyncE คุมความถี่ให้นิ่ง PTP ผ่านสายโซ่ Boundary Clock คุมเฟสและเวลา</li>
+      <li>เลือก profile จากความต้องการ: FDD ที่ต้องการแค่ความถี่ → SyncE หรือ G.8265.1 · TDD/5G ที่ต้องการเฟส → G.8275.1 ถ้า transport รองรับทุก hop ไม่งั้น G.8275.2 หรือ APTS</li>
+      <li>วางแผน holdover ด้วย: ตอน GNSS หรือสายโซ่หลุด คุณภาพ oscillator ของแต่ละชั้นคือสิ่งที่ซื้อเวลาให้</li>
     </ul>
   </section>
 
-  <p style="margin-top:-1rem;padding-bottom:3rem;"><a href="../index.html">← กลับไปดูโพสต์อื่น ๆ</a></p>
-
+  <p class="caption" style="text-align:center;margin:3rem 0 1rem"><a href="../index.html">← กลับไปดูโพสต์อื่น ๆ</a></p>
 </main>
 
 <footer>
@@ -697,6 +742,63 @@
   }, 5.1);
 
 })();
+</script>
+<script>
+  (function(){
+    var bar = document.getElementById('progress-bar');
+    var toggle = document.getElementById('toc-toggle');
+    var panel = document.getElementById('toc-panel');
+    if (!bar) return;
+    var links = panel ? Array.prototype.slice.call(panel.querySelectorAll('a[data-toc]')) : [];
+
+    function clamp01(x){ return x<0?0:x>1?1:x; }
+    function updateBar(){
+      var doc = document.documentElement;
+      var scrollTop = window.scrollY || doc.scrollTop;
+      var height = doc.scrollHeight - doc.clientHeight;
+      var pct = height>0 ? clamp01(scrollTop/height)*100 : 0;
+      bar.style.width = pct + '%';
+    }
+    window.addEventListener('scroll', updateBar, {passive:true});
+    window.addEventListener('resize', updateBar);
+    updateBar();
+
+    if (toggle && panel){
+      toggle.addEventListener('click', function(){
+        var willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+      });
+      document.addEventListener('click', function(e){
+        if (!panel.hidden && !panel.contains(e.target) && e.target!==toggle && !toggle.contains(e.target)){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+      links.forEach(function(a){
+        a.addEventListener('click', function(){
+          panel.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+    if (sections.length && links.length){
+      var byId = {};
+      links.forEach(function(a){ byId[a.getAttribute('data-toc')] = a; });
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){
+            links.forEach(function(a){ a.classList.remove('active'); });
+            var a = byId[e.target.id];
+            if (a) a.classList.add('active');
+          }
+        });
+      }, {rootMargin:'-40% 0px -55% 0px', threshold:0});
+      sections.forEach(function(s){ io.observe(s); });
+    }
+  })();
 </script>
 <script src="../assets/theme.js"></script>
 </body>
